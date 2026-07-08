@@ -91,7 +91,7 @@ export default async function Home() {
             <a href="#admin" className="hover:text-black">Admin</a>
           </div>
           <a
-            href="#admin"
+            href="/admin"
             className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-bold text-white transition hover:bg-[#17613d]"
           >
             <Plus size={16} />
