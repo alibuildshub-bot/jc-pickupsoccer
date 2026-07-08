@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -9,6 +9,7 @@ import {
   Lock,
   Plus,
   Shield,
+  Target,
   Trash2,
   Users,
 } from "lucide-react";
@@ -33,6 +34,18 @@ type Match = {
   status: string;
 };
 
+type PlayerStat = {
+  id: string;
+  match_id: string;
+  player_id: string;
+  team_name: string;
+  goals: number;
+  assists: number;
+  result: string;
+  players: { name: string } | null;
+  matches: { week_label: string; match_date: string } | null;
+};
+
 const emptyPlayer = {
   name: "",
   nickname: "",
@@ -51,15 +64,27 @@ const emptyMatch = {
   status: "completed",
 };
 
+const emptyStat = {
+  match_id: "",
+  player_id: "",
+  team_name: "",
+  goals: 0,
+  assists: 0,
+  result: "draw",
+};
+
 export default function AdminPage() {
   const [password, setPassword] = useState(getStoredPassword);
   const [savedPassword, setSavedPassword] = useState(getStoredPassword);
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [stats, setStats] = useState<PlayerStat[]>([]);
   const [playerForm, setPlayerForm] = useState(emptyPlayer);
   const [matchForm, setMatchForm] = useState(emptyMatch);
+  const [statForm, setStatForm] = useState(emptyStat);
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+  const [editingStatId, setEditingStatId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -73,13 +98,15 @@ export default function AdminPage() {
     setMessage("");
 
     try {
-      const [playersResponse, matchesResponse] = await Promise.all([
+      const [playersResponse, matchesResponse, statsResponse] = await Promise.all([
         adminFetch("/api/admin/players", { method: "GET" }, adminPassword),
         adminFetch("/api/admin/matches", { method: "GET" }, adminPassword),
+        adminFetch("/api/admin/stats", { method: "GET" }, adminPassword),
       ]);
 
       setPlayers(playersResponse.players || []);
       setMatches(matchesResponse.matches || []);
+      setStats(statsResponse.stats || []);
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -115,6 +142,7 @@ export default function AdminPage() {
     setPassword("");
     setPlayers([]);
     setMatches([]);
+    setStats([]);
     setMessage("");
   }
 
@@ -238,6 +266,76 @@ export default function AdminPage() {
     });
   }
 
+  async function saveStat(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const payload = {
+        ...statForm,
+        id: editingStatId || undefined,
+      };
+
+      await adminFetch(
+        "/api/admin/stats",
+        {
+          method: editingStatId ? "PATCH" : "POST",
+          body: JSON.stringify(payload),
+        },
+        savedPassword,
+      );
+
+      setStatForm(emptyStat);
+      setEditingStatId(null);
+      setMessage(editingStatId ? "Player stat updated." : "Player stat added.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteStat(statId: string) {
+    if (!window.confirm("Remove this player stat row?")) return;
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await adminFetch(`/api/admin/stats?id=${statId}`, { method: "DELETE" }, savedPassword);
+      setMessage("Player stat removed.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function editStat(stat: PlayerStat) {
+    setEditingStatId(stat.id);
+    setStatForm({
+      match_id: stat.match_id,
+      player_id: stat.player_id,
+      team_name: stat.team_name,
+      goals: stat.goals,
+      assists: stat.assists,
+      result: stat.result,
+    });
+  }
+
+  function setTeamFromMatch(matchId: string, side: "a" | "b") {
+    const match = matches.find((matchItem) => matchItem.id === matchId);
+    if (!match) return;
+
+    setStatForm((current) => ({
+      ...current,
+      team_name: side === "a" ? match.team_a_name : match.team_b_name,
+    }));
+  }
+
   if (!isUnlocked) {
     return (
       <main className="min-h-screen bg-[#f7f3ec] px-4 py-8 text-[#171717] sm:px-6">
@@ -308,7 +406,7 @@ export default function AdminPage() {
         <div className="mb-6 grid gap-4 sm:grid-cols-3">
           <AdminMetric icon={Users} label="Active Players" value={String(activePlayers.length)} />
           <AdminMetric icon={CalendarDays} label="Matches" value={String(matches.length)} />
-          <AdminMetric icon={Shield} label="Admin Status" value={loading ? "Saving" : "Ready"} />
+          <AdminMetric icon={Target} label="Stat Rows" value={String(stats.length)} />
         </div>
 
         {message && (
@@ -511,9 +609,162 @@ export default function AdminPage() {
             </div>
           </section>
         </div>
+
+        <section className="mt-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-black/50">Player Performance</p>
+              <h1 className="text-2xl font-black">Stats</h1>
+            </div>
+            <Target className="text-[#1f7a4d]" size={26} />
+          </div>
+
+          <form onSubmit={saveStat} className="mb-6 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
+            <div className="grid gap-3 lg:grid-cols-2">
+              <AdminSelect
+                label="Match"
+                value={statForm.match_id}
+                onChange={(value) => setStatForm({ ...statForm, match_id: value, team_name: "" })}
+                required
+              >
+                <option value="">Select match</option>
+                {matches.map((match) => (
+                  <option key={match.id} value={match.id}>
+                    {match.week_label} - {match.match_date}
+                  </option>
+                ))}
+              </AdminSelect>
+              <AdminSelect
+                label="Player"
+                value={statForm.player_id}
+                onChange={(value) => setStatForm({ ...statForm, player_id: value })}
+                required
+              >
+                <option value="">Select player</option>
+                {players.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {player.name}
+                  </option>
+                ))}
+              </AdminSelect>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
+              <div>
+                <AdminInput
+                  label="Team name"
+                  value={statForm.team_name}
+                  onChange={(value) => setStatForm({ ...statForm, team_name: value })}
+                  required
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTeamFromMatch(statForm.match_id, "a")}
+                    className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-bold text-black/65"
+                  >
+                    Use Team A
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTeamFromMatch(statForm.match_id, "b")}
+                    className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-bold text-black/65"
+                  >
+                    Use Team B
+                  </button>
+                </div>
+              </div>
+              <AdminInput
+                type="number"
+                label="Goals"
+                value={String(statForm.goals)}
+                onChange={(value) => setStatForm({ ...statForm, goals: Number(value) })}
+              />
+              <AdminInput
+                type="number"
+                label="Assists"
+                value={String(statForm.assists)}
+                onChange={(value) => setStatForm({ ...statForm, assists: Number(value) })}
+              />
+              <AdminSelect
+                label="Result"
+                value={statForm.result}
+                onChange={(value) => setStatForm({ ...statForm, result: value })}
+                required
+              >
+                <option value="win">Win</option>
+                <option value="loss">Loss</option>
+                <option value="draw">Draw</option>
+              </AdminSelect>
+            </div>
+
+            <div className="flex gap-2">
+              <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white">
+                <Plus size={16} />
+                {editingStatId ? "Update Stat" : "Add Stat"}
+              </button>
+              {editingStatId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingStatId(null);
+                    setStatForm(emptyStat);
+                  }}
+                  className="h-11 rounded-lg border border-black/15 bg-white px-4 text-sm font-bold"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
+                  <th className="py-3">Match</th>
+                  <th className="py-3">Player</th>
+                  <th className="py-3">Team</th>
+                  <th className="py-3 text-center">G</th>
+                  <th className="py-3 text-center">A</th>
+                  <th className="py-3 text-center">Result</th>
+                  <th className="py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.map((stat) => (
+                  <tr key={stat.id} className="border-b border-black/10 last:border-0">
+                    <td className="py-4 font-bold">
+                      {stat.matches?.week_label || getMatchLabel(stat.match_id)}
+                    </td>
+                    <td className="py-4 font-black">{stat.players?.name || getPlayerName(stat.player_id)}</td>
+                    <td className="py-4 font-bold">{stat.team_name}</td>
+                    <td className="py-4 text-center font-bold">{stat.goals}</td>
+                    <td className="py-4 text-center font-bold">{stat.assists}</td>
+                    <td className="py-4 text-center font-bold capitalize">{stat.result}</td>
+                    <td className="py-4">
+                      <div className="flex justify-end gap-2">
+                        <IconButton label="Edit stat" onClick={() => editStat(stat)} icon={Edit3} />
+                        <IconButton label="Delete stat" onClick={() => deleteStat(stat.id)} icon={Trash2} danger />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </section>
     </main>
   );
+
+  function getPlayerName(playerId: string) {
+    return players.find((player) => player.id === playerId)?.name || "Unknown player";
+  }
+
+  function getMatchLabel(matchId: string) {
+    return matches.find((match) => match.id === matchId)?.week_label || "Unknown match";
+  }
 }
 
 async function adminFetch(path: string, options: RequestInit, password: string) {
@@ -589,6 +840,34 @@ function AdminInput({
         required={required}
         className="mt-2 h-11 w-full rounded-lg border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-[#1f7a4d]"
       />
+    </label>
+  );
+}
+
+function AdminSelect({
+  label,
+  value,
+  onChange,
+  children,
+  required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-bold text-black/60">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+        className="mt-2 h-11 w-full rounded-lg border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-[#1f7a4d]"
+      >
+        {children}
+      </select>
     </label>
   );
 }
