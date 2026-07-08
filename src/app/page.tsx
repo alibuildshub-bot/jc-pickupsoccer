@@ -4,11 +4,11 @@ import {
   ClipboardList,
   Medal,
   Plus,
-  Shield,
   Target,
   Trophy,
   Users,
 } from "lucide-react";
+import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
 type PlayerRow = {
@@ -77,9 +77,7 @@ export default async function Home() {
       <nav className="border-b border-black/10 bg-[#f7f3ec]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#171717] text-white">
-              <Shield size={24} />
-            </div>
+            <LogoMark />
             <div>
               <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
               <p className="text-xs font-medium text-black/55">Weekly rec league stats</p>

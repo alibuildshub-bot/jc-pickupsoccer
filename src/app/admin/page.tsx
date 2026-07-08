@@ -8,11 +8,11 @@ import {
   Loader2,
   Lock,
   Plus,
-  Shield,
   Target,
   Trash2,
   Users,
 } from "lucide-react";
+import LogoMark from "@/components/LogoMark";
 
 type Player = {
   id: string;
@@ -341,7 +341,7 @@ export default function AdminPage() {
       <main className="min-h-screen bg-[#f7f3ec] px-4 py-8 text-[#171717] sm:px-6">
         <div className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center">
           <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-black/60 hover:text-black">
-            <Shield size={18} />
+            <LogoMark size="sm" />
             JC Pickup Soccer
           </Link>
           <form onSubmit={unlock} className="rounded-lg border border-black/10 bg-white p-6 shadow-sm">
@@ -377,9 +377,7 @@ export default function AdminPage() {
       <nav className="border-b border-black/10 bg-[#f7f3ec]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#171717] text-white">
-              <Shield size={24} />
-            </div>
+            <LogoMark />
             <div>
               <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
               <p className="text-xs font-medium text-black/55">Admin dashboard</p>
