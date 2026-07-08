@@ -432,14 +432,14 @@ export default function AdminPage() {
                   required
                 />
                 <AdminInput
-                  label="Nickname"
+                  label="Nickname (optional)"
                   value={playerForm.nickname}
                   onChange={(value) => setPlayerForm({ ...playerForm, nickname: value })}
                 />
               </div>
               <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                 <AdminInput
-                  label="Position"
+                  label="Position (optional)"
                   value={playerForm.position}
                   onChange={(value) => setPlayerForm({ ...playerForm, position: value })}
                   placeholder="Forward, Mid, GK..."
