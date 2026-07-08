@@ -9,50 +9,69 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
+import { createSupabaseClient } from "@/lib/supabase";
 
-const players = [
-  { name: "Ali Khan", games: 8, wins: 6, goals: 12, assists: 5, points: 17 },
-  { name: "Hamza Malik", games: 8, wins: 5, goals: 9, assists: 8, points: 17 },
-  { name: "Omar Syed", games: 7, wins: 5, goals: 7, assists: 6, points: 13 },
-  { name: "Bilal Ahmed", games: 8, wins: 4, goals: 5, assists: 9, points: 14 },
-  { name: "Ray Patel", games: 6, wins: 4, goals: 8, assists: 3, points: 11 },
+type PlayerRow = {
+  id: string;
+  name: string;
+  position: string | null;
+};
+
+type MatchRow = {
+  id: string;
+  match_date: string;
+  week_label: string;
+  location: string | null;
+  team_a_name: string;
+  team_b_name: string;
+  team_a_score: number;
+  team_b_score: number;
+};
+
+type MatchPlayerRow = {
+  player_id: string;
+  goals: number;
+  assists: number;
+  result: string;
+};
+
+type LeaderboardPlayer = {
+  name: string;
+  games: number;
+  wins: number;
+  goals: number;
+  assists: number;
+  points: number;
+};
+
+const fallbackPlayers: LeaderboardPlayer[] = [
+  { name: "Add players in Supabase", games: 0, wins: 0, goals: 0, assists: 0, points: 0 },
 ];
 
-const recentMatches = [
+const fallbackMatches = [
   {
-    week: "Week 8",
-    date: "Sunday, July 5",
-    teamA: "Black",
-    teamB: "White",
-    score: "7 - 5",
-    mvp: "Ali Khan",
-  },
-  {
-    week: "Week 7",
-    date: "Sunday, June 28",
-    teamA: "Green",
-    teamB: "Blue",
-    score: "4 - 4",
-    mvp: "Hamza Malik",
-  },
-  {
-    week: "Week 6",
-    date: "Sunday, June 21",
-    teamA: "Red",
-    teamB: "Grey",
-    score: "6 - 3",
-    mvp: "Ray Patel",
+    week: "Week 1",
+    date: "Add a match in Supabase",
+    teamA: "Team A",
+    teamB: "Team B",
+    score: "0 - 0",
+    mvp: "Coming soon",
   },
 ];
 
-const statCards = [
-  { label: "Active Players", value: "28", icon: Users },
-  { label: "Games Played", value: "8", icon: CalendarDays },
-  { label: "Goals Tracked", value: "86", icon: Target },
-  { label: "Top Streak", value: "4W", icon: Trophy },
-];
+export const revalidate = 0;
 
-export default function Home() {
+export default async function Home() {
+  const data = await getDashboardData();
+  const latestMatch = data.recentMatches[0] || fallbackMatches[0];
+
+  const statCards = [
+    { label: "Active Players", value: String(data.activePlayers), icon: Users },
+    { label: "Games Played", value: String(data.gamesPlayed), icon: CalendarDays },
+    { label: "Goals Tracked", value: String(data.goalsTracked), icon: Target },
+    { label: "Top Player", value: data.topPlayer, icon: Trophy },
+  ];
+
   return (
     <main className="min-h-screen bg-[#f7f3ec] text-[#171717]">
       <nav className="border-b border-black/10 bg-[#f7f3ec]/95 backdrop-blur">
@@ -113,25 +132,27 @@ export default function Home() {
           <div className="flex items-center justify-between border-b border-black/10 pb-4">
             <div>
               <p className="text-sm font-bold text-black/50">Latest Result</p>
-              <h2 className="text-2xl font-black">Week 8</h2>
+              <h2 className="text-2xl font-black">{latestMatch.week}</h2>
             </div>
             <Medal className="text-[#b7791f]" size={32} />
           </div>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-7 text-center">
             <div>
-              <p className="text-3xl font-black">Black</p>
+              <p className="text-3xl font-black">{latestMatch.teamA}</p>
               <p className="mt-2 text-sm font-semibold text-black/55">Team A</p>
             </div>
-            <div className="rounded-lg bg-[#171717] px-4 py-3 text-3xl font-black text-white">7-5</div>
+            <div className="rounded-lg bg-[#171717] px-4 py-3 text-3xl font-black text-white">
+              {latestMatch.score}
+            </div>
             <div>
-              <p className="text-3xl font-black">White</p>
+              <p className="text-3xl font-black">{latestMatch.teamB}</p>
               <p className="mt-2 text-sm font-semibold text-black/55">Team B</p>
             </div>
           </div>
           <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
-            <MiniStat label="MVP" value="Ali Khan" />
-            <MiniStat label="Top scorer" value="Ali, 4" />
-            <MiniStat label="Next game" value="Sunday" />
+            <MiniStat label="MVP" value={latestMatch.mvp} />
+            <MiniStat label="Date" value={latestMatch.date} />
+            <MiniStat label="Source" value={data.isConnected ? "Supabase" : "Setup needed"} />
           </div>
         </div>
       </section>
@@ -156,8 +177,8 @@ export default function Home() {
             <CalendarDays className="text-[#1f7a4d]" size={26} />
           </div>
           <div className="space-y-3">
-            {recentMatches.map((match) => (
-              <article key={match.week} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+            {data.recentMatches.map((match) => (
+              <article key={`${match.week}-${match.date}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-bold text-black/50">{match.date}</p>
@@ -197,7 +218,7 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {players.map((player, index) => (
+                {data.players.map((player, index) => (
                   <tr key={player.name} className="border-b border-black/10 last:border-0">
                     <td className="py-4">
                       <div className="flex items-center gap-3">
@@ -240,6 +261,90 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+async function getDashboardData() {
+  const supabase = createSupabaseClient();
+
+  if (!supabase) {
+    return {
+      isConnected: false,
+      activePlayers: 0,
+      gamesPlayed: 0,
+      goalsTracked: 0,
+      topPlayer: "Setup",
+      players: fallbackPlayers,
+      recentMatches: fallbackMatches,
+    };
+  }
+
+  const [{ data: playerRows }, { data: matchRows }, { data: statRows }] = await Promise.all([
+    supabase.from("players").select("id,name,position").eq("is_active", true).order("name"),
+    supabase
+      .from("matches")
+      .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score")
+      .order("match_date", { ascending: false })
+      .limit(5),
+    supabase.from("match_players").select("player_id,goals,assists,result"),
+  ]);
+
+  const players = (playerRows || []) as PlayerRow[];
+  const matches = (matchRows || []) as MatchRow[];
+  const matchStats = (statRows || []) as MatchPlayerRow[];
+
+  const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name">>();
+
+  for (const player of players) {
+    totalsByPlayer.set(player.id, { games: 0, wins: 0, goals: 0, assists: 0, points: 0 });
+  }
+
+  for (const stat of matchStats) {
+    const totals = totalsByPlayer.get(stat.player_id);
+    if (!totals) continue;
+
+    totals.games += 1;
+    totals.goals += stat.goals || 0;
+    totals.assists += stat.assists || 0;
+    totals.wins += stat.result === "win" ? 1 : 0;
+    totals.points = totals.goals + totals.assists;
+  }
+
+  const leaderboard = players
+    .map((player) => ({
+      name: player.name,
+      ...(totalsByPlayer.get(player.id) || { games: 0, wins: 0, goals: 0, assists: 0, points: 0 }),
+    }))
+    .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
+
+  const recentMatches = matches.map((match) => ({
+    week: match.week_label,
+    date: formatDate(match.match_date),
+    teamA: match.team_a_name,
+    teamB: match.team_b_name,
+    score: `${match.team_a_score} - ${match.team_b_score}`,
+    mvp: leaderboard[0]?.name || "Coming soon",
+  }));
+
+  const goalsTracked = matchStats.reduce((total, stat) => total + (stat.goals || 0), 0);
+
+  return {
+    isConnected: true,
+    activePlayers: players.length,
+    gamesPlayed: matches.length,
+    goalsTracked,
+    topPlayer: leaderboard[0]?.name || "Coming soon",
+    players: leaderboard.length > 0 ? leaderboard : fallbackPlayers,
+    recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
+  };
+}
+
+function formatDate(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(date);
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
