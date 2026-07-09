@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 const supabaseSecretKey = (
-  process.env.SUPABASE_SECRET_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SECRET_KEY ||
   ""
 ).trim();
 const adminPassword = process.env.ADMIN_PASSWORD?.trim();
@@ -117,7 +117,7 @@ export function adminConfigError() {
   return Response.json(
     {
       error:
-        "Admin is not configured. Add SUPABASE_SECRET_KEY and ADMIN_EMAIL in Vercel environment variables.",
+        "Admin is not configured. Add SUPABASE_SERVICE_ROLE_KEY and ADMIN_EMAIL in Vercel environment variables.",
     },
     { status: 500 },
   );
