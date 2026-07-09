@@ -571,7 +571,12 @@ function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
 }
 
 function normalizeTeamName(name: string) {
-  return cleanTeamName(name).replace(/^team\s+/i, "").toLowerCase();
+  return cleanTeamName(name)
+    .replace(/^team\s+/i, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function cleanTeamName(name: string) {
