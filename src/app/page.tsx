@@ -1,7 +1,5 @@
 import {
-  Activity,
   CalendarDays,
-  ClipboardList,
   Medal,
   Plus,
   Target,
@@ -86,7 +84,7 @@ export default async function Home() {
           <div className="hidden items-center gap-6 text-sm font-semibold text-black/65 md:flex">
             <a href="#matches" className="hover:text-black">Matches</a>
             <a href="#leaderboard" className="hover:text-black">Leaderboard</a>
-            <a href="#admin" className="hover:text-black">Admin</a>
+            <a href="/admin" className="hover:text-black">Admin</a>
           </div>
           <a
             href="/admin"
@@ -239,24 +237,6 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="admin" className="border-t border-black/10 bg-[#171717] px-4 py-12 text-white sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-          <div>
-            <p className="text-sm font-bold text-white/50">Admin Preview</p>
-            <h2 className="mt-2 text-3xl font-black">The first real feature to build</h2>
-            <p className="mt-4 max-w-xl leading-7 text-white/65">
-              Start with one simple flow: create a match, pick both teams, enter
-              the final score, add goals and assists, then let the leaderboard update.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <AdminStep icon={Users} title="Add Players" text="Create the permanent player list." />
-            <AdminStep icon={ClipboardList} title="Create Match" text="Add date, teams, and final score." />
-            <AdminStep icon={Target} title="Enter Stats" text="Track goals, assists, wins, and losses." />
-            <AdminStep icon={Activity} title="Update Tables" text="Show season leaders automatically." />
-          </div>
-        </div>
-      </section>
     </main>
   );
 }
@@ -350,24 +330,6 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg bg-[#f7f3ec] p-3">
       <p className="text-xs font-bold uppercase text-black/45">{label}</p>
       <p className="mt-1 text-sm font-black">{value}</p>
-    </div>
-  );
-}
-
-function AdminStep({
-  icon: Icon,
-  title,
-  text,
-}: {
-  icon: typeof Users;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-5">
-      <Icon className="mb-4 text-[#7ed9a3]" size={24} />
-      <h3 className="text-lg font-black">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-white/60">{text}</p>
     </div>
   );
 }
