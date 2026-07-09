@@ -6,6 +6,8 @@ import {
 } from "@/lib/admin";
 
 type PollPayload = {
+  id?: string;
+  action?: "reset_votes" | "close" | "open";
   title?: string;
   match_date?: string;
   player_ids?: string[];
@@ -70,6 +72,11 @@ export async function POST(request: Request) {
   if (!supabase) return adminConfigError();
 
   const payload = (await request.json()) as PollPayload;
+
+  if (payload.action) {
+    return updatePoll(payload, supabase);
+  }
+
   const title = payload.title?.trim() || "JC Footy MVP Vote";
 
   const playerIds = Array.isArray(payload.player_ids) ? payload.player_ids.filter(Boolean) : [];
@@ -117,6 +124,60 @@ export async function POST(request: Request) {
   }
 
   return Response.json({ poll }, { status: 201 });
+}
+
+export async function DELETE(request: Request) {
+  if (!(await isAdminRequest(request))) return unauthorizedError();
+
+  const supabase = createSupabaseAdminClient();
+  if (!supabase) return adminConfigError();
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return Response.json({ error: "Poll id is required." }, { status: 400 });
+  }
+
+  const { error } = await supabase.from("mvp_polls").delete().eq("id", id);
+
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  return Response.json({ ok: true });
+}
+
+async function updatePoll(
+  payload: PollPayload,
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  if (!payload.id) {
+    return Response.json({ error: "Poll id is required." }, { status: 400 });
+  }
+
+  if (payload.action === "reset_votes") {
+    const { error } = await supabase.from("mvp_votes").delete().eq("poll_id", payload.id);
+
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+
+    return Response.json({ ok: true });
+  }
+
+  if (payload.action === "close" || payload.action === "open") {
+    const { data, error } = await supabase
+      .from("mvp_polls")
+      .update({ status: payload.action === "close" ? "closed" : "open" })
+      .eq("id", payload.id)
+      .select("id,token,title,match_date,status,created_at")
+      .single();
+
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+
+    return Response.json({ poll: data });
+  }
+
+  return Response.json({ error: "Unknown poll action." }, { status: 400 });
 }
 
 function buildPollSummaries(polls: PollRow[], options: PollOptionRow[], votes: PollVoteRow[]) {

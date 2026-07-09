@@ -320,6 +320,72 @@ export default function AdminPage() {
     setMessage("Poll link copied.");
   }
 
+  async function resetPollVotes(pollId: string) {
+    if (!window.confirm("Reset all votes for this MVP poll? The poll link and player options will stay.")) return;
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await adminFetch(
+        "/api/admin/polls",
+        {
+          method: "POST",
+          body: JSON.stringify({ id: pollId, action: "reset_votes" }),
+        },
+        adminCredential,
+      );
+      setMessage("MVP poll votes reset.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function togglePollStatus(poll: MvpPoll) {
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await adminFetch(
+        "/api/admin/polls",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            id: poll.id,
+            action: poll.status === "open" ? "close" : "open",
+          }),
+        },
+        adminCredential,
+      );
+      setMessage(poll.status === "open" ? "MVP poll closed." : "MVP poll reopened.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deletePoll(pollId: string) {
+    if (!window.confirm("Delete this MVP poll completely? This removes the link, options, and votes.")) return;
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await adminFetch(`/api/admin/polls?id=${pollId}`, { method: "DELETE" }, adminCredential);
+      setMessage("MVP poll deleted.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function savePlayer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
@@ -794,6 +860,29 @@ export default function AdminPage() {
                         <span className="text-sm font-black">{option.votes}</span>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-black/10 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => resetPollVotes(poll.id)}
+                      className="h-10 rounded-lg border border-black/10 bg-white px-3 text-xs font-black text-black/70 hover:bg-black/5"
+                    >
+                      Reset Votes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => togglePollStatus(poll)}
+                      className="h-10 rounded-lg border border-black/10 bg-white px-3 text-xs font-black text-black/70 hover:bg-black/5"
+                    >
+                      {poll.status === "open" ? "Close Poll" : "Reopen Poll"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deletePoll(poll.id)}
+                      className="h-10 rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-black text-red-700 hover:bg-red-100"
+                    >
+                      Delete Poll
+                    </button>
                   </div>
                 </article>
               ))}
