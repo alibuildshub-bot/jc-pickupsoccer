@@ -142,6 +142,12 @@ export default function AdminPage() {
   const [teamForm, setTeamForm] = useState(emptyTeam);
   const [rosterForm, setRosterForm] = useState({ team_id: "", player_id: "" });
   const [statForm, setStatForm] = useState(emptyStat);
+  const [gameDayForm, setGameDayForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    label: "Game",
+    location: "",
+  });
+  const [quickScores, setQuickScores] = useState<Record<string, { team_a_score: string; team_b_score: string }>>({});
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
@@ -153,6 +159,11 @@ export default function AdminPage() {
   const adminCredential = session?.access_token || savedPassword;
   const isUnlocked = Boolean(adminCredential);
   const activePlayers = useMemo(() => players.filter((player) => player.is_active), [players]);
+  const activeTeams = useMemo(() => teams.filter((team) => team.is_active), [teams]);
+  const gameDayMatches = useMemo(
+    () => matches.filter((match) => match.match_date === gameDayForm.date),
+    [gameDayForm.date, matches],
+  );
 
   const loadData = useCallback(async (credential = adminCredential) => {
     if (!credential) return;
@@ -378,6 +389,91 @@ export default function AdminPage() {
     try {
       await adminFetch(`/api/admin/polls?id=${pollId}`, { method: "DELETE" }, adminCredential);
       setMessage("MVP poll deleted.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function createGameDayMatchups() {
+    if (activeTeams.length < 2) {
+      setMessage("Add at least two active teams first.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const pairings = getTeamPairings(activeTeams);
+      const existingKeys = new Set(
+        matches
+          .filter((match) => match.match_date === gameDayForm.date)
+          .map((match) => getMatchupKey(match.team_a_name, match.team_b_name)),
+      );
+      const newPairings = pairings.filter(([teamA, teamB]) => !existingKeys.has(getMatchupKey(teamA.name, teamB.name)));
+
+      if (newPairings.length === 0) {
+        setMessage("All matchups for this date already exist.");
+        return;
+      }
+
+      await Promise.all(
+        newPairings.map(([teamA, teamB], index) =>
+          adminFetch(
+            "/api/admin/matches",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                match_date: gameDayForm.date,
+                week_label: `${gameDayForm.label || "Game"} ${gameDayMatches.length + index + 1}`,
+                location: gameDayForm.location,
+                team_a_name: teamA.name,
+                team_b_name: teamB.name,
+                team_a_score: 0,
+                team_b_score: 0,
+                status: "scheduled",
+              }),
+            },
+            adminCredential,
+          ),
+        ),
+      );
+
+      setMessage(`${newPairings.length} matchups created.`);
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveQuickScore(match: Match) {
+    const score = quickScores[match.id];
+    if (!score) return;
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await adminFetch(
+        "/api/admin/matches",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            ...match,
+            team_a_score: Number(score.team_a_score || 0),
+            team_b_score: Number(score.team_b_score || 0),
+            status: "completed",
+          }),
+        },
+        adminCredential,
+      );
+
+      setMessage("Score saved.");
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -804,6 +900,178 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-sm font-bold text-black/50">Game Day Console</p>
+              <h1 className="text-2xl font-black">Run Tournament Day</h1>
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
+                Create the matchups, save scores as games end, and enter goals or assists from one place.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={createGameDayMatchups}
+              disabled={loading || activeTeams.length < 2}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white transition hover:bg-[#17613d] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Plus size={16} />
+              Create Matchups
+            </button>
+          </div>
+
+          <div className="mb-5 grid gap-3 md:grid-cols-3">
+            <AdminInput
+              type="date"
+              label="Tournament date"
+              value={gameDayForm.date}
+              onChange={(value) => setGameDayForm({ ...gameDayForm, date: value })}
+            />
+            <AdminInput
+              label="Game label"
+              value={gameDayForm.label}
+              onChange={(value) => setGameDayForm({ ...gameDayForm, label: value })}
+              placeholder="Game"
+            />
+            <AdminInput
+              label="Location"
+              value={gameDayForm.location}
+              onChange={(value) => setGameDayForm({ ...gameDayForm, location: value })}
+              placeholder="Field name"
+            />
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="font-black">Scores</h2>
+                <p className="text-sm font-bold text-black/45">{gameDayMatches.length} games</p>
+              </div>
+              {gameDayMatches.length === 0 ? (
+                <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4 text-sm font-bold text-black/50">
+                  No games for this date yet. Create matchups to start the day.
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {gameDayMatches.map((match) => (
+                    <article key={match.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold text-black/50">{match.week_label}</p>
+                          <p className="font-black">
+                            {match.team_a_name} vs {match.team_b_name}
+                          </p>
+                        </div>
+                        <span className="rounded-lg bg-white px-3 py-2 text-xs font-black text-black/55">
+                          {match.status}
+                        </span>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                        <AdminInput
+                          type="number"
+                          label={match.team_a_name}
+                          value={quickScores[match.id]?.team_a_score ?? String(match.team_a_score)}
+                          onChange={(value) =>
+                            setQuickScores({
+                              ...quickScores,
+                              [match.id]: {
+                                team_a_score: value,
+                                team_b_score: quickScores[match.id]?.team_b_score ?? String(match.team_b_score),
+                              },
+                            })
+                          }
+                        />
+                        <AdminInput
+                          type="number"
+                          label={match.team_b_name}
+                          value={quickScores[match.id]?.team_b_score ?? String(match.team_b_score)}
+                          onChange={(value) =>
+                            setQuickScores({
+                              ...quickScores,
+                              [match.id]: {
+                                team_a_score: quickScores[match.id]?.team_a_score ?? String(match.team_a_score),
+                                team_b_score: value,
+                              },
+                            })
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => saveQuickScore(match)}
+                          className="h-11 rounded-lg bg-[#171717] px-4 text-sm font-black text-white"
+                        >
+                          Save Score
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h2 className="mb-3 font-black">Quick Stats</h2>
+              <form onSubmit={saveStat} className="grid gap-3 rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                <AdminSelect
+                  label="Game"
+                  value={statForm.match_id}
+                  onChange={(value) => setStatForm({ ...statForm, match_id: value, team_name: "" })}
+                  required
+                >
+                  <option value="">Select game</option>
+                  {gameDayMatches.map((match) => (
+                    <option key={match.id} value={match.id}>
+                      {match.week_label}: {match.team_a_name} vs {match.team_b_name}
+                    </option>
+                  ))}
+                </AdminSelect>
+                <AdminSelect
+                  label="Player"
+                  value={statForm.player_id}
+                  onChange={(value) => setStatForm({ ...statForm, player_id: value })}
+                  required
+                >
+                  <option value="">Select player</option>
+                  {activePlayers.map((player) => (
+                    <option key={player.id} value={player.id}>
+                      {player.name}
+                    </option>
+                  ))}
+                </AdminSelect>
+                <GameTeamSelect
+                  match={matches.find((match) => match.id === statForm.match_id) || null}
+                  value={statForm.team_name}
+                  onChange={(teamName) =>
+                    setStatForm({
+                      ...statForm,
+                      team_name: teamName,
+                      result: getResultForTeam(matches.find((match) => match.id === statForm.match_id), teamName),
+                    })
+                  }
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <AdminInput
+                    type="number"
+                    label="Goals"
+                    value={String(statForm.goals)}
+                    onChange={(value) => setStatForm({ ...statForm, goals: Number(value) })}
+                  />
+                  <AdminInput
+                    type="number"
+                    label="Assists"
+                    value={String(statForm.assists)}
+                    onChange={(value) => setStatForm({ ...statForm, assists: Number(value) })}
+                  />
+                </div>
+                <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white">
+                  <Plus size={16} />
+                  Add Stat
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
 
         <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
           <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1417,6 +1685,32 @@ function getStoredPassword() {
   return window.localStorage.getItem("jc-admin-password") || "";
 }
 
+function getTeamPairings(teams: TournamentTeam[]) {
+  const pairings: Array<[TournamentTeam, TournamentTeam]> = [];
+
+  for (let firstIndex = 0; firstIndex < teams.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < teams.length; secondIndex += 1) {
+      pairings.push([teams[firstIndex], teams[secondIndex]]);
+    }
+  }
+
+  return pairings;
+}
+
+function getMatchupKey(teamA: string, teamB: string) {
+  return [teamA.trim().toLowerCase(), teamB.trim().toLowerCase()].sort().join("|");
+}
+
+function getResultForTeam(match: Match | undefined, teamName: string) {
+  if (!match || match.status !== "completed") return "draw";
+  if (match.team_a_score === match.team_b_score) return "draw";
+
+  const isTeamA = match.team_a_name === teamName;
+  const didTeamAWin = match.team_a_score > match.team_b_score;
+
+  return isTeamA === didTeamAWin ? "win" : "loss";
+}
+
 function getPollUrl(token: string) {
   if (typeof window === "undefined") return `/poll/${token}`;
 
@@ -1538,6 +1832,32 @@ function TeamNameSelect({
           {team.name}
         </option>
       ))}
+    </AdminSelect>
+  );
+}
+
+function GameTeamSelect({
+  match,
+  value,
+  onChange,
+}: {
+  match: Match | null;
+  value: string;
+  onChange: (teamName: string) => void;
+}) {
+  if (!match) {
+    return (
+      <AdminSelect label="Team" value={value} onChange={onChange} required>
+        <option value="">Select game first</option>
+      </AdminSelect>
+    );
+  }
+
+  return (
+    <AdminSelect label="Team" value={value} onChange={onChange} required>
+      <option value="">Select team</option>
+      <option value={match.team_a_name}>{match.team_a_name}</option>
+      <option value={match.team_b_name}>{match.team_b_name}</option>
     </AdminSelect>
   );
 }
