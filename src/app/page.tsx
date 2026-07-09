@@ -64,10 +64,6 @@ type TeamStanding = {
   points: number;
 };
 
-const fallbackPlayers: LeaderboardPlayer[] = [
-  { name: "Add players", games: 0, wins: 0, goals: 0, assists: 0, points: 0 },
-];
-
 const fallbackMatches = [
   {
     week: "Week 1",
@@ -270,39 +266,48 @@ export default async function Home() {
             </div>
             <Trophy className="text-[#b7791f]" size={28} />
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
-                  <th className="py-3">Player</th>
-                  <th className="py-3 text-center">GP</th>
-                  <th className="py-3 text-center">W</th>
-                  <th className="py-3 text-center">G</th>
-                  <th className="py-3 text-center">A</th>
-                  <th className="py-3 text-center">PTS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.players.map((player, index) => (
-                  <tr key={player.name} className="border-b border-black/10 last:border-0">
-                    <td className="py-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
-                          {index + 1}
-                        </span>
-                        <span className="font-black">{player.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 text-center font-bold">{player.games}</td>
-                    <td className="py-4 text-center font-bold">{player.wins}</td>
-                    <td className="py-4 text-center font-bold">{player.goals}</td>
-                    <td className="py-4 text-center font-bold">{player.assists}</td>
-                    <td className="py-4 text-center font-black">{player.points}</td>
+          {data.players.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
+                    <th className="py-3">Player</th>
+                    <th className="py-3 text-center">GP</th>
+                    <th className="py-3 text-center">W</th>
+                    <th className="py-3 text-center">G</th>
+                    <th className="py-3 text-center">A</th>
+                    <th className="py-3 text-center">PTS</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {data.players.map((player, index) => (
+                    <tr key={player.name} className="border-b border-black/10 last:border-0">
+                      <td className="py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                            {index + 1}
+                          </span>
+                          <span className="font-black">{player.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 text-center font-bold">{player.games}</td>
+                      <td className="py-4 text-center font-bold">{player.wins}</td>
+                      <td className="py-4 text-center font-bold">{player.goals}</td>
+                      <td className="py-4 text-center font-bold">{player.assists}</td>
+                      <td className="py-4 text-center font-black">{player.points}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
+              <p className="font-black">Leaderboard will appear after the first game.</p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-black/55">
+                Once scores and player stats are entered, this table will rank goals, assists, wins, and points.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -321,7 +326,7 @@ async function getDashboardData() {
       gamesPlayed: 0,
       goalsTracked: 0,
       topPlayer: "Setup",
-      players: fallbackPlayers,
+      players: [],
       recentMatches: fallbackMatches,
       teamStandings: fallbackStandings(),
       tournamentLabel: "Tournament Day",
@@ -408,7 +413,7 @@ async function getDashboardData() {
     gamesPlayed: matches.filter((match) => match.status === "completed").length,
     goalsTracked,
     topPlayer: activeLeaderboard[0]?.name || "Coming soon",
-    players: activeLeaderboard.length > 0 ? activeLeaderboard : fallbackPlayers,
+    players: activeLeaderboard,
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
     teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
