@@ -776,16 +776,6 @@ export default function AdminPage() {
     });
   }
 
-  function setTeamFromMatch(matchId: string, side: "a" | "b") {
-    const match = matches.find((matchItem) => matchItem.id === matchId);
-    if (!match) return;
-
-    setStatForm((current) => ({
-      ...current,
-      team_name: side === "a" ? match.team_a_name : match.team_b_name,
-    }));
-  }
-
   if (!isUnlocked) {
     return (
       <main className="min-h-screen bg-[#f7f3ec] px-4 py-8 text-[#171717] sm:px-6">
@@ -1042,14 +1032,9 @@ export default function AdminPage() {
                 <GameTeamSelect
                   match={matches.find((match) => match.id === statForm.match_id) || null}
                   value={statForm.team_name}
-                  onChange={(teamName) =>
-                    setStatForm({
-                      ...statForm,
-                      team_name: teamName,
-                      result: getResultForTeam(matches.find((match) => match.id === statForm.match_id), teamName),
-                    })
-                  }
+                  onChange={(teamName) => setStatForm({ ...statForm, team_name: teamName })}
                 />
+                <p className="text-xs font-bold text-black/45">Result is calculated from the saved score.</p>
                 <div className="grid grid-cols-2 gap-3">
                   <AdminInput
                     type="number"
@@ -1533,30 +1518,14 @@ export default function AdminPage() {
               </AdminSelect>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
+            <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
               <div>
-                <AdminInput
-                  label="Team name"
+                <GameTeamSelect
+                  match={matches.find((match) => match.id === statForm.match_id) || null}
                   value={statForm.team_name}
                   onChange={(value) => setStatForm({ ...statForm, team_name: value })}
-                  required
                 />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setTeamFromMatch(statForm.match_id, "a")}
-                    className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-bold text-black/65"
-                  >
-                    Use Team A
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTeamFromMatch(statForm.match_id, "b")}
-                    className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-bold text-black/65"
-                  >
-                    Use Team B
-                  </button>
-                </div>
+                <p className="mt-2 text-xs font-bold text-black/45">Result is calculated from the saved score.</p>
               </div>
               <AdminInput
                 type="number"
@@ -1570,16 +1539,6 @@ export default function AdminPage() {
                 value={String(statForm.assists)}
                 onChange={(value) => setStatForm({ ...statForm, assists: Number(value) })}
               />
-              <AdminSelect
-                label="Result"
-                value={statForm.result}
-                onChange={(value) => setStatForm({ ...statForm, result: value })}
-                required
-              >
-                <option value="win">Win</option>
-                <option value="loss">Loss</option>
-                <option value="draw">Draw</option>
-              </AdminSelect>
             </div>
 
             <div className="flex gap-2">
@@ -1699,16 +1658,6 @@ function getTeamPairings(teams: TournamentTeam[]) {
 
 function getMatchupKey(teamA: string, teamB: string) {
   return [teamA.trim().toLowerCase(), teamB.trim().toLowerCase()].sort().join("|");
-}
-
-function getResultForTeam(match: Match | undefined, teamName: string) {
-  if (!match || match.status !== "completed") return "draw";
-  if (match.team_a_score === match.team_b_score) return "draw";
-
-  const isTeamA = match.team_a_name === teamName;
-  const didTeamAWin = match.team_a_score > match.team_b_score;
-
-  return isTeamA === didTeamAWin ? "win" : "loss";
 }
 
 function getPollUrl(token: string) {
