@@ -3,7 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 const adminPassword = process.env.ADMIN_PASSWORD;
-const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+const adminEmails = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || "")
+  .split(",")
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
 
 export async function isAdminRequest(request: Request) {
   const providedPassword = request.headers.get("x-admin-password");
@@ -15,7 +18,7 @@ export async function isAdminRequest(request: Request) {
   const authorization = request.headers.get("authorization");
   const token = authorization?.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : null;
 
-  if (!token || !adminEmail) {
+  if (!token || adminEmails.length === 0) {
     return false;
   }
 
@@ -30,7 +33,7 @@ export async function isAdminRequest(request: Request) {
     return false;
   }
 
-  return data.user.email.toLowerCase() === adminEmail;
+  return adminEmails.includes(data.user.email.trim().toLowerCase());
 }
 
 export function createSupabaseAdminClient() {

@@ -599,7 +599,9 @@ export default function AdminPage() {
             <LogoMark />
             <div>
               <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
-              <p className="text-xs font-medium text-black/55">Admin dashboard</p>
+              <p className="text-xs font-medium text-black/55">
+                {session?.user.email ? `Signed in as ${session.user.email}` : "Admin dashboard"}
+              </p>
             </div>
           </Link>
           <div className="flex items-center gap-3">
