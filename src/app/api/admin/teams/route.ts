@@ -69,6 +69,11 @@ export async function POST(request: Request) {
     return Response.json({ error: validationError }, { status: 400 });
   }
 
+  const duplicateError = await validateUniqueTeamName(teamPayload, supabase);
+  if (duplicateError) {
+    return Response.json({ error: duplicateError }, { status: 400 });
+  }
+
   const { data, error } = await supabase
     .from("tournament_teams")
     .insert(teamPayloadToRow(teamPayload))
@@ -97,6 +102,11 @@ export async function PATCH(request: Request) {
   const validationError = validateTeamPayload(payload);
   if (validationError) {
     return Response.json({ error: validationError }, { status: 400 });
+  }
+
+  const duplicateError = await validateUniqueTeamName(payload, supabase);
+  if (duplicateError) {
+    return Response.json({ error: duplicateError }, { status: 400 });
   }
 
   const { data, error } = await supabase
@@ -176,6 +186,27 @@ function validateTeamPayload(payload: TeamPayload) {
   return null;
 }
 
+async function validateUniqueTeamName(
+  payload: TeamPayload,
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  const nextKey = normalizeTeamName(payload.name || "");
+
+  const { data, error } = await supabase.from("tournament_teams").select("id,name");
+
+  if (error) return error.message;
+
+  const duplicate = (data || []).find((team) => {
+    if (payload.id && team.id === payload.id) return false;
+
+    return normalizeTeamName(team.name || "") === nextKey;
+  });
+
+  if (!duplicate) return null;
+
+  return `A team named "${duplicate.name}" already exists. Edit that team instead of creating another one.`;
+}
+
 function teamPayloadToRow(payload: TeamPayload) {
   return {
     name: payload.name?.trim(),
@@ -183,4 +214,15 @@ function teamPayloadToRow(payload: TeamPayload) {
     sort_order: Number(payload.sort_order || 0),
     is_active: payload.is_active ?? true,
   };
+}
+
+function normalizeTeamName(name: string) {
+  return name
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/^team\s+/i, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
