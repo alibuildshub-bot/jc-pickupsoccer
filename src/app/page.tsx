@@ -27,6 +27,7 @@ type MatchRow = {
 };
 
 type MatchPlayerRow = {
+  match_id: string;
   player_id: string;
   goals: number;
   assists: number;
@@ -336,7 +337,7 @@ async function getDashboardData() {
       .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status")
       .order("match_date", { ascending: false })
       .limit(50),
-    supabase.from("match_players").select("player_id,goals,assists,result"),
+    supabase.from("match_players").select("match_id,player_id,goals,assists,result"),
     supabase
       .from("tournament_teams")
       .select("id,name,color,sort_order,is_active")
@@ -354,6 +355,14 @@ async function getDashboardData() {
     ? matches.filter((match) => match.match_date === tournamentDate)
     : [];
   const teamStandings = buildTeamStandings(teams, tournamentMatches);
+  const playerNames = new Map(players.map((player) => [player.id, player.name]));
+  const statsByMatch = new Map<string, MatchPlayerRow[]>();
+
+  for (const stat of matchStats) {
+    const currentStats = statsByMatch.get(stat.match_id) || [];
+    currentStats.push(stat);
+    statsByMatch.set(stat.match_id, currentStats);
+  }
 
   const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name">>();
 
@@ -378,14 +387,15 @@ async function getDashboardData() {
       ...(totalsByPlayer.get(player.id) || { games: 0, wins: 0, goals: 0, assists: 0, points: 0 }),
     }))
     .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
+  const activeLeaderboard = leaderboard.filter((player) => player.games > 0);
 
   const recentMatches = matches.slice(0, 5).map((match) => ({
     week: match.week_label,
     date: formatDate(match.match_date),
     teamA: match.team_a_name,
     teamB: match.team_b_name,
-    score: `${match.team_a_score} - ${match.team_b_score}`,
-    mvp: leaderboard[0]?.name || "Coming soon",
+    score: match.status === "completed" ? `${match.team_a_score} - ${match.team_b_score}` : "Not started",
+    mvp: getMatchMvp(match, statsByMatch.get(match.id) || [], playerNames),
   }));
 
   const goalsTracked = matchStats.reduce((total, stat) => total + (stat.goals || 0), 0);
@@ -394,10 +404,10 @@ async function getDashboardData() {
     isConnected: true,
     activePlayers: players.length,
     activeTeams: teams.length || teamStandings.length,
-    gamesPlayed: matches.length,
+    gamesPlayed: matches.filter((match) => match.status === "completed").length,
     goalsTracked,
-    topPlayer: leaderboard[0]?.name || "Coming soon",
-    players: leaderboard.length > 0 ? leaderboard : fallbackPlayers,
+    topPlayer: activeLeaderboard[0]?.name || "Coming soon",
+    players: activeLeaderboard.length > 0 ? activeLeaderboard : fallbackPlayers,
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
     teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
@@ -482,6 +492,38 @@ function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
   }
 
   return standings.get(name)!;
+}
+
+function getMatchMvp(
+  match: MatchRow,
+  stats: MatchPlayerRow[],
+  playerNames: Map<string, string>,
+) {
+  if (match.status !== "completed") {
+    return "Not started";
+  }
+
+  const playerTotals = new Map<string, { goals: number; assists: number; points: number }>();
+
+  for (const stat of stats) {
+    const current = playerTotals.get(stat.player_id) || { goals: 0, assists: 0, points: 0 };
+
+    current.goals += stat.goals || 0;
+    current.assists += stat.assists || 0;
+    current.points = current.goals + current.assists;
+    playerTotals.set(stat.player_id, current);
+  }
+
+  const [mvp] = Array.from(playerTotals.entries())
+    .filter(([, totals]) => totals.points > 0)
+    .sort((a, b) => {
+      const nameA = playerNames.get(a[0]) || "";
+      const nameB = playerNames.get(b[0]) || "";
+
+      return b[1].points - a[1].points || b[1].goals - a[1].goals || nameA.localeCompare(nameB);
+    });
+
+  return mvp ? playerNames.get(mvp[0]) || "No MVP yet" : "No MVP yet";
 }
 
 function fallbackStandings() {
