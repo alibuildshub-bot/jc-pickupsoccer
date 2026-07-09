@@ -1052,30 +1052,18 @@ export default function AdminPage() {
                 />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <AdminInput
-                    label="Team A name"
-                    value={matchForm.team_a_name}
-                    onChange={(value) => setMatchForm({ ...matchForm, team_a_name: value })}
-                    required
-                  />
-                  <TeamQuickButtons
-                    teams={teams}
-                    onPick={(teamName) => setMatchForm({ ...matchForm, team_a_name: teamName })}
-                  />
-                </div>
-                <div>
-                  <AdminInput
-                    label="Team B name"
-                    value={matchForm.team_b_name}
-                    onChange={(value) => setMatchForm({ ...matchForm, team_b_name: value })}
-                    required
-                  />
-                  <TeamQuickButtons
-                    teams={teams}
-                    onPick={(teamName) => setMatchForm({ ...matchForm, team_b_name: teamName })}
-                  />
-                </div>
+                <TeamNameSelect
+                  label="Team A"
+                  value={matchForm.team_a_name}
+                  teams={teams}
+                  onChange={(value) => setMatchForm({ ...matchForm, team_a_name: value })}
+                />
+                <TeamNameSelect
+                  label="Team B"
+                  value={matchForm.team_b_name}
+                  teams={teams}
+                  onChange={(value) => setMatchForm({ ...matchForm, team_b_name: value })}
+                />
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <AdminInput
@@ -1428,30 +1416,40 @@ function AdminSelect({
   );
 }
 
-function TeamQuickButtons({
+function TeamNameSelect({
+  label,
+  value,
   teams,
-  onPick,
+  onChange,
 }: {
+  label: string;
+  value: string;
   teams: TournamentTeam[];
-  onPick: (teamName: string) => void;
+  onChange: (teamName: string) => void;
 }) {
-  if (teams.length === 0) return null;
+  const activeTeams = teams.filter((team) => team.is_active);
+
+  if (activeTeams.length === 0) {
+    return (
+      <AdminInput
+        label={label}
+        value={value}
+        onChange={onChange}
+        placeholder="Create teams first"
+        required
+      />
+    );
+  }
 
   return (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {teams
-        .filter((team) => team.is_active)
-        .map((team) => (
-          <button
-            key={team.id}
-            type="button"
-            onClick={() => onPick(team.name)}
-            className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-bold text-black/65"
-          >
-            {team.name}
-          </button>
-        ))}
-    </div>
+    <AdminSelect label={label} value={value} onChange={onChange} required>
+      <option value="">Select team</option>
+      {activeTeams.map((team) => (
+        <option key={team.id} value={team.name}>
+          {team.name}
+        </option>
+      ))}
+    </AdminSelect>
   );
 }
 

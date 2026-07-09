@@ -118,6 +118,9 @@ function validateMatchPayload(payload: MatchPayload) {
   if (!payload.week_label?.trim()) return "Week label is required.";
   if (!payload.team_a_name?.trim()) return "Team A name is required.";
   if (!payload.team_b_name?.trim()) return "Team B name is required.";
+  if (payload.team_a_name.trim() === payload.team_b_name.trim()) {
+    return "Choose two different teams.";
+  }
 
   return null;
 }
