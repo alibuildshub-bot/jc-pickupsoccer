@@ -420,8 +420,8 @@ function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
   const standings = new Map<string, TeamStanding>();
 
   for (const team of teams) {
-    standings.set(team.name, {
-      name: team.name,
+    standings.set(normalizeTeamName(team.name), {
+      name: cleanTeamName(team.name),
       color: team.color || "#1f7a4d",
       played: 0,
       wins: 0,
@@ -476,9 +476,11 @@ function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
 }
 
 function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
-  if (!standings.has(name)) {
-    standings.set(name, {
-      name,
+  const key = normalizeTeamName(name);
+
+  if (!standings.has(key)) {
+    standings.set(key, {
+      name: cleanTeamName(name),
       color: "#1f7a4d",
       played: 0,
       wins: 0,
@@ -491,7 +493,15 @@ function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
     });
   }
 
-  return standings.get(name)!;
+  return standings.get(key)!;
+}
+
+function normalizeTeamName(name: string) {
+  return cleanTeamName(name).toLowerCase();
+}
+
+function cleanTeamName(name: string) {
+  return name.trim().replace(/\s+/g, " ");
 }
 
 function getMatchMvp(
