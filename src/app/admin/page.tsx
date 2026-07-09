@@ -64,6 +64,17 @@ type RosterRow = {
   players: { name: string } | null;
 };
 
+type AuthInfo = {
+  allowed: boolean;
+  method: string;
+  email: string | null;
+  hasToken: boolean;
+  tokenValid: boolean;
+  adminEmailConfigured: boolean;
+  serverConfigured: boolean;
+  reason: string;
+};
+
 const emptyPlayer = {
   name: "",
   nickname: "",
@@ -117,6 +128,7 @@ export default function AdminPage() {
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editingStatId, setEditingStatId] = useState<string | null>(null);
+  const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -131,6 +143,14 @@ export default function AdminPage() {
     setMessage("");
 
     try {
+      const authResponse = await adminFetch("/api/admin/auth", { method: "GET" }, credential);
+      setAuthInfo(authResponse.auth);
+
+      if (!authResponse.auth.allowed) {
+        setMessage(authResponse.auth.reason || "You are not authorized to manage this site.");
+        return;
+      }
+
       const [playersResponse, matchesResponse, statsResponse, teamsResponse] = await Promise.all([
         adminFetch("/api/admin/players", { method: "GET" }, credential),
         adminFetch("/api/admin/matches", { method: "GET" }, credential),
@@ -237,6 +257,7 @@ export default function AdminPage() {
     setStats([]);
     setTeams([]);
     setRoster([]);
+    setAuthInfo(null);
     setMessage("");
   }
 
@@ -632,6 +653,30 @@ export default function AdminPage() {
         {message && (
           <div className="mb-6 rounded-lg border border-black/10 bg-white p-4 text-sm font-bold text-black/70">
             {message}
+          </div>
+        )}
+
+        {authInfo && (
+          <div className="mb-6 rounded-lg border border-black/10 bg-white p-4 text-sm text-black/70">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-black text-black">Admin auth check</p>
+                <p className="mt-1 font-semibold">{authInfo.reason}</p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-black ${
+                  authInfo.allowed ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                }`}
+              >
+                {authInfo.allowed ? "Allowed" : "Blocked"}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-2 text-xs font-bold sm:grid-cols-2 lg:grid-cols-4">
+              <p>Signed in as: {authInfo.email || session?.user.email || "No Google email detected"}</p>
+              <p>Login method: {authInfo.method}</p>
+              <p>ADMIN_EMAIL set: {authInfo.adminEmailConfigured ? "Yes" : "No"}</p>
+              <p>Secret key set: {authInfo.serverConfigured ? "Yes" : "No"}</p>
+            </div>
           </div>
         )}
 
