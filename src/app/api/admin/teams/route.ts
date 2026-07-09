@@ -109,6 +109,16 @@ export async function PATCH(request: Request) {
     return Response.json({ error: duplicateError }, { status: 400 });
   }
 
+  const { data: existingTeam, error: existingTeamError } = await supabase
+    .from("tournament_teams")
+    .select("id,name")
+    .eq("id", payload.id)
+    .single();
+
+  if (existingTeamError) {
+    return Response.json({ error: existingTeamError.message }, { status: 500 });
+  }
+
   const { data, error } = await supabase
     .from("tournament_teams")
     .update(teamPayloadToRow(payload))
@@ -118,6 +128,11 @@ export async function PATCH(request: Request) {
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  const syncError = await syncScheduledMatchTeamNames(existingTeam.name, data.name, supabase);
+  if (syncError) {
+    return Response.json({ error: syncError }, { status: 500 });
   }
 
   return Response.json({ team: data });
@@ -214,6 +229,29 @@ function teamPayloadToRow(payload: TeamPayload) {
     sort_order: Number(payload.sort_order || 0),
     is_active: payload.is_active ?? true,
   };
+}
+
+async function syncScheduledMatchTeamNames(
+  oldName: string,
+  newName: string,
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  if (normalizeTeamName(oldName) === normalizeTeamName(newName)) return null;
+
+  const [teamAResult, teamBResult] = await Promise.all([
+    supabase
+      .from("matches")
+      .update({ team_a_name: newName })
+      .eq("status", "scheduled")
+      .eq("team_a_name", oldName),
+    supabase
+      .from("matches")
+      .update({ team_b_name: newName })
+      .eq("status", "scheduled")
+      .eq("team_b_name", oldName),
+  ]);
+
+  return teamAResult.error?.message || teamBResult.error?.message || null;
 }
 
 function normalizeTeamName(name: string) {

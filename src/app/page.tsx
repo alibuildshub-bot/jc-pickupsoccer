@@ -451,8 +451,6 @@ function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
 
   for (const match of matches) {
     if (match.status !== "completed") {
-      ensureTeam(standings, match.team_a_name);
-      ensureTeam(standings, match.team_b_name);
       continue;
     }
 
