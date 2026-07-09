@@ -1,8 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
-const adminPassword = process.env.ADMIN_PASSWORD;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+const supabaseSecretKey = (
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  ""
+).trim();
+const adminPassword = process.env.ADMIN_PASSWORD?.trim();
 const adminEmails = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || "")
   .split(",")
   .map((email) => email.trim().toLowerCase())
@@ -46,7 +51,7 @@ export async function getAdminAuthInfo(request: Request) {
     };
   }
 
-  const supabase = createSupabaseAdminClient();
+  const supabase = createSupabaseAuthClient();
   if (!supabase) {
     return {
       allowed: false,
@@ -56,7 +61,7 @@ export async function getAdminAuthInfo(request: Request) {
       tokenValid: false,
       adminEmailConfigured: adminEmails.length > 0,
       serverConfigured: false,
-      reason: "SUPABASE_SECRET_KEY is not configured.",
+      reason: "Supabase auth key is not configured.",
     };
   }
 
@@ -96,6 +101,16 @@ export function createSupabaseAdminClient() {
   }
 
   return createClient(supabaseUrl, supabaseSecretKey);
+}
+
+function createSupabaseAuthClient() {
+  const authKey = supabasePublishableKey || supabaseSecretKey;
+
+  if (!supabaseUrl || !authKey) {
+    return null;
+  }
+
+  return createClient(supabaseUrl, authKey);
 }
 
 export function adminConfigError() {
