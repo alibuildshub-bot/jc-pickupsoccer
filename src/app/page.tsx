@@ -105,8 +105,8 @@ export default async function Home() {
             Track every weekly pickup game, player, goal, assist, and win.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-black/65">
-            A simple home base for JC Pickup Soccer: weekly results, temporary teams,
-            player profiles, and leaderboards that update as the season goes.
+            Follow each week&apos;s matchups, scores, and player stats as the group
+            competes through the season.
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <a
