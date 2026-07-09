@@ -355,6 +355,7 @@ async function getDashboardData() {
     ? matches.filter((match) => match.match_date === tournamentDate)
     : [];
   const teamStandings = buildTeamStandings(teams, tournamentMatches);
+  const teamDisplayNames = buildTeamDisplayNames(teams);
   const playerNames = new Map(players.map((player) => [player.id, player.name]));
   const statsByMatch = new Map<string, MatchPlayerRow[]>();
 
@@ -392,8 +393,8 @@ async function getDashboardData() {
   const recentMatches = matches.slice(0, 5).map((match) => ({
     week: match.week_label,
     date: formatDate(match.match_date),
-    teamA: match.team_a_name,
-    teamB: match.team_b_name,
+    teamA: getTeamDisplayName(match.team_a_name, teamDisplayNames),
+    teamB: getTeamDisplayName(match.team_b_name, teamDisplayNames),
     score: match.status === "completed" ? `${match.team_a_score} - ${match.team_b_score}` : "Not started",
     mvp: getMatchMvp(match, statsByMatch.get(match.id) || [], playerNames),
   }));
@@ -420,17 +421,26 @@ function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
   const standings = new Map<string, TeamStanding>();
 
   for (const team of teams) {
-    standings.set(normalizeTeamName(team.name), {
-      name: cleanTeamName(team.name),
+    const key = normalizeTeamName(team.name);
+    const existing = standings.get(key);
+    const nextName = cleanTeamName(team.name);
+
+    if (existing && prefersExistingTeamName(existing.name, nextName)) {
+      continue;
+    }
+
+    standings.set(key, {
+      ...existing,
+      name: nextName,
       color: team.color || "#1f7a4d",
-      played: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-      goalDiff: 0,
-      points: 0,
+      played: existing?.played || 0,
+      wins: existing?.wins || 0,
+      draws: existing?.draws || 0,
+      losses: existing?.losses || 0,
+      goalsFor: existing?.goalsFor || 0,
+      goalsAgainst: existing?.goalsAgainst || 0,
+      goalDiff: existing?.goalDiff || 0,
+      points: existing?.points || 0,
     });
   }
 
@@ -497,11 +507,35 @@ function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
 }
 
 function normalizeTeamName(name: string) {
-  return cleanTeamName(name).toLowerCase();
+  return cleanTeamName(name).replace(/^team\s+/i, "").toLowerCase();
 }
 
 function cleanTeamName(name: string) {
   return name.trim().replace(/\s+/g, " ");
+}
+
+function buildTeamDisplayNames(teams: TeamRow[]) {
+  const displayNames = new Map<string, string>();
+
+  for (const team of teams) {
+    const key = normalizeTeamName(team.name);
+    const nextName = cleanTeamName(team.name);
+    const existingName = displayNames.get(key);
+
+    if (!existingName || !prefersExistingTeamName(existingName, nextName)) {
+      displayNames.set(key, nextName);
+    }
+  }
+
+  return displayNames;
+}
+
+function getTeamDisplayName(name: string, displayNames: Map<string, string>) {
+  return displayNames.get(normalizeTeamName(name)) || cleanTeamName(name);
+}
+
+function prefersExistingTeamName(existingName: string, nextName: string) {
+  return existingName.toLowerCase().startsWith("team ") || !nextName.toLowerCase().startsWith("team ");
 }
 
 function getMatchMvp(
