@@ -64,6 +64,19 @@ type TeamStanding = {
   points: number;
 };
 
+type RosterRow = {
+  id: string;
+  team_id: string;
+  player_id: string;
+  players: { name: string } | { name: string }[] | null;
+};
+
+type TeamRoster = {
+  name: string;
+  color: string;
+  players: string[];
+};
+
 const fallbackMatches = [
   {
     week: "Week 1",
@@ -101,6 +114,7 @@ export default async function Home() {
           </div>
           <div className="hidden items-center gap-6 text-sm font-semibold text-black/65 md:flex">
             <a href="#progress" className="hover:text-black">Progress</a>
+            <a href="#teams" className="hover:text-black">Teams</a>
             <a href="#matches" className="hover:text-black">Matches</a>
             <a href="#leaderboard" className="hover:text-black">Leaderboard</a>
           </div>
@@ -228,6 +242,45 @@ export default async function Home() {
         </div>
       </section>
 
+      <section id="teams" className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold text-black/50">Rosters</p>
+            <h2 className="text-2xl font-black">Teams & Players</h2>
+          </div>
+          <Users className="hidden text-[#1f7a4d] sm:block" size={26} />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {data.teamRosters.map((team) => (
+            <article key={team.name} className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: team.color }} />
+                  <h3 className="text-lg font-black">{team.name}</h3>
+                </div>
+                <p className="text-sm font-black text-black/45">{team.players.length}/5</p>
+              </div>
+              {team.players.length > 0 ? (
+                <div className="grid gap-2">
+                  {team.players.map((player, index) => (
+                    <div key={`${team.name}-${player}`} className="flex items-center gap-3 rounded-lg bg-[#fbfaf7] px-3 py-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm font-bold">{player}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold text-black/50">
+                  Roster coming soon.
+                </p>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="mx-auto grid max-w-7xl gap-6 px-4 pb-12 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
         <div id="matches" className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
@@ -329,13 +382,14 @@ async function getDashboardData() {
       players: [],
       recentMatches: fallbackMatches,
       teamStandings: fallbackStandings(),
+      teamRosters: fallbackRosters(),
       tournamentLabel: "Tournament Day",
       tournamentGames: 0,
       completedTournamentGames: 0,
     };
   }
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: teamRows }] = await Promise.all([
+  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: teamRows }, { data: rosterRows }] = await Promise.all([
     supabase.from("players").select("id,name,position").eq("is_active", true).order("name"),
     supabase
       .from("matches")
@@ -349,12 +403,18 @@ async function getDashboardData() {
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true }),
+    supabase
+      .from("tournament_team_players")
+      .select("id,team_id,player_id,players(name)")
+      .order("created_at", { ascending: true }),
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
   const matches = dedupeMatches((matchRows || []) as MatchRow[]);
   const matchStats = (statRows || []) as MatchPlayerRow[];
-  const teams = dedupeTeams((teamRows || []) as TeamRow[]);
+  const rawTeams = (teamRows || []) as TeamRow[];
+  const teams = dedupeTeams(rawTeams);
+  const teamRosters = buildTeamRosters(teams, rawTeams, (rosterRows || []) as unknown as RosterRow[]);
   const tournamentDate = matches[0]?.match_date || "";
   const tournamentMatches = tournamentDate
     ? matches.filter((match) => match.match_date === tournamentDate)
@@ -416,6 +476,7 @@ async function getDashboardData() {
     players: activeLeaderboard,
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
     teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
+    teamRosters: teamRosters.length > 0 ? teamRosters : fallbackRosters(),
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
     tournamentGames: tournamentMatches.length,
     completedTournamentGames: tournamentMatches.filter((match) => match.status === "completed").length,
@@ -547,6 +608,42 @@ function dedupeMatches(matches: MatchRow[]) {
   return Array.from(matchesByKey.values());
 }
 
+function buildTeamRosters(teams: TeamRow[], rawTeams: TeamRow[], rosterRows: RosterRow[]) {
+  const rawTeamKeys = new Map(rawTeams.map((team) => [team.id, normalizeTeamName(team.name)]));
+  const rostersByTeam = new Map<string, TeamRoster>();
+
+  for (const team of teams) {
+    rostersByTeam.set(normalizeTeamName(team.name), {
+      name: cleanTeamName(team.name),
+      color: team.color || "#1f7a4d",
+      players: [],
+    });
+  }
+
+  for (const row of rosterRows) {
+    const teamKey = rawTeamKeys.get(row.team_id);
+    const playerName = getRosterPlayerName(row.players);
+
+    if (!teamKey || !playerName) continue;
+
+    const roster = rostersByTeam.get(teamKey);
+    if (!roster || roster.players.includes(playerName)) continue;
+
+    roster.players.push(playerName);
+  }
+
+  return Array.from(rostersByTeam.values()).map((team) => ({
+    ...team,
+    players: team.players.sort((a, b) => a.localeCompare(b)),
+  }));
+}
+
+function getRosterPlayerName(players: RosterRow["players"]) {
+  if (!players) return "";
+
+  return (Array.isArray(players) ? players[0]?.name : players.name)?.trim() || "";
+}
+
 function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
   const key = normalizeTeamName(name);
 
@@ -649,6 +746,14 @@ function fallbackStandings() {
     goalsAgainst: 0,
     goalDiff: 0,
     points: 0,
+  }));
+}
+
+function fallbackRosters() {
+  return fallbackStandings().map((team) => ({
+    name: team.name,
+    color: team.color,
+    players: [],
   }));
 }
 
