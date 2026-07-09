@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import {
   CalendarDays,
+  Copy,
   Edit3,
   LogIn,
   Loader2,
@@ -13,6 +14,7 @@ import {
   Target,
   Trash2,
   Users,
+  Vote,
 } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
@@ -75,6 +77,20 @@ type AuthInfo = {
   reason: string;
 };
 
+type MvpPoll = {
+  id: string;
+  token: string;
+  title: string;
+  match_date: string | null;
+  status: string;
+  totalVotes: number;
+  options: Array<{
+    id: string;
+    label: string;
+    votes: number;
+  }>;
+};
+
 const emptyPlayer = {
   name: "",
   nickname: "",
@@ -119,6 +135,8 @@ export default function AdminPage() {
   const [stats, setStats] = useState<PlayerStat[]>([]);
   const [teams, setTeams] = useState<TournamentTeam[]>([]);
   const [roster, setRoster] = useState<RosterRow[]>([]);
+  const [polls, setPolls] = useState<MvpPoll[]>([]);
+  const [pollSetupNeeded, setPollSetupNeeded] = useState(false);
   const [playerForm, setPlayerForm] = useState(emptyPlayer);
   const [matchForm, setMatchForm] = useState(emptyMatch);
   const [teamForm, setTeamForm] = useState(emptyTeam);
@@ -151,11 +169,12 @@ export default function AdminPage() {
         return;
       }
 
-      const [playersResponse, matchesResponse, statsResponse, teamsResponse] = await Promise.all([
+      const [playersResponse, matchesResponse, statsResponse, teamsResponse, pollsResponse] = await Promise.all([
         adminFetch("/api/admin/players", { method: "GET" }, credential),
         adminFetch("/api/admin/matches", { method: "GET" }, credential),
         adminFetch("/api/admin/stats", { method: "GET" }, credential),
         adminFetch("/api/admin/teams", { method: "GET" }, credential),
+        adminFetch("/api/admin/polls", { method: "GET" }, credential),
       ]);
 
       setPlayers(playersResponse.players || []);
@@ -163,6 +182,8 @@ export default function AdminPage() {
       setStats(statsResponse.stats || []);
       setTeams(teamsResponse.teams || []);
       setRoster(teamsResponse.roster || []);
+      setPolls(pollsResponse.polls || []);
+      setPollSetupNeeded(Boolean(pollsResponse.setupNeeded));
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -257,8 +278,46 @@ export default function AdminPage() {
     setStats([]);
     setTeams([]);
     setRoster([]);
+    setPolls([]);
+    setPollSetupNeeded(false);
     setAuthInfo(null);
     setMessage("");
+  }
+
+  async function createMvpPoll() {
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const latestCompletedMatch = matches.find((match) => match.status === "completed");
+      const response = await adminFetch(
+        "/api/admin/polls",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            title: latestCompletedMatch
+              ? `JC Footy MVP Vote - ${latestCompletedMatch.week_label}`
+              : "JC Footy MVP Vote",
+            match_date: latestCompletedMatch?.match_date,
+          }),
+        },
+        adminCredential,
+      );
+
+      const pollUrl = getPollUrl(response.poll.token);
+      await copyText(pollUrl);
+      setMessage("MVP poll created and link copied.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copyPollLink(token: string) {
+    await copyText(getPollUrl(token));
+    setMessage("Poll link copied.");
   }
 
   async function savePlayer(event: FormEvent<HTMLFormElement>) {
@@ -679,6 +738,68 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-bold text-black/50">After the Tournament</p>
+              <h1 className="text-2xl font-black">MVP Poll</h1>
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
+                Create a link after all games are finished, then send it to the group chat for voting.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={createMvpPoll}
+              disabled={loading || activePlayers.length < 2}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white transition hover:bg-[#17613d] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Vote size={16} />
+              Create MVP Poll
+            </button>
+          </div>
+
+          {pollSetupNeeded ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+              MVP poll tables are not set up yet. Run the SQL file named supabase-mvp-polls.sql in Supabase first.
+            </div>
+          ) : polls.length === 0 ? (
+            <div className="rounded-lg border border-black/10 bg-[#f7f3ec] p-4 text-sm font-bold text-black/50">
+              No MVP polls yet.
+            </div>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {polls.map((poll) => (
+                <article key={poll.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="font-black">{poll.title}</h2>
+                      <p className="mt-1 text-sm font-semibold text-black/50">
+                        {poll.totalVotes} votes | {poll.status}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyPollLink(poll.token)}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-black/10 bg-white px-3 text-xs font-black text-black/70 hover:bg-black/5"
+                    >
+                      <Copy size={14} />
+                      Copy Link
+                    </button>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {poll.options.map((option) => (
+                      <div key={option.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2">
+                        <span className="text-sm font-bold">{option.label}</span>
+                        <span className="text-sm font-black">{option.votes}</span>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
@@ -1217,6 +1338,18 @@ function getStoredPassword() {
   if (typeof window === "undefined") return "";
 
   return window.localStorage.getItem("jc-admin-password") || "";
+}
+
+function getPollUrl(token: string) {
+  if (typeof window === "undefined") return `/poll/${token}`;
+
+  return `${window.location.origin}/poll/${token}`;
+}
+
+async function copyText(value: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    await navigator.clipboard.writeText(value);
+  }
 }
 
 function AdminMetric({
