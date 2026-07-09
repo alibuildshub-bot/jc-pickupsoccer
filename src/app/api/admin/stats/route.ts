@@ -16,7 +16,7 @@ type StatPayload = {
 };
 
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return unauthorizedError();
+  if (!(await isAdminRequest(request))) return unauthorizedError();
 
   const supabase = createSupabaseAdminClient();
   if (!supabase) return adminConfigError();
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) return unauthorizedError();
+  if (!(await isAdminRequest(request))) return unauthorizedError();
 
   const supabase = createSupabaseAdminClient();
   if (!supabase) return adminConfigError();
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (!isAdminRequest(request)) return unauthorizedError();
+  if (!(await isAdminRequest(request))) return unauthorizedError();
 
   const supabase = createSupabaseAdminClient();
   if (!supabase) return adminConfigError();
@@ -90,7 +90,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!isAdminRequest(request)) return unauthorizedError();
+  if (!(await isAdminRequest(request))) return unauthorizedError();
 
   const supabase = createSupabaseAdminClient();
   if (!supabase) return adminConfigError();

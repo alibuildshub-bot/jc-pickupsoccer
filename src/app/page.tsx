@@ -1,7 +1,6 @@
 import {
   CalendarDays,
   Medal,
-  Plus,
   Target,
   Trophy,
   Users,
@@ -43,13 +42,13 @@ type LeaderboardPlayer = {
 };
 
 const fallbackPlayers: LeaderboardPlayer[] = [
-  { name: "Add players in Supabase", games: 0, wins: 0, goals: 0, assists: 0, points: 0 },
+  { name: "Add players", games: 0, wins: 0, goals: 0, assists: 0, points: 0 },
 ];
 
 const fallbackMatches = [
   {
     week: "Week 1",
-    date: "Add a match in Supabase",
+    date: "Schedule a match",
     teamA: "Team A",
     teamB: "Team B",
     score: "0 - 0",
@@ -84,15 +83,7 @@ export default async function Home() {
           <div className="hidden items-center gap-6 text-sm font-semibold text-black/65 md:flex">
             <a href="#matches" className="hover:text-black">Matches</a>
             <a href="#leaderboard" className="hover:text-black">Leaderboard</a>
-            <a href="/admin" className="hover:text-black">Admin</a>
           </div>
-          <a
-            href="/admin"
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-bold text-white transition hover:bg-[#17613d]"
-          >
-            <Plus size={16} />
-            Add Match
-          </a>
         </div>
       </nav>
 
@@ -148,7 +139,7 @@ export default async function Home() {
           <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
             <MiniStat label="MVP" value={latestMatch.mvp} />
             <MiniStat label="Date" value={latestMatch.date} />
-            <MiniStat label="Source" value={data.isConnected ? "Supabase" : "Setup needed"} />
+            <MiniStat label="Status" value={data.isConnected ? "Live standings" : "Coming soon"} />
           </div>
         </div>
       </section>

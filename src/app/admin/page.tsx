@@ -2,9 +2,11 @@
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import type { Session } from "@supabase/supabase-js";
 import {
   CalendarDays,
   Edit3,
+  LogIn,
   Loader2,
   Lock,
   Plus,
@@ -13,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
+import { createSupabaseClient } from "@/lib/supabase";
 
 type Player = {
   id: string;
@@ -76,6 +79,8 @@ const emptyStat = {
 export default function AdminPage() {
   const [password, setPassword] = useState(getStoredPassword);
   const [savedPassword, setSavedPassword] = useState(getStoredPassword);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [stats, setStats] = useState<PlayerStat[]>([]);
@@ -88,20 +93,21 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const isUnlocked = Boolean(savedPassword);
+  const adminCredential = session?.access_token || savedPassword;
+  const isUnlocked = Boolean(adminCredential);
   const activePlayers = useMemo(() => players.filter((player) => player.is_active), [players]);
 
-  const loadData = useCallback(async (adminPassword = savedPassword) => {
-    if (!adminPassword) return;
+  const loadData = useCallback(async (credential = adminCredential) => {
+    if (!credential) return;
 
     setLoading(true);
     setMessage("");
 
     try {
       const [playersResponse, matchesResponse, statsResponse] = await Promise.all([
-        adminFetch("/api/admin/players", { method: "GET" }, adminPassword),
-        adminFetch("/api/admin/matches", { method: "GET" }, adminPassword),
-        adminFetch("/api/admin/stats", { method: "GET" }, adminPassword),
+        adminFetch("/api/admin/players", { method: "GET" }, credential),
+        adminFetch("/api/admin/matches", { method: "GET" }, credential),
+        adminFetch("/api/admin/stats", { method: "GET" }, credential),
       ]);
 
       setPlayers(playersResponse.players || []);
@@ -112,15 +118,40 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [savedPassword]);
+  }, [adminCredential]);
 
   useEffect(() => {
-    if (savedPassword) {
-      const timeoutId = window.setTimeout(() => loadData(savedPassword), 0);
+    const supabase = createSupabaseClient();
+    if (!supabase) {
+      const timeoutId = window.setTimeout(() => setAuthLoading(false), 0);
 
       return () => window.clearTimeout(timeoutId);
     }
-  }, [loadData, savedPassword]);
+
+    const timeoutId = window.setTimeout(async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setAuthLoading(false);
+    }, 0);
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (adminCredential) {
+      const timeoutId = window.setTimeout(() => loadData(adminCredential), 0);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+  }, [adminCredential, loadData]);
 
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -136,10 +167,41 @@ export default function AdminPage() {
     await loadData(trimmed);
   }
 
+  async function signInWithGoogle() {
+    const supabase = createSupabaseClient();
+
+    if (!supabase) {
+      setMessage("Supabase login is not configured.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/admin`,
+      },
+    });
+
+    if (error) {
+      setMessage(error.message);
+    }
+  }
+
+  async function signOut() {
+    const supabase = createSupabaseClient();
+
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+
+    lockDashboard();
+  }
+
   function lockDashboard() {
     window.localStorage.removeItem("jc-admin-password");
     setSavedPassword("");
     setPassword("");
+    setSession(null);
     setPlayers([]);
     setMatches([]);
     setStats([]);
@@ -163,7 +225,7 @@ export default function AdminPage() {
           method: editingPlayerId ? "PATCH" : "POST",
           body: JSON.stringify(payload),
         },
-        savedPassword,
+        adminCredential,
       );
 
       setPlayerForm(emptyPlayer);
@@ -184,7 +246,7 @@ export default function AdminPage() {
     setMessage("");
 
     try {
-      await adminFetch(`/api/admin/players?id=${playerId}`, { method: "DELETE" }, savedPassword);
+      await adminFetch(`/api/admin/players?id=${playerId}`, { method: "DELETE" }, adminCredential);
       setMessage("Player removed.");
       await loadData();
     } catch (error) {
@@ -221,7 +283,7 @@ export default function AdminPage() {
           method: editingMatchId ? "PATCH" : "POST",
           body: JSON.stringify(payload),
         },
-        savedPassword,
+        adminCredential,
       );
 
       setMatchForm(emptyMatch);
@@ -242,7 +304,7 @@ export default function AdminPage() {
     setMessage("");
 
     try {
-      await adminFetch(`/api/admin/matches?id=${matchId}`, { method: "DELETE" }, savedPassword);
+      await adminFetch(`/api/admin/matches?id=${matchId}`, { method: "DELETE" }, adminCredential);
       setMessage("Match removed.");
       await loadData();
     } catch (error) {
@@ -283,7 +345,7 @@ export default function AdminPage() {
           method: editingStatId ? "PATCH" : "POST",
           body: JSON.stringify(payload),
         },
-        savedPassword,
+        adminCredential,
       );
 
       setStatForm(emptyStat);
@@ -304,7 +366,7 @@ export default function AdminPage() {
     setMessage("");
 
     try {
-      await adminFetch(`/api/admin/stats?id=${statId}`, { method: "DELETE" }, savedPassword);
+      await adminFetch(`/api/admin/stats?id=${statId}`, { method: "DELETE" }, adminCredential);
       setMessage("Player stat removed.");
       await loadData();
     } catch (error) {
@@ -350,8 +412,19 @@ export default function AdminPage() {
             </div>
             <h1 className="text-3xl font-black">Admin Dashboard</h1>
             <p className="mt-2 text-sm leading-6 text-black/60">
-              Enter your admin password to manage players, matches, team names, and scores.
+              Sign in with your approved Google account to manage players, matches, team names, and scores.
             </p>
+            <button
+              type="button"
+              onClick={signInWithGoogle}
+              disabled={authLoading}
+              className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] text-sm font-black text-white transition hover:bg-[#17613d] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {authLoading ? <Loader2 className="animate-spin" size={18} /> : <LogIn size={18} />}
+              Continue with Google
+            </button>
+            <div className="my-5 h-px bg-black/10" />
+            <p className="text-xs font-bold uppercase tracking-wide text-black/40">Password fallback</p>
             <label className="mt-6 block text-sm font-bold text-black/60" htmlFor="password">
               Admin password
             </label>
@@ -363,7 +436,7 @@ export default function AdminPage() {
               className="mt-2 h-12 w-full rounded-lg border border-black/15 px-4 text-base outline-none focus:border-[#1f7a4d]"
             />
             {message && <p className="mt-4 text-sm font-semibold text-red-700">{message}</p>}
-            <button className="mt-6 h-12 w-full rounded-lg bg-[#1f7a4d] text-sm font-black text-white transition hover:bg-[#17613d]">
+            <button className="mt-6 h-12 w-full rounded-lg border border-black/15 bg-white text-sm font-black text-black transition hover:bg-black/5">
               Open Dashboard
             </button>
           </form>
@@ -391,7 +464,7 @@ export default function AdminPage() {
               Refresh
             </button>
             <button
-              onClick={lockDashboard}
+              onClick={signOut}
               className="h-10 rounded-lg bg-[#171717] px-4 text-sm font-bold text-white"
             >
               Lock
@@ -765,12 +838,13 @@ export default function AdminPage() {
   }
 }
 
-async function adminFetch(path: string, options: RequestInit, password: string) {
+async function adminFetch(path: string, options: RequestInit, credential: string) {
   const response = await fetch(path, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      "x-admin-password": password,
+      authorization: `Bearer ${credential}`,
+      "x-admin-password": credential,
       ...(options.headers || {}),
     },
   });
