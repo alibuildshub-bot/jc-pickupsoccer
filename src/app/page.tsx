@@ -23,6 +23,7 @@ type MatchRow = {
   team_b_name: string;
   team_a_score: number;
   team_b_score: number;
+  status: string;
 };
 
 type MatchPlayerRow = {
@@ -38,6 +39,27 @@ type LeaderboardPlayer = {
   wins: number;
   goals: number;
   assists: number;
+  points: number;
+};
+
+type TeamRow = {
+  id: string;
+  name: string;
+  color: string | null;
+  sort_order: number;
+  is_active: boolean;
+};
+
+type TeamStanding = {
+  name: string;
+  color: string;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDiff: number;
   points: number;
 };
 
@@ -64,9 +86,9 @@ export default async function Home() {
 
   const statCards = [
     { label: "Active Players", value: String(data.activePlayers), icon: Users },
+    { label: "Teams", value: String(data.activeTeams), icon: Users },
     { label: "Games Played", value: String(data.gamesPlayed), icon: CalendarDays },
     { label: "Goals Tracked", value: String(data.goalsTracked), icon: Target },
-    { label: "Top Player", value: data.topPlayer, icon: Trophy },
   ];
 
   return (
@@ -81,6 +103,7 @@ export default async function Home() {
             </div>
           </div>
           <div className="hidden items-center gap-6 text-sm font-semibold text-black/65 md:flex">
+            <a href="#progress" className="hover:text-black">Progress</a>
             <a href="#matches" className="hover:text-black">Matches</a>
             <a href="#leaderboard" className="hover:text-black">Leaderboard</a>
           </div>
@@ -90,10 +113,10 @@ export default async function Home() {
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-12">
         <div className="flex flex-col justify-center">
           <p className="mb-4 inline-flex w-fit rounded-lg bg-[#dff0e7] px-3 py-2 text-sm font-extrabold text-[#17613d]">
-            Rotating teams. Permanent bragging rights.
+            3 teams. 5 players each. One tournament day.
           </p>
           <h1 className="max-w-4xl text-4xl font-black leading-tight tracking-normal sm:text-5xl lg:text-6xl">
-            Track every weekly pickup game, player, goal, assist, and win.
+            Track every game, score, table, goal, and assist.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-black/65">
             Follow each week&apos;s matchups, scores, and player stats as the group
@@ -152,6 +175,60 @@ export default async function Home() {
             <p className="mt-1 text-sm font-semibold text-black/55">{item.label}</p>
           </div>
         ))}
+      </section>
+
+      <section id="progress" className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold text-black/50">Tournament Progress</p>
+              <h2 className="text-2xl font-black">{data.tournamentLabel}</h2>
+            </div>
+            <p className="text-sm font-bold text-black/50">
+              {data.completedTournamentGames} completed / {data.tournamentGames} games
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
+                  <th className="py-3">Team</th>
+                  <th className="py-3 text-center">P</th>
+                  <th className="py-3 text-center">W</th>
+                  <th className="py-3 text-center">D</th>
+                  <th className="py-3 text-center">L</th>
+                  <th className="py-3 text-center">GF</th>
+                  <th className="py-3 text-center">GA</th>
+                  <th className="py-3 text-center">GD</th>
+                  <th className="py-3 text-center">PTS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.teamStandings.map((team, index) => (
+                  <tr key={team.name} className="border-b border-black/10 last:border-0">
+                    <td className="py-4">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                          {index + 1}
+                        </span>
+                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: team.color }} />
+                        <span className="font-black">{team.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 text-center font-bold">{team.played}</td>
+                    <td className="py-4 text-center font-bold">{team.wins}</td>
+                    <td className="py-4 text-center font-bold">{team.draws}</td>
+                    <td className="py-4 text-center font-bold">{team.losses}</td>
+                    <td className="py-4 text-center font-bold">{team.goalsFor}</td>
+                    <td className="py-4 text-center font-bold">{team.goalsAgainst}</td>
+                    <td className="py-4 text-center font-bold">{team.goalDiff}</td>
+                    <td className="py-4 text-center font-black">{team.points}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-6 px-4 pb-12 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
@@ -239,27 +316,44 @@ async function getDashboardData() {
     return {
       isConnected: false,
       activePlayers: 0,
+      activeTeams: 0,
       gamesPlayed: 0,
       goalsTracked: 0,
       topPlayer: "Setup",
       players: fallbackPlayers,
       recentMatches: fallbackMatches,
+      teamStandings: fallbackStandings(),
+      tournamentLabel: "Tournament Day",
+      tournamentGames: 0,
+      completedTournamentGames: 0,
     };
   }
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }] = await Promise.all([
+  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: teamRows }] = await Promise.all([
     supabase.from("players").select("id,name,position").eq("is_active", true).order("name"),
     supabase
       .from("matches")
-      .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score")
+      .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status")
       .order("match_date", { ascending: false })
-      .limit(5),
+      .limit(50),
     supabase.from("match_players").select("player_id,goals,assists,result"),
+    supabase
+      .from("tournament_teams")
+      .select("id,name,color,sort_order,is_active")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
   const matches = (matchRows || []) as MatchRow[];
   const matchStats = (statRows || []) as MatchPlayerRow[];
+  const teams = (teamRows || []) as TeamRow[];
+  const tournamentDate = matches[0]?.match_date || "";
+  const tournamentMatches = tournamentDate
+    ? matches.filter((match) => match.match_date === tournamentDate)
+    : [];
+  const teamStandings = buildTeamStandings(teams, tournamentMatches);
 
   const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name">>();
 
@@ -285,7 +379,7 @@ async function getDashboardData() {
     }))
     .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
 
-  const recentMatches = matches.map((match) => ({
+  const recentMatches = matches.slice(0, 5).map((match) => ({
     week: match.week_label,
     date: formatDate(match.match_date),
     teamA: match.team_a_name,
@@ -299,12 +393,110 @@ async function getDashboardData() {
   return {
     isConnected: true,
     activePlayers: players.length,
+    activeTeams: teams.length || teamStandings.length,
     gamesPlayed: matches.length,
     goalsTracked,
     topPlayer: leaderboard[0]?.name || "Coming soon",
     players: leaderboard.length > 0 ? leaderboard : fallbackPlayers,
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
+    teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
+    tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
+    tournamentGames: tournamentMatches.length,
+    completedTournamentGames: tournamentMatches.filter((match) => match.status === "completed").length,
   };
+}
+
+function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
+  const standings = new Map<string, TeamStanding>();
+
+  for (const team of teams) {
+    standings.set(team.name, {
+      name: team.name,
+      color: team.color || "#1f7a4d",
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      goalDiff: 0,
+      points: 0,
+    });
+  }
+
+  for (const match of matches) {
+    if (match.status !== "completed") {
+      ensureTeam(standings, match.team_a_name);
+      ensureTeam(standings, match.team_b_name);
+      continue;
+    }
+
+    const teamA = ensureTeam(standings, match.team_a_name);
+    const teamB = ensureTeam(standings, match.team_b_name);
+
+    teamA.played += 1;
+    teamB.played += 1;
+    teamA.goalsFor += match.team_a_score;
+    teamA.goalsAgainst += match.team_b_score;
+    teamB.goalsFor += match.team_b_score;
+    teamB.goalsAgainst += match.team_a_score;
+
+    if (match.team_a_score > match.team_b_score) {
+      teamA.wins += 1;
+      teamB.losses += 1;
+      teamA.points += 3;
+    } else if (match.team_b_score > match.team_a_score) {
+      teamB.wins += 1;
+      teamA.losses += 1;
+      teamB.points += 3;
+    } else {
+      teamA.draws += 1;
+      teamB.draws += 1;
+      teamA.points += 1;
+      teamB.points += 1;
+    }
+  }
+
+  return Array.from(standings.values())
+    .map((team) => ({
+      ...team,
+      goalDiff: team.goalsFor - team.goalsAgainst,
+    }))
+    .sort((a, b) => b.points - a.points || b.goalDiff - a.goalDiff || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name));
+}
+
+function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
+  if (!standings.has(name)) {
+    standings.set(name, {
+      name,
+      color: "#1f7a4d",
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      goalDiff: 0,
+      points: 0,
+    });
+  }
+
+  return standings.get(name)!;
+}
+
+function fallbackStandings() {
+  return ["Team A", "Team B", "Team C"].map((name) => ({
+    name,
+    color: "#1f7a4d",
+    played: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    goalsFor: 0,
+    goalsAgainst: 0,
+    goalDiff: 0,
+    points: 0,
+  }));
 }
 
 function formatDate(value: string) {
