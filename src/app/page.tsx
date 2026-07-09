@@ -352,9 +352,9 @@ async function getDashboardData() {
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
-  const matches = (matchRows || []) as MatchRow[];
+  const matches = dedupeMatches((matchRows || []) as MatchRow[]);
   const matchStats = (statRows || []) as MatchPlayerRow[];
-  const teams = (teamRows || []) as TeamRow[];
+  const teams = dedupeTeams((teamRows || []) as TeamRow[]);
   const tournamentDate = matches[0]?.match_date || "";
   const tournamentMatches = tournamentDate
     ? matches.filter((match) => match.match_date === tournamentDate)
@@ -409,7 +409,7 @@ async function getDashboardData() {
   return {
     isConnected: true,
     activePlayers: players.length,
-    activeTeams: teams.length || teamStandings.length,
+    activeTeams: teamStandings.length || teams.length,
     gamesPlayed: matches.filter((match) => match.status === "completed").length,
     goalsTracked,
     topPlayer: activeLeaderboard[0]?.name || "Coming soon",
@@ -488,6 +488,65 @@ function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
       goalDiff: team.goalsFor - team.goalsAgainst,
     }))
     .sort((a, b) => b.points - a.points || b.goalDiff - a.goalDiff || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name));
+}
+
+function dedupeTeams(teams: TeamRow[]) {
+  const teamsByName = new Map<string, TeamRow>();
+
+  for (const team of teams) {
+    const key = normalizeTeamName(team.name);
+    const existing = teamsByName.get(key);
+
+    if (!existing) {
+      teamsByName.set(key, {
+        ...team,
+        name: cleanTeamName(team.name),
+      });
+      continue;
+    }
+
+    const nextName = cleanTeamName(team.name);
+    const keepExistingName = prefersExistingTeamName(existing.name, nextName);
+
+    teamsByName.set(key, {
+      ...existing,
+      name: keepExistingName ? existing.name : nextName,
+      color: existing.color || team.color,
+      sort_order: Math.min(existing.sort_order, team.sort_order),
+    });
+  }
+
+  return Array.from(teamsByName.values()).sort(
+    (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name),
+  );
+}
+
+function dedupeMatches(matches: MatchRow[]) {
+  const matchesByKey = new Map<string, MatchRow>();
+
+  for (const match of matches) {
+    const key = [
+      match.match_date,
+      cleanTeamName(match.week_label).toLowerCase(),
+      normalizeTeamName(match.team_a_name),
+      normalizeTeamName(match.team_b_name),
+      match.team_a_score,
+      match.team_b_score,
+      match.status,
+    ].join("|");
+
+    if (!matchesByKey.has(key)) {
+      matchesByKey.set(key, {
+        ...match,
+        team_a_name: cleanTeamName(match.team_a_name),
+        team_b_name: cleanTeamName(match.team_b_name),
+        week_label: cleanTeamName(match.week_label),
+        location: match.location ? cleanTeamName(match.location) : null,
+      });
+    }
+  }
+
+  return Array.from(matchesByKey.values());
 }
 
 function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
