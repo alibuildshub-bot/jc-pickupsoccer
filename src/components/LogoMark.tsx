@@ -1,8 +1,8 @@
 import Image from "next/image";
 
 export default function LogoMark({ size = "md" }: { size?: "sm" | "md" }) {
-  const boxSize = size === "sm" ? "h-8 w-8" : "h-12 w-12";
-  const imageSize = size === "sm" ? 32 : 48;
+  const boxSize = size === "sm" ? "h-10 w-10" : "h-15 w-15";
+  const imageSize = size === "sm" ? 40 : 60;
 
   return (
     <Image
