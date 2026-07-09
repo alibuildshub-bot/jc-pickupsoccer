@@ -157,16 +157,16 @@ export default async function Home() {
             </div>
             <Medal className="text-[#b7791f]" size={32} />
           </div>
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-7 text-center">
-            <div>
-              <p className="text-3xl font-black">{latestMatch.teamA}</p>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 py-6 text-center sm:gap-4 sm:py-7">
+            <div className="min-w-0">
+              <p className="break-words text-xl font-black leading-tight sm:text-3xl">{latestMatch.teamA}</p>
               <p className="mt-2 text-sm font-semibold text-black/55">Team A</p>
             </div>
-            <div className="rounded-lg bg-[#171717] px-4 py-3 text-3xl font-black text-white">
+            <div className="rounded-lg bg-[#171717] px-3 py-2 text-xl font-black text-white sm:px-4 sm:py-3 sm:text-3xl">
               {latestMatch.score}
             </div>
-            <div>
-              <p className="text-3xl font-black">{latestMatch.teamB}</p>
+            <div className="min-w-0">
+              <p className="break-words text-xl font-black leading-tight sm:text-3xl">{latestMatch.teamB}</p>
               <p className="mt-2 text-sm font-semibold text-black/55">Team B</p>
             </div>
           </div>
@@ -199,7 +199,39 @@ export default async function Home() {
               {data.completedTournamentGames} completed / {data.tournamentGames} games
             </p>
           </div>
-          <div className="overflow-x-auto">
+          <div className="grid gap-3 md:hidden">
+            {data.teamStandings.map((team, index) => (
+              <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
+                        <h3 className="break-words font-black leading-tight">{team.name}</h3>
+                      </div>
+                      <p className="mt-1 text-xs font-bold text-black/45">
+                        {team.wins}W {team.draws}D {team.losses}L
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black">{team.points}</p>
+                    <p className="text-xs font-black uppercase text-black/40">PTS</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  <MiniStat label="P" value={String(team.played)} />
+                  <MiniStat label="GF" value={String(team.goalsFor)} />
+                  <MiniStat label="GA" value={String(team.goalsAgainst)} />
+                  <MiniStat label="GD" value={String(team.goalDiff)} />
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[720px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
@@ -253,13 +285,13 @@ export default async function Home() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.teamRosters.map((team) => (
             <article key={team.name} className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
-                <div className="flex items-center gap-3">
-                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: team.color }} />
-                  <h3 className="text-lg font-black">{team.name}</h3>
-                </div>
-                <p className="text-sm font-black text-black/45">{team.players.length}/5</p>
-              </div>
+	              <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
+	                <div className="flex min-w-0 items-center gap-3">
+	                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
+	                  <h3 className="break-words text-lg font-black leading-tight">{team.name}</h3>
+	                </div>
+	                <p className="shrink-0 text-sm font-black text-black/45">{team.players.length}/5</p>
+	              </div>
               {team.players.length > 0 ? (
                 <div className="grid gap-2">
                   {team.players.map((player, index) => (
@@ -267,7 +299,7 @@ export default async function Home() {
                       <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
                         {index + 1}
                       </span>
-                      <span className="text-sm font-bold">{player}</span>
+	                      <span className="min-w-0 break-words text-sm font-bold">{player}</span>
                     </div>
                   ))}
                 </div>
@@ -291,19 +323,19 @@ export default async function Home() {
             <CalendarDays className="text-[#1f7a4d]" size={26} />
           </div>
           <div className="space-y-3">
-            {data.recentMatches.map((match) => (
+                  {data.recentMatches.map((match) => (
               <article key={`${match.week}-${match.date}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold text-black/50">{match.date}</p>
                     <h3 className="mt-1 text-lg font-black">{match.week}</h3>
                   </div>
-                  <p className="rounded-lg bg-[#171717] px-3 py-2 text-lg font-black text-white">{match.score}</p>
+                  <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-base font-black text-white sm:text-lg">{match.score}</p>
                 </div>
-                <div className="mt-4 flex items-center justify-between gap-3 text-sm font-bold">
-                  <span>{match.teamA}</span>
+                <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-sm font-bold">
+                  <span className="min-w-0 break-words">{match.teamA}</span>
                   <span className="text-black/35">vs</span>
-                  <span>{match.teamB}</span>
+                  <span className="min-w-0 break-words text-right">{match.teamB}</span>
                 </div>
                 <p className="mt-3 text-sm font-semibold text-black/55">MVP: {match.mvp}</p>
               </article>
@@ -320,7 +352,32 @@ export default async function Home() {
             <Trophy className="text-[#b7791f]" size={28} />
           </div>
           {data.players.length > 0 ? (
-            <div className="overflow-x-auto">
+            <>
+            <div className="grid gap-3 md:hidden">
+              {data.players.map((player, index) => (
+                <article key={player.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                        {index + 1}
+                      </span>
+                      <h3 className="min-w-0 break-words font-black leading-tight">{player.name}</h3>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-black">{player.points}</p>
+                      <p className="text-xs font-black uppercase text-black/40">PTS</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <MiniStat label="GP" value={String(player.games)} />
+                    <MiniStat label="W" value={String(player.wins)} />
+                    <MiniStat label="G" value={String(player.goals)} />
+                    <MiniStat label="A" value={String(player.assists)} />
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[640px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
@@ -353,6 +410,7 @@ export default async function Home() {
                 </tbody>
               </table>
             </div>
+            </>
           ) : (
             <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
               <p className="font-black">Leaderboard will appear after the first game.</p>
