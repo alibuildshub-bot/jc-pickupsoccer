@@ -25,6 +25,34 @@ create table if not exists public.mvp_votes (
   unique(poll_id, voter_key)
 );
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'mvp_votes_poll_id_voter_key_key'
+      and conrelid = 'public.mvp_votes'::regclass
+  ) then
+    delete from public.mvp_votes
+    where id in (
+      select id
+      from (
+        select
+          id,
+          row_number() over (
+            partition by poll_id, voter_key
+            order by created_at desc, id desc
+          ) as duplicate_rank
+        from public.mvp_votes
+      ) ranked_votes
+      where duplicate_rank > 1
+    );
+
+    alter table public.mvp_votes
+      add constraint mvp_votes_poll_id_voter_key_key unique (poll_id, voter_key);
+  end if;
+end $$;
+
 alter table public.mvp_polls enable row level security;
 alter table public.mvp_poll_options enable row level security;
 alter table public.mvp_votes enable row level security;

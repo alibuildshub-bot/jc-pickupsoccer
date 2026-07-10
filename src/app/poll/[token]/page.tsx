@@ -17,6 +17,7 @@ type Poll = {
   match_date: string | null;
   status: string;
   totalVotes: number;
+  currentOptionId: string | null;
   options: PollOption[];
 };
 
@@ -38,18 +39,21 @@ export default function MvpPollPage({ params }: { params: Promise<{ token: strin
     setMessage("");
 
     try {
-      const response = await fetch(`/api/polls/${nextToken}`, { cache: "no-store" });
+      const response = await fetch(`/api/polls/${nextToken}?voter_key=${encodeURIComponent(voterKey)}`, {
+        cache: "no-store",
+      });
       const data = await response.json();
 
       if (!response.ok) throw new Error(data.error || "Could not load poll.");
 
       setPoll(data.poll);
+      setSelectedOption(data.poll.currentOptionId || "");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not load poll.");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, voterKey]);
 
   useEffect(() => {
     params.then(({ token: nextToken }) => {
@@ -113,7 +117,9 @@ export default function MvpPollPage({ params }: { params: Promise<{ token: strin
                   <p className="text-sm font-bold text-black/50">Tournament MVP Poll</p>
                   <h1 className="mt-1 text-3xl font-black">{getTournamentPollTitle(poll)}</h1>
                   <p className="mt-2 text-sm font-semibold text-black/55">
-                    Vote for the best player across all games. {poll.totalVotes} votes so far.
+                    Vote once for the best player across all games. You can come back and change your vote.
+                    {" "}
+                    {poll.totalVotes} votes so far.
                   </p>
                 </div>
                 <Trophy className="shrink-0 text-[#b7791f]" size={32} />
@@ -149,6 +155,11 @@ export default function MvpPollPage({ params }: { params: Promise<{ token: strin
                           onChange={(event) => setSelectedOption(event.target.value)}
                         />
                         <span className="font-black">{option.label}</span>
+                        {poll.currentOptionId === option.id && (
+                          <span className="rounded-lg bg-[#dff0e7] px-2 py-1 text-xs font-black text-[#17613d]">
+                            Your vote
+                          </span>
+                        )}
                       </div>
                       <span className="text-sm font-bold text-black/50">{option.votes} votes</span>
                     </div>
@@ -164,7 +175,7 @@ export default function MvpPollPage({ params }: { params: Promise<{ token: strin
                 className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] text-sm font-black text-white transition hover:bg-[#17613d] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving && <Loader2 className="animate-spin" size={18} />}
-                Submit Tournament MVP Vote
+                {poll.currentOptionId ? "Update Tournament MVP Vote" : "Submit Tournament MVP Vote"}
               </button>
             </>
           ) : (
