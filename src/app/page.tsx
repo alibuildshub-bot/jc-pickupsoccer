@@ -518,7 +518,7 @@ async function getDashboardData() {
     .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
   const activeLeaderboard = leaderboard.filter((player) => player.games > 0);
 
-  const recentMatches = matches.slice(0, 5).map((match) => ({
+  const recentMatches = matches.map((match) => ({
     game: gameLabels.get(match.id) || "Game",
     week: match.week_label,
     date: formatDate(match.match_date),
