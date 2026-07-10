@@ -149,6 +149,8 @@ export default function AdminPage() {
     location: "",
   });
   const [quickScores, setQuickScores] = useState<Record<string, { team_a_score: string; team_b_score: string }>>({});
+  const [quickStatMatchId, setQuickStatMatchId] = useState("");
+  const [quickStatDrafts, setQuickStatDrafts] = useState<Record<string, { goals: string; assists: string }>>({});
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
@@ -168,6 +170,13 @@ export default function AdminPage() {
         .filter((match) => match.match_date === gameDayForm.date)
         .sort(sortMatchesByGameOrder),
     [gameDayForm.date, matches],
+  );
+  const quickStatSelectedMatchId = gameDayMatches.some((match) => match.id === quickStatMatchId)
+    ? quickStatMatchId
+    : gameDayMatches[0]?.id || "";
+  const quickStatMatch = useMemo(
+    () => gameDayMatches.find((match) => match.id === quickStatSelectedMatchId) || null,
+    [gameDayMatches, quickStatSelectedMatchId],
   );
   const loadData = useCallback(async (credential = adminCredential) => {
     if (!credential) return;
@@ -771,6 +780,57 @@ export default function AdminPage() {
     }
   }
 
+  async function saveQuickPlayerStat(match: Match, player: Player, teamName: string) {
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const draft = getQuickStatDraft(match.id, player.id, teamName);
+
+      const response = await adminFetch(
+        "/api/admin/stats",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            match_id: match.id,
+            player_id: player.id,
+            team_name: teamName,
+            goals: Number(draft.goals || 0),
+            assists: Number(draft.assists || 0),
+          }),
+        },
+        adminCredential,
+      );
+
+      setMessage(response.updatedExisting ? `${player.name} updated.` : `${player.name} added to stats.`);
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateQuickStatDraft(matchId: string, playerId: string, teamName: string, field: "goals" | "assists", value: string) {
+    const key = getQuickStatKey(matchId, playerId, teamName);
+    const current = getQuickStatDraft(matchId, playerId, teamName);
+
+    setQuickStatDrafts({
+      ...quickStatDrafts,
+      [key]: {
+        ...current,
+        [field]: value,
+      },
+    });
+  }
+
+  function adjustQuickStatDraft(matchId: string, playerId: string, teamName: string, field: "goals" | "assists", amount: number) {
+    const current = getQuickStatDraft(matchId, playerId, teamName);
+    const nextValue = Math.max(0, Number(current[field] || 0) + amount);
+
+    updateQuickStatDraft(matchId, playerId, teamName, field, String(nextValue));
+  }
+
   async function deleteStat(statId: string) {
     if (!window.confirm("Remove this player stat row?")) return;
 
@@ -1029,11 +1089,11 @@ export default function AdminPage() {
 
             <div>
               <h2 className="mb-3 font-black">Quick Stats</h2>
-              <form onSubmit={saveStat} className="grid gap-3 rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+              <div className="grid gap-3 rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
                 <AdminSelect
                   label="Game"
-                  value={statForm.match_id}
-                  onChange={(value) => setStatForm({ ...statForm, match_id: value, team_name: "" })}
+                  value={quickStatSelectedMatchId}
+                  onChange={(value) => setQuickStatMatchId(value)}
                   required
                 >
                   <option value="">Select game</option>
@@ -1043,44 +1103,38 @@ export default function AdminPage() {
                     </option>
                   ))}
                 </AdminSelect>
-                <AdminSelect
-                  label="Player"
-                  value={statForm.player_id}
-                  onChange={(value) => setStatForm({ ...statForm, player_id: value })}
-                  required
-                >
-                  <option value="">Select player</option>
-                  {activePlayers.map((player) => (
-                    <option key={player.id} value={player.id}>
-                      {player.name}
-                    </option>
-                  ))}
-                </AdminSelect>
-                <GameTeamSelect
-                  match={matches.find((match) => match.id === statForm.match_id) || null}
-                  value={statForm.team_name}
-                  onChange={(teamName) => setStatForm({ ...statForm, team_name: teamName })}
-                />
-                <p className="text-xs font-bold text-black/45">Result is calculated from the saved score.</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <AdminInput
-                    type="number"
-                    label="Goals"
-                    value={String(statForm.goals)}
-                    onChange={(value) => setStatForm({ ...statForm, goals: Number(value) })}
-                  />
-                  <AdminInput
-                    type="number"
-                    label="Assists"
-                    value={String(statForm.assists)}
-                    onChange={(value) => setStatForm({ ...statForm, assists: Number(value) })}
-                  />
-                </div>
-                <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white">
-                  <Plus size={16} />
-                  Add Stat
-                </button>
-              </form>
+                {!quickStatMatch ? (
+                  <div className="rounded-lg border border-black/10 bg-white p-4 text-sm font-bold text-black/50">
+                    Create games for this date first.
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    <p className="text-xs font-bold text-black/45">
+                      Mark the game Live or Completed, then enter each player&apos;s goals and assists.
+                    </p>
+                    <QuickStatTeamSheet
+                      match={quickStatMatch}
+                      teamName={quickStatMatch.team_a_name}
+                      players={getPlayersForTeamName(quickStatMatch.team_a_name)}
+                      getDraft={getQuickStatDraft}
+                      updateDraft={updateQuickStatDraft}
+                      adjustDraft={adjustQuickStatDraft}
+                      savePlayerStat={saveQuickPlayerStat}
+                      loading={loading}
+                    />
+                    <QuickStatTeamSheet
+                      match={quickStatMatch}
+                      teamName={quickStatMatch.team_b_name}
+                      players={getPlayersForTeamName(quickStatMatch.team_b_name)}
+                      getDraft={getQuickStatDraft}
+                      updateDraft={updateQuickStatDraft}
+                      adjustDraft={adjustQuickStatDraft}
+                      savePlayerStat={saveQuickPlayerStat}
+                      loading={loading}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </section>
@@ -1640,6 +1694,33 @@ export default function AdminPage() {
   function getTeamRoster(teamId: string) {
     return roster.filter((row) => row.team_id === teamId);
   }
+
+  function getPlayersForTeamName(teamName: string) {
+    const team = teams.find((nextTeam) => normalizeAdminLabel(nextTeam.name) === normalizeAdminLabel(teamName));
+    if (!team) return [];
+
+    const teamPlayerIds = new Set(getTeamRoster(team.id).map((row) => row.player_id));
+
+    return activePlayers.filter((player) => teamPlayerIds.has(player.id));
+  }
+
+  function getQuickStatDraft(matchId: string, playerId: string, teamName: string) {
+    const key = getQuickStatKey(matchId, playerId, teamName);
+    const draft = quickStatDrafts[key];
+    if (draft) return draft;
+
+    const existingStat = stats.find(
+      (stat) =>
+        stat.match_id === matchId &&
+        stat.player_id === playerId &&
+        normalizeAdminLabel(stat.team_name) === normalizeAdminLabel(teamName),
+    );
+
+    return {
+      goals: String(existingStat?.goals ?? 0),
+      assists: String(existingStat?.assists ?? 0),
+    };
+  }
 }
 
 async function adminFetch(path: string, options: RequestInit, credential: string) {
@@ -1716,6 +1797,10 @@ function formatMatchOption(match: Match, gameLabels: Map<string, string>) {
 
 function normalizeAdminLabel(label: string) {
   return label.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function getQuickStatKey(matchId: string, playerId: string, teamName: string) {
+  return `${matchId}:${playerId}:${normalizeAdminLabel(teamName)}`;
 }
 
 function getTeamPairings(teams: TournamentTeam[]) {
@@ -1864,6 +1949,109 @@ function TeamNameSelect({
         </option>
       ))}
     </AdminSelect>
+  );
+}
+
+function QuickStatTeamSheet({
+  match,
+  teamName,
+  players,
+  getDraft,
+  updateDraft,
+  adjustDraft,
+  savePlayerStat,
+  loading,
+}: {
+  match: Match;
+  teamName: string;
+  players: Player[];
+  getDraft: (matchId: string, playerId: string, teamName: string) => { goals: string; assists: string };
+  updateDraft: (matchId: string, playerId: string, teamName: string, field: "goals" | "assists", value: string) => void;
+  adjustDraft: (matchId: string, playerId: string, teamName: string, field: "goals" | "assists", amount: number) => void;
+  savePlayerStat: (match: Match, player: Player, teamName: string) => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-black/10 bg-white p-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="font-black">{teamName}</h3>
+        <span className="rounded-lg bg-[#edf4f0] px-2 py-1 text-xs font-black text-[#17613d]">
+          {players.length}/5
+        </span>
+      </div>
+      {players.length === 0 ? (
+        <p className="rounded-lg bg-[#f7f3ec] p-3 text-sm font-semibold text-black/50">
+          Assign players to this team first.
+        </p>
+      ) : (
+        <div className="grid gap-2">
+          {players.map((player) => {
+            const draft = getDraft(match.id, player.id, teamName);
+
+            return (
+              <div key={player.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-3">
+                <p className="mb-3 break-words text-sm font-black">{player.name}</p>
+                <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+                  <StatStepper
+                    label="G"
+                    value={draft.goals}
+                    onChange={(value) => updateDraft(match.id, player.id, teamName, "goals", value)}
+                    onAdjust={(amount) => adjustDraft(match.id, player.id, teamName, "goals", amount)}
+                  />
+                  <StatStepper
+                    label="A"
+                    value={draft.assists}
+                    onChange={(value) => updateDraft(match.id, player.id, teamName, "assists", value)}
+                    onAdjust={(amount) => adjustDraft(match.id, player.id, teamName, "assists", amount)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => savePlayerStat(match, player, teamName)}
+                    disabled={loading}
+                    className="h-10 rounded-lg bg-[#171717] px-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatStepper({
+  label,
+  value,
+  onChange,
+  onAdjust,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  onAdjust: (amount: number) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black uppercase text-black/45">{label}</span>
+      <div className="mt-1 grid h-10 grid-cols-[32px_1fr_32px] overflow-hidden rounded-lg border border-black/15 bg-white">
+        <button type="button" onClick={() => onAdjust(-1)} className="font-black text-black/55 hover:bg-black/5">
+          -
+        </button>
+        <input
+          type="number"
+          min="0"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="w-full border-x border-black/10 text-center text-sm font-black outline-none"
+        />
+        <button type="button" onClick={() => onAdjust(1)} className="font-black text-[#17613d] hover:bg-black/5">
+          +
+        </button>
+      </div>
+    </label>
   );
 }
 
