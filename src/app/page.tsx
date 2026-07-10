@@ -317,7 +317,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-4 pb-12 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
+      <section className="mx-auto grid max-w-7xl items-start gap-6 px-4 pb-12 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
         <div id="matches" className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
             <div>
