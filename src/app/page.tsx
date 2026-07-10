@@ -88,6 +88,7 @@ const fallbackMatches = [
     teamB: "Team B",
     score: "0 - 0",
     mvp: "Coming soon",
+    status: "Coming soon",
   },
 ];
 
@@ -176,7 +177,7 @@ export default async function Home() {
           <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
             <MiniStat label="MVP" value={latestMatch.mvp} />
             <MiniStat label="Date" value={latestMatch.date} />
-            <MiniStat label="Status" value={data.isConnected ? "Live standings" : "Coming soon"} />
+            <MiniStat label="Status" value={latestMatch.status} />
           </div>
         </div>
       </section>
@@ -526,6 +527,7 @@ async function getDashboardData() {
     teamB: getTeamDisplayName(match.team_b_name, teamDisplayNames),
     score: getMatchScoreLabel(match),
     mvp: getMatchMvp(match, statsByMatch.get(match.id) || [], playerNames),
+    status: getMatchStatusLabel(match.status),
   }));
 
   const goalsTracked = matchStats.reduce((total, stat) => total + (stat.goals || 0), 0);
@@ -842,6 +844,14 @@ function getMatchScoreLabel(match: MatchRow) {
   if (match.status === "live") return `Live ${match.team_a_score} - ${match.team_b_score}`;
 
   return `${match.team_a_score} - ${match.team_b_score}`;
+}
+
+function getMatchStatusLabel(status: string) {
+  if (status === "completed") return "Completed";
+  if (status === "live") return "Live";
+  if (status === "scheduled") return "Scheduled";
+
+  return status;
 }
 
 function fallbackStandings() {
