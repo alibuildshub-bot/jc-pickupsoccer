@@ -37,6 +37,7 @@ type MatchPlayerRow = {
 
 type LeaderboardPlayer = {
   name: string;
+  team: string;
   games: number;
   wins: number;
   goals: number;
@@ -366,7 +367,10 @@ export default async function Home() {
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
                         {index + 1}
                       </span>
-                      <h3 className="min-w-0 break-words font-black leading-tight">{player.name}</h3>
+                      <div className="min-w-0">
+                        <h3 className="break-words font-black leading-tight">{player.name}</h3>
+                        <p className="mt-1 break-words text-xs font-bold text-black/45">{player.team}</p>
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-center">
@@ -381,6 +385,7 @@ export default async function Home() {
                 <thead>
                   <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
                     <th className="py-3">Player</th>
+                    <th className="py-3">Team</th>
                     <th className="py-3 text-center">G</th>
                     <th className="py-3 text-center">A</th>
                   </tr>
@@ -396,6 +401,7 @@ export default async function Home() {
                           <span className="font-black">{player.name}</span>
                         </div>
                       </td>
+                      <td className="py-4 font-bold text-black/55">{player.team}</td>
                       <td className="py-4 text-center font-bold">{player.goals}</td>
                       <td className="py-4 text-center font-bold">{player.assists}</td>
                     </tr>
@@ -410,6 +416,52 @@ export default async function Home() {
               <p className="mt-2 text-sm font-semibold leading-6 text-black/55">
                 Once scores and player stats are entered, this table will rank goals and assists.
               </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-black/50">Archive</p>
+              <h2 className="text-2xl font-black">Past Results</h2>
+            </div>
+            <CalendarDays className="text-[#1f7a4d]" size={26} />
+          </div>
+          {data.resultsArchive.length > 0 ? (
+            <div className="grid gap-5">
+              {data.resultsArchive.map((day) => (
+                <div key={day.date} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="font-black">{day.date}</h3>
+                    <span className="text-sm font-bold text-black/45">{day.matches.length} games</span>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {day.matches.map((match) => (
+                      <article key={`${day.date}-${match.game}-${match.teamA}-${match.teamB}`} className="rounded-lg bg-white p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
+                            <p className="mt-1 text-sm font-black">
+                              {match.teamA} vs {match.teamB}
+                            </p>
+                          </div>
+                          <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
+                            {match.score}
+                          </p>
+                        </div>
+                        <p className="mt-2 text-xs font-bold text-black/50">Winner: {match.winner}</p>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
+              <p className="font-black">Past results will appear after completed games.</p>
             </div>
           )}
         </div>
@@ -432,6 +484,7 @@ async function getDashboardData() {
       topPlayer: "Setup",
       players: [],
       recentMatches: fallbackMatches,
+      resultsArchive: [],
       teamStandings: fallbackStandings(),
       teamRosters: fallbackRosters(),
       teamOfTheWeek: fallbackTeamOfTheWeek,
@@ -475,8 +528,9 @@ async function getDashboardData() {
   const teamStandings = buildTeamStandings(teams, tournamentMatches);
   const teamOfTheWeek = buildTeamOfTheWeek(teamStandings);
   const teamDisplayNames = buildTeamDisplayNames(teams);
+  const playerTeamNames = buildPlayerTeamNames(rawTeams, (rosterRows || []) as RosterRow[], teamDisplayNames);
 
-  const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name">>();
+  const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name" | "team">>();
 
   for (const player of players) {
     totalsByPlayer.set(player.id, { games: 0, wins: 0, goals: 0, assists: 0, points: 0 });
@@ -496,6 +550,7 @@ async function getDashboardData() {
   const leaderboard = players
     .map((player) => ({
       name: player.name,
+      team: playerTeamNames.get(player.id) || "Unassigned",
       ...(totalsByPlayer.get(player.id) || { games: 0, wins: 0, goals: 0, assists: 0, points: 0 }),
     }))
     .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
@@ -511,6 +566,7 @@ async function getDashboardData() {
     winner: getMatchWinner(match, teamDisplayNames),
     status: getMatchStatusLabel(match.status),
   }));
+  const resultsArchive = buildResultsArchive(matches, gameLabels, teamDisplayNames);
 
   const goalsTracked = matchStats.reduce((total, stat) => total + (stat.goals || 0), 0);
 
@@ -523,6 +579,7 @@ async function getDashboardData() {
     topPlayer: activeLeaderboard[0]?.name || "Coming soon",
     players: activeLeaderboard,
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
+    resultsArchive,
     teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
     teamRosters: teamRosters.length > 0 ? teamRosters : fallbackRosters(),
     teamOfTheWeek,
@@ -543,6 +600,67 @@ function buildTeamOfTheWeek(standings: TeamStanding[]) {
     points: winner.points,
     record: `${winner.wins}W - ${winner.draws}D - ${winner.losses}L`,
   };
+}
+
+function buildPlayerTeamNames(
+  rawTeams: TeamRow[],
+  rosterRows: RosterRow[],
+  teamDisplayNames: Map<string, string>,
+) {
+  const teamNamesById = new Map(
+    rawTeams.map((team) => [
+      team.id,
+      getTeamDisplayName(team.name, teamDisplayNames),
+    ]),
+  );
+  const playerTeams = new Map<string, string>();
+
+  for (const row of rosterRows) {
+    const teamName = teamNamesById.get(row.team_id);
+    if (!teamName || playerTeams.has(row.player_id)) continue;
+
+    playerTeams.set(row.player_id, teamName);
+  }
+
+  return playerTeams;
+}
+
+function buildResultsArchive(
+  matches: MatchRow[],
+  gameLabels: Map<string, string>,
+  teamDisplayNames: Map<string, string>,
+) {
+  const archiveByDate = new Map<
+    string,
+    Array<{
+      game: string;
+      teamA: string;
+      teamB: string;
+      score: string;
+      winner: string;
+    }>
+  >();
+
+  for (const match of matches) {
+    if (match.status !== "completed") continue;
+
+    const date = formatDate(match.match_date);
+    const dayMatches = archiveByDate.get(date) || [];
+
+    dayMatches.push({
+      game: gameLabels.get(match.id) || "Game",
+      teamA: getTeamDisplayName(match.team_a_name, teamDisplayNames),
+      teamB: getTeamDisplayName(match.team_b_name, teamDisplayNames),
+      score: `${match.team_a_score} - ${match.team_b_score}`,
+      winner: getMatchWinner(match, teamDisplayNames),
+    });
+    archiveByDate.set(date, dayMatches);
+  }
+
+  return Array.from(archiveByDate.entries()).map(([date, dayMatches]) => ({
+    date,
+    matches: dayMatches,
+  }));
 }
 
 function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
