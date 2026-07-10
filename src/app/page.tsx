@@ -177,7 +177,7 @@ export default async function Home() {
           <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
             <MiniStat label="Winner" value={latestMatch.winner} />
             <MiniStat label="Date" value={latestMatch.date} />
-            <MiniStat label="Status" value={latestMatch.status} />
+            <MiniStat label="Team of the Week" value={latestMatch.winner} icon={Trophy} />
           </div>
         </div>
       </section>
@@ -840,10 +840,13 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function MiniStat({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof Trophy }) {
   return (
     <div className="rounded-lg bg-[#f7f3ec] p-3">
-      <p className="text-xs font-bold uppercase text-black/45">{label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-bold uppercase text-black/45">{label}</p>
+        {Icon && <Icon className="shrink-0 text-[#b7791f]" size={18} />}
+      </div>
       <p className="mt-1 text-sm font-black">{value}</p>
     </div>
   );
