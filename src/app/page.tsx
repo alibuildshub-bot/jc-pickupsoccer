@@ -368,14 +368,8 @@ export default async function Home() {
                       </span>
                       <h3 className="min-w-0 break-words font-black leading-tight">{player.name}</h3>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-black">{player.points}</p>
-                      <p className="text-xs font-black uppercase text-black/40">PTS</p>
-                    </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    <MiniStat label="GP" value={String(player.games)} />
-                    <MiniStat label="W" value={String(player.wins)} />
+                  <div className="grid grid-cols-2 gap-2 text-center">
                     <MiniStat label="G" value={String(player.goals)} />
                     <MiniStat label="A" value={String(player.assists)} />
                   </div>
@@ -387,11 +381,8 @@ export default async function Home() {
                 <thead>
                   <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
                     <th className="py-3">Player</th>
-                    <th className="py-3 text-center">GP</th>
-                    <th className="py-3 text-center">W</th>
                     <th className="py-3 text-center">G</th>
                     <th className="py-3 text-center">A</th>
-                    <th className="py-3 text-center">PTS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -405,11 +396,8 @@ export default async function Home() {
                           <span className="font-black">{player.name}</span>
                         </div>
                       </td>
-                      <td className="py-4 text-center font-bold">{player.games}</td>
-                      <td className="py-4 text-center font-bold">{player.wins}</td>
                       <td className="py-4 text-center font-bold">{player.goals}</td>
                       <td className="py-4 text-center font-bold">{player.assists}</td>
-                      <td className="py-4 text-center font-black">{player.points}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -420,7 +408,7 @@ export default async function Home() {
             <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
               <p className="font-black">Leaderboard will appear after the first game.</p>
               <p className="mt-2 text-sm font-semibold leading-6 text-black/55">
-                Once scores and player stats are entered, this table will rank goals, assists, wins, and points.
+                Once scores and player stats are entered, this table will rank goals and assists.
               </p>
             </div>
           )}
