@@ -330,16 +330,13 @@ export default function AdminPage() {
     setMessage("");
 
     try {
-      const latestCompletedMatch = matches.find((match) => match.status === "completed");
       const response = await adminFetch(
         "/api/admin/polls",
         {
           method: "POST",
           body: JSON.stringify({
-            title: latestCompletedMatch
-              ? `JC Footy MVP Vote - ${latestCompletedMatch.week_label}`
-              : "JC Footy MVP Vote",
-            match_date: latestCompletedMatch?.match_date,
+            title: `JC Footy Tournament MVP - ${formatDateLabel(gameDayForm.date)}`,
+            match_date: gameDayForm.date,
           }),
         },
         adminCredential,
@@ -1143,9 +1140,9 @@ export default function AdminPage() {
           <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">After the Tournament</p>
-              <h1 className="text-2xl font-black">MVP Poll</h1>
+              <h1 className="text-2xl font-black">Tournament MVP Poll</h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
-                Create a link after all games are finished, then send it to the group chat for voting.
+                Create one vote for the full tournament day after all games are finished, then send it to the group chat.
               </p>
             </div>
             <button
@@ -1155,7 +1152,7 @@ export default function AdminPage() {
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white transition hover:bg-[#17613d] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Vote size={16} />
-              Create MVP Poll
+              Create Tournament Poll
             </button>
           </div>
 
@@ -1165,7 +1162,7 @@ export default function AdminPage() {
             </div>
           ) : polls.length === 0 ? (
             <div className="rounded-lg border border-black/10 bg-[#f7f3ec] p-4 text-sm font-bold text-black/50">
-              No MVP polls yet.
+              No tournament MVP polls yet.
             </div>
           ) : (
             <div className="grid gap-3 lg:grid-cols-2">
@@ -1825,6 +1822,15 @@ function formatMatchStatus(status: string) {
   if (status === "scheduled") return "Scheduled";
 
   return status;
+}
+
+function formatDateLabel(value: string) {
+  if (!value) return "Tournament Day";
+
+  return new Date(`${value}T00:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function getPollUrl(token: string) {

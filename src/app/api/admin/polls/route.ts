@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     return updatePoll(payload, supabase);
   }
 
-  const title = payload.title?.trim() || "JC Footy MVP Vote";
+  const title = payload.title?.trim() || "JC Footy Tournament MVP";
 
   const playerIds = Array.isArray(payload.player_ids) ? payload.player_ids.filter(Boolean) : [];
   const playersQuery = supabase.from("players").select("id,name").eq("is_active", true).order("name");

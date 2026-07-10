@@ -97,7 +97,7 @@ export default function MvpPollPage({ params }: { params: Promise<{ token: strin
           <LogoMark />
           <div>
             <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
-            <p className="text-xs font-medium text-black/55">MVP vote</p>
+            <p className="text-xs font-medium text-black/55">Tournament MVP vote</p>
           </div>
         </Link>
 
@@ -110,10 +110,10 @@ export default function MvpPollPage({ params }: { params: Promise<{ token: strin
             <>
               <div className="mb-5 flex items-start justify-between gap-4 border-b border-black/10 pb-5">
                 <div>
-                  <p className="text-sm font-bold text-black/50">MVP Poll</p>
+                  <p className="text-sm font-bold text-black/50">Tournament MVP Poll</p>
                   <h1 className="mt-1 text-3xl font-black">{poll.title}</h1>
                   <p className="mt-2 text-sm font-semibold text-black/55">
-                    {poll.totalVotes} votes so far
+                    Vote for the best player across all games. {poll.totalVotes} votes so far.
                   </p>
                 </div>
                 <Trophy className="shrink-0 text-[#b7791f]" size={32} />
@@ -164,7 +164,7 @@ export default function MvpPollPage({ params }: { params: Promise<{ token: strin
                 className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] text-sm font-black text-white transition hover:bg-[#17613d] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving && <Loader2 className="animate-spin" size={18} />}
-                Submit MVP Vote
+                Submit Tournament MVP Vote
               </button>
             </>
           ) : (
