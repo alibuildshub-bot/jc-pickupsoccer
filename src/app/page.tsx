@@ -29,9 +29,14 @@ type MatchRow = {
 type MatchPlayerRow = {
   match_id: string;
   player_id: string;
+  team_name: string;
   goals: number;
   assists: number;
   result: string;
+  minutes_played: number | null;
+  match_rating: number | null;
+  rating_label: string | null;
+  show_rating_public: boolean | null;
 };
 
 type LeaderboardPlayer = {
@@ -313,6 +318,50 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-black/50">Player Ratings</p>
+              <h2 className="text-2xl font-black">Team of the Week</h2>
+            </div>
+            <Trophy className="text-[#b7791f]" size={28} />
+          </div>
+          {data.teamOfWeek.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              {data.teamOfWeek.map((player, index) => (
+                <article key={`${player.name}-${player.match}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                      {index + 1}
+                    </span>
+                    <div className="text-right">
+                      <p className="text-2xl font-black">{player.rating.toFixed(1)}</p>
+                      <p className="text-xs font-black uppercase text-black/40">Rating</p>
+                    </div>
+                  </div>
+                  <h3 className="break-words font-black leading-tight">{player.name}</h3>
+                  <p className="mt-1 text-sm font-bold text-black/50">{player.team}</p>
+                  <p className="mt-3 text-xs font-bold text-black/45">{player.match}</p>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <MiniStat label="G" value={String(player.goals)} />
+                    <MiniStat label="A" value={String(player.assists)} />
+                    <MiniStat label="Form" value={player.label} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
+              <p className="font-black">Team of the Week will appear after ratings are published.</p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-black/55">
+                In admin, check “Show this rating on the public site” when saving player stats.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
       <section className="mx-auto grid max-w-7xl gap-6 px-4 pb-12 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
         <div id="matches" className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
@@ -441,6 +490,7 @@ async function getDashboardData() {
       recentMatches: fallbackMatches,
       teamStandings: fallbackStandings(),
       teamRosters: fallbackRosters(),
+      teamOfWeek: [],
       tournamentLabel: "Tournament Day",
       tournamentGames: 0,
       completedTournamentGames: 0,
@@ -454,7 +504,7 @@ async function getDashboardData() {
       .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status")
       .order("match_date", { ascending: false })
       .limit(50),
-    supabase.from("match_players").select("match_id,player_id,goals,assists,result"),
+    supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result,minutes_played,match_rating,rating_label,show_rating_public"),
     supabase
       .from("tournament_teams")
       .select("id,name,color,sort_order,is_active")
@@ -480,6 +530,7 @@ async function getDashboardData() {
   const teamStandings = buildTeamStandings(teams, tournamentMatches);
   const teamDisplayNames = buildTeamDisplayNames(teams);
   const playerNames = new Map(players.map((player) => [player.id, player.name]));
+  const matchLabels = new Map(matches.map((match) => [match.id, `${match.week_label} - ${formatDate(match.match_date)}`]));
   const statsByMatch = new Map<string, MatchPlayerRow[]>();
 
   for (const stat of matchStats) {
@@ -535,6 +586,7 @@ async function getDashboardData() {
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
     teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
     teamRosters: teamRosters.length > 0 ? teamRosters : fallbackRosters(),
+    teamOfWeek: buildTeamOfWeek(matchStats, playerNames, matchLabels, teamDisplayNames),
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
     tournamentGames: tournamentMatches.length,
     completedTournamentGames: tournamentMatches.filter((match) => match.status === "completed").length,
@@ -694,6 +746,27 @@ function buildTeamRosters(teams: TeamRow[], rawTeams: TeamRow[], rosterRows: Ros
     ...team,
     players: team.players.sort((a, b) => a.localeCompare(b)),
   }));
+}
+
+function buildTeamOfWeek(
+  stats: MatchPlayerRow[],
+  playerNames: Map<string, string>,
+  matchLabels: Map<string, string>,
+  teamDisplayNames: Map<string, string>,
+) {
+  return stats
+    .filter((stat) => stat.show_rating_public && stat.match_rating !== null)
+    .map((stat) => ({
+      name: playerNames.get(stat.player_id) || "Unknown player",
+      team: getTeamDisplayName(stat.team_name, teamDisplayNames),
+      match: matchLabels.get(stat.match_id) || "Match",
+      rating: Number(stat.match_rating || 0),
+      label: stat.rating_label || "Rated",
+      goals: stat.goals || 0,
+      assists: stat.assists || 0,
+    }))
+    .sort((a, b) => b.rating - a.rating || b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name))
+    .slice(0, 5);
 }
 
 function getRosterPlayerName(players: RosterRow["players"]) {

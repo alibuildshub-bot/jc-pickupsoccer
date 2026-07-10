@@ -12,6 +12,8 @@ type StatPayload = {
   team_name?: string;
   goals?: number;
   assists?: number;
+  minutes_played?: number;
+  show_rating_public?: boolean;
 };
 
 type MatchForResult = {
@@ -30,7 +32,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase
     .from("match_players")
-    .select("id,match_id,player_id,team_name,goals,assists,result,players(name),matches(week_label,match_date)")
+    .select("id,match_id,player_id,team_name,goals,assists,result,minutes_played,match_rating,rating_label,show_rating_public,players(name),matches(week_label,match_date)")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -56,11 +58,12 @@ export async function POST(request: Request) {
   if ("error" in result) {
     return Response.json({ error: result.error }, { status: 400 });
   }
+  const rating = calculateSimpleRating(payload, result.result);
 
   const { data, error } = await supabase
     .from("match_players")
-    .insert(statPayloadToRow(payload, result.result))
-    .select("id,match_id,player_id,team_name,goals,assists,result")
+    .insert(statPayloadToRow(payload, result.result, rating))
+    .select("id,match_id,player_id,team_name,goals,assists,result,minutes_played,match_rating,rating_label,show_rating_public")
     .single();
 
   if (error) {
@@ -91,12 +94,13 @@ export async function PATCH(request: Request) {
   if ("error" in result) {
     return Response.json({ error: result.error }, { status: 400 });
   }
+  const rating = calculateSimpleRating(payload, result.result);
 
   const { data, error } = await supabase
     .from("match_players")
-    .update(statPayloadToRow(payload, result.result))
+    .update(statPayloadToRow(payload, result.result, rating))
     .eq("id", payload.id)
-    .select("id,match_id,player_id,team_name,goals,assists,result")
+    .select("id,match_id,player_id,team_name,goals,assists,result,minutes_played,match_rating,rating_label,show_rating_public")
     .single();
 
   if (error) {
@@ -172,7 +176,37 @@ async function calculateResult(
   return { result: isTeamA === didTeamAWin ? "win" : "loss" };
 }
 
-function statPayloadToRow(payload: StatPayload, result: string) {
+function calculateSimpleRating(payload: StatPayload, result: string) {
+  const goals = Number(payload.goals || 0);
+  const assists = Number(payload.assists || 0);
+  const minutes = Math.max(0, Math.min(120, Number(payload.minutes_played || 90)));
+  const resultBonus = result === "win" ? 0.25 : result === "draw" ? 0.05 : -0.1;
+  const productionBonus = goals * 0.5 + assists * 0.35 + resultBonus;
+  const minutesMultiplier = minutes > 0 && minutes < 45 ? 0.5 : 1;
+  const rawRating = 6 + productionBonus * minutesMultiplier;
+  const rating = Math.max(1, Math.min(10, Math.round(rawRating * 10) / 10));
+
+  return {
+    rating,
+    label: getRatingLabel(rating),
+  };
+}
+
+function getRatingLabel(rating: number) {
+  if (rating >= 9) return "World Class";
+  if (rating >= 8) return "Excellent";
+  if (rating >= 7) return "Good";
+  if (rating >= 6) return "Average";
+  if (rating >= 5) return "Below Average";
+
+  return "Poor";
+}
+
+function statPayloadToRow(
+  payload: StatPayload,
+  result: string,
+  rating: ReturnType<typeof calculateSimpleRating>,
+) {
   return {
     match_id: payload.match_id,
     player_id: payload.player_id,
@@ -180,5 +214,9 @@ function statPayloadToRow(payload: StatPayload, result: string) {
     goals: Number(payload.goals || 0),
     assists: Number(payload.assists || 0),
     result,
+    minutes_played: Number(payload.minutes_played || 90),
+    match_rating: rating.rating,
+    rating_label: rating.label,
+    show_rating_public: payload.show_rating_public ?? false,
   };
 }
