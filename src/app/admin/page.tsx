@@ -1170,7 +1170,7 @@ export default function AdminPage() {
                 <article key={poll.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="font-black">{poll.title}</h2>
+                      <h2 className="font-black">{getTournamentPollTitle(poll)}</h2>
                       <p className="mt-1 text-sm font-semibold text-black/50">
                         {poll.totalVotes} votes | {poll.status}
                       </p>
@@ -1831,6 +1831,18 @@ function formatDateLabel(value: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function getTournamentPollTitle(poll: Pick<MvpPoll, "title" | "match_date">) {
+  if (poll.match_date) {
+    return `JC Footy Tournament MVP - ${formatDateLabel(poll.match_date)}`;
+  }
+
+  if (poll.title.toLowerCase().includes("game ")) {
+    return "JC Footy Tournament MVP";
+  }
+
+  return poll.title;
 }
 
 function getPollUrl(token: string) {

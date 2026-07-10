@@ -111,7 +111,7 @@ export default function MvpPollPage({ params }: { params: Promise<{ token: strin
               <div className="mb-5 flex items-start justify-between gap-4 border-b border-black/10 pb-5">
                 <div>
                   <p className="text-sm font-bold text-black/50">Tournament MVP Poll</p>
-                  <h1 className="mt-1 text-3xl font-black">{poll.title}</h1>
+                  <h1 className="mt-1 text-3xl font-black">{getTournamentPollTitle(poll)}</h1>
                   <p className="mt-2 text-sm font-semibold text-black/55">
                     Vote for the best player across all games. {poll.totalVotes} votes so far.
                   </p>
@@ -186,4 +186,23 @@ function getOrCreateVoterKey() {
   window.localStorage.setItem("jc-mvp-voter-key", nextKey);
 
   return nextKey;
+}
+
+function getTournamentPollTitle(poll: Pick<Poll, "title" | "match_date">) {
+  if (poll.match_date) {
+    return `JC Footy Tournament MVP - ${formatDateLabel(poll.match_date)}`;
+  }
+
+  if (poll.title.toLowerCase().includes("game ")) {
+    return "JC Footy Tournament MVP";
+  }
+
+  return poll.title;
+}
+
+function formatDateLabel(value: string) {
+  return new Date(`${value}T00:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
