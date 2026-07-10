@@ -37,6 +37,7 @@ type Match = {
   team_a_score: number;
   team_b_score: number;
   status: string;
+  created_at?: string;
 };
 
 type PlayerStat = {
@@ -47,10 +48,6 @@ type PlayerStat = {
   goals: number;
   assists: number;
   result: string;
-  minutes_played: number;
-  match_rating: number | null;
-  rating_label: string | null;
-  show_rating_public: boolean;
   players: { name: string } | null;
   matches: { week_label: string; match_date: string } | null;
 };
@@ -110,7 +107,7 @@ const emptyMatch = {
   team_b_name: "White",
   team_a_score: 0,
   team_b_score: 0,
-  status: "completed",
+  status: "scheduled",
 };
 
 const emptyTeam = {
@@ -126,8 +123,6 @@ const emptyStat = {
   team_name: "",
   goals: 0,
   assists: 0,
-  minutes_played: 90,
-  show_rating_public: false,
   result: "draw",
 };
 
@@ -166,15 +161,14 @@ export default function AdminPage() {
   const isUnlocked = Boolean(adminCredential);
   const activePlayers = useMemo(() => players.filter((player) => player.is_active), [players]);
   const activeTeams = useMemo(() => teams.filter((team) => team.is_active), [teams]);
+  const matchGameLabels = useMemo(() => buildGameLabels(matches), [matches]);
   const gameDayMatches = useMemo(
-    () => matches.filter((match) => match.match_date === gameDayForm.date),
+    () =>
+      matches
+        .filter((match) => match.match_date === gameDayForm.date)
+        .sort(sortMatchesByGameOrder),
     [gameDayForm.date, matches],
   );
-  const ratingPreview = useMemo(
-    () => calculateSimpleRatingPreview(statForm, matches.find((match) => match.id === statForm.match_id)),
-    [matches, statForm],
-  );
-
   const loadData = useCallback(async (credential = adminCredential) => {
     if (!credential) return;
 
@@ -494,7 +488,7 @@ export default function AdminPage() {
             ...match,
             team_a_score: Number(score.team_a_score || 0),
             team_b_score: Number(score.team_b_score || 0),
-            status: "completed",
+            status: "live",
           }),
         },
         adminCredential,
@@ -576,6 +570,9 @@ export default function AdminPage() {
       const payload = {
         ...matchForm,
         id: editingMatchId || undefined,
+        week_label:
+          matchForm.week_label.trim() ||
+          `Game ${getNextGameNumber(matches, matchForm.match_date, editingMatchId || undefined)}`,
       };
 
       await adminFetch(
@@ -754,7 +751,7 @@ export default function AdminPage() {
         id: editingStatId || undefined,
       };
 
-      await adminFetch(
+      const response = await adminFetch(
         "/api/admin/stats",
         {
           method: editingStatId ? "PATCH" : "POST",
@@ -765,7 +762,7 @@ export default function AdminPage() {
 
       setStatForm(emptyStat);
       setEditingStatId(null);
-      setMessage(editingStatId ? "Player stat updated." : "Player stat added.");
+      setMessage(editingStatId || response.updatedExisting ? "Player stat updated." : "Player stat added.");
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -799,8 +796,6 @@ export default function AdminPage() {
       team_name: stat.team_name,
       goals: stat.goals,
       assists: stat.assists,
-      minutes_played: stat.minutes_played ?? 90,
-      show_rating_public: stat.show_rating_public ?? false,
       result: stat.result,
     });
   }
@@ -978,12 +973,15 @@ export default function AdminPage() {
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-bold text-black/50">{match.week_label}</p>
+                          <p className="text-xs font-black uppercase text-[#1f7a4d]">
+                            {matchGameLabels.get(match.id)}
+                          </p>
                           <p className="font-black">
                             {match.team_a_name} vs {match.team_b_name}
                           </p>
                         </div>
                         <span className="rounded-lg bg-white px-3 py-2 text-xs font-black text-black/55">
-                          {match.status}
+                          {formatMatchStatus(match.status)}
                         </span>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
@@ -1041,7 +1039,7 @@ export default function AdminPage() {
                   <option value="">Select game</option>
                   {gameDayMatches.map((match) => (
                     <option key={match.id} value={match.id}>
-                      {match.week_label}: {match.team_a_name} vs {match.team_b_name}
+                      {formatMatchOption(match, matchGameLabels)}
                     </option>
                   ))}
                 </AdminSelect>
@@ -1078,29 +1076,6 @@ export default function AdminPage() {
                     onChange={(value) => setStatForm({ ...statForm, assists: Number(value) })}
                   />
                 </div>
-                <div className="grid gap-3 sm:grid-cols-[0.75fr_1.25fr]">
-                  <AdminInput
-                    type="number"
-                    label="Minutes"
-                    value={String(statForm.minutes_played)}
-                    onChange={(value) => setStatForm({ ...statForm, minutes_played: Number(value) })}
-                  />
-                  <RatingPreviewCard rating={ratingPreview} />
-                </div>
-                <label className="flex items-center gap-2 text-sm font-bold text-black/60">
-                  <input
-                    type="checkbox"
-                    checked={statForm.show_rating_public}
-                    onChange={(event) => setStatForm({ ...statForm, show_rating_public: event.target.checked })}
-                  />
-                  Show this rating on the public site
-                </label>
-                <details className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-bold text-black/50">
-                  <summary className="cursor-pointer text-black/65">Advanced rating inputs</summary>
-                  <p className="mt-2 leading-5">
-                    Optional advanced stats like shots, pass accuracy, tackles, interceptions, clearances, and cards can be added later without changing this simple calculator.
-                  </p>
-                </details>
                 <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white">
                   <Plus size={16} />
                   Add Stat
@@ -1433,11 +1408,10 @@ export default function AdminPage() {
                   required
                 />
                 <AdminInput
-                  label="Week label"
+                  label="Game label"
                   value={matchForm.week_label}
                   onChange={(value) => setMatchForm({ ...matchForm, week_label: value })}
-                  placeholder="Week 2"
-                  required
+                  placeholder={`Game ${getNextGameNumber(matches, matchForm.match_date, editingMatchId || undefined)}`}
                 />
                 <AdminInput
                   label="Location"
@@ -1480,6 +1454,7 @@ export default function AdminPage() {
                     className="mt-2 h-11 w-full rounded-lg border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-[#1f7a4d]"
                   >
                     <option value="scheduled">Scheduled</option>
+                    <option value="live">Live</option>
                     <option value="completed">Completed</option>
                   </select>
                 </label>
@@ -1510,6 +1485,7 @@ export default function AdminPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-black/50">{match.match_date}</p>
+                      <p className="text-xs font-black uppercase text-[#1f7a4d]">{matchGameLabels.get(match.id)}</p>
                       <p className="font-black">{match.week_label}</p>
                     </div>
                     <div className="flex gap-2">
@@ -1551,7 +1527,7 @@ export default function AdminPage() {
                 <option value="">Select match</option>
                 {matches.map((match) => (
                   <option key={match.id} value={match.id}>
-                    {match.week_label} - {match.match_date}
+                    {formatMatchOption(match, matchGameLabels)} - {match.match_date}
                   </option>
                 ))}
               </AdminSelect>
@@ -1570,7 +1546,7 @@ export default function AdminPage() {
               </AdminSelect>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
+            <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
               <div>
                 <GameTeamSelect
                   match={matches.find((match) => match.id === statForm.match_id) || null}
@@ -1591,31 +1567,6 @@ export default function AdminPage() {
                 value={String(statForm.assists)}
                 onChange={(value) => setStatForm({ ...statForm, assists: Number(value) })}
               />
-              <AdminInput
-                type="number"
-                label="Minutes"
-                value={String(statForm.minutes_played)}
-                onChange={(value) => setStatForm({ ...statForm, minutes_played: Number(value) })}
-              />
-            </div>
-            <div className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
-              <RatingPreviewCard rating={ratingPreview} />
-              <div className="rounded-lg border border-black/10 bg-white p-3">
-                <label className="flex items-center gap-2 text-sm font-bold text-black/60">
-                  <input
-                    type="checkbox"
-                    checked={statForm.show_rating_public}
-                    onChange={(event) => setStatForm({ ...statForm, show_rating_public: event.target.checked })}
-                  />
-                  Show this rating on the public site
-                </label>
-                <details className="mt-3 text-xs font-bold text-black/50">
-                  <summary className="cursor-pointer text-black/65">Advanced rating inputs</summary>
-                  <p className="mt-2 leading-5">
-                    Later toggle: shots, pass accuracy, key passes, tackles, interceptions, clearances, and cards.
-                  </p>
-                </details>
-              </div>
             </div>
 
             <div className="flex gap-2">
@@ -1647,7 +1598,6 @@ export default function AdminPage() {
                   <th className="py-3">Team</th>
                   <th className="py-3 text-center">G</th>
                   <th className="py-3 text-center">A</th>
-                  <th className="py-3 text-center">Rating</th>
                   <th className="py-3 text-center">Result</th>
                   <th className="py-3 text-right">Actions</th>
                 </tr>
@@ -1662,9 +1612,6 @@ export default function AdminPage() {
                     <td className="py-4 font-bold">{stat.team_name}</td>
                     <td className="py-4 text-center font-bold">{stat.goals}</td>
                     <td className="py-4 text-center font-bold">{stat.assists}</td>
-                    <td className="py-4 text-center font-black">
-                      {stat.match_rating ? stat.match_rating.toFixed(1) : "-"}
-                    </td>
                     <td className="py-4 text-center font-bold capitalize">{stat.result}</td>
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
@@ -1725,6 +1672,52 @@ function getStoredPassword() {
   return window.localStorage.getItem("jc-admin-password") || "";
 }
 
+function buildGameLabels(matches: Match[]) {
+  const labels = new Map<string, string>();
+  const matchesByDate = new Map<string, Match[]>();
+
+  for (const match of matches) {
+    const dateMatches = matchesByDate.get(match.match_date) || [];
+    dateMatches.push(match);
+    matchesByDate.set(match.match_date, dateMatches);
+  }
+
+  for (const dateMatches of matchesByDate.values()) {
+    dateMatches.sort(sortMatchesByGameOrder).forEach((match, index) => {
+      labels.set(match.id, `Game ${index + 1}`);
+    });
+  }
+
+  return labels;
+}
+
+function sortMatchesByGameOrder(first: Match, second: Match) {
+  return (
+    (first.created_at || "").localeCompare(second.created_at || "") ||
+    first.week_label.localeCompare(second.week_label) ||
+    first.id.localeCompare(second.id)
+  );
+}
+
+function getNextGameNumber(matches: Match[], matchDate: string, editingMatchId?: string) {
+  return matches.filter((match) => match.match_date === matchDate && match.id !== editingMatchId).length + 1;
+}
+
+function formatMatchOption(match: Match, gameLabels: Map<string, string>) {
+  const gameLabel = gameLabels.get(match.id) || "Game";
+  const matchup = `${match.team_a_name} vs ${match.team_b_name}`;
+
+  if (normalizeAdminLabel(match.week_label) === normalizeAdminLabel(gameLabel)) {
+    return `${gameLabel}: ${matchup}`;
+  }
+
+  return `${gameLabel} - ${match.week_label}: ${matchup}`;
+}
+
+function normalizeAdminLabel(label: string) {
+  return label.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 function getTeamPairings(teams: TournamentTeam[]) {
   const pairings: Array<[TournamentTeam, TournamentTeam]> = [];
 
@@ -1741,45 +1734,12 @@ function getMatchupKey(teamA: string, teamB: string) {
   return [teamA.trim().toLowerCase(), teamB.trim().toLowerCase()].sort().join("|");
 }
 
-function calculateSimpleRatingPreview(
-  statForm: typeof emptyStat,
-  match: Match | undefined,
-) {
-  const result = getPreviewResult(match, statForm.team_name);
-  const goals = Number(statForm.goals || 0);
-  const assists = Number(statForm.assists || 0);
-  const minutes = Math.max(0, Math.min(120, Number(statForm.minutes_played || 90)));
-  const resultBonus = result === "win" ? 0.25 : result === "draw" ? 0.05 : result === "loss" ? -0.1 : 0;
-  const productionBonus = goals * 0.5 + assists * 0.35 + resultBonus;
-  const minutesMultiplier = minutes > 0 && minutes < 45 ? 0.5 : 1;
-  const rawRating = 6 + productionBonus * minutesMultiplier;
-  const rating = Math.max(1, Math.min(10, Math.round(rawRating * 10) / 10));
+function formatMatchStatus(status: string) {
+  if (status === "live") return "Live";
+  if (status === "completed") return "Completed";
+  if (status === "scheduled") return "Scheduled";
 
-  return {
-    rating,
-    label: getRatingLabel(rating),
-    result,
-  };
-}
-
-function getPreviewResult(match: Match | undefined, teamName: string) {
-  if (!match || match.status !== "completed" || !teamName) return "pending";
-  if (match.team_a_score === match.team_b_score) return "draw";
-
-  const isTeamA = match.team_a_name === teamName;
-  const didTeamAWin = match.team_a_score > match.team_b_score;
-
-  return isTeamA === didTeamAWin ? "win" : "loss";
-}
-
-function getRatingLabel(rating: number) {
-  if (rating >= 9) return "World Class";
-  if (rating >= 8) return "Excellent";
-  if (rating >= 7) return "Good";
-  if (rating >= 6) return "Average";
-  if (rating >= 5) return "Below Average";
-
-  return "Poor";
+  return status;
 }
 
 function getPollUrl(token: string) {
@@ -1904,27 +1864,6 @@ function TeamNameSelect({
         </option>
       ))}
     </AdminSelect>
-  );
-}
-
-function RatingPreviewCard({
-  rating,
-}: {
-  rating: ReturnType<typeof calculateSimpleRatingPreview>;
-}) {
-  return (
-    <div className="rounded-lg border border-black/10 bg-white p-3">
-      <p className="text-xs font-black uppercase text-black/40">Rating Preview</p>
-      <div className="mt-1 flex items-end justify-between gap-3">
-        <div>
-          <p className="text-2xl font-black">{rating.rating.toFixed(1)}</p>
-          <p className="text-xs font-bold text-black/50">{rating.label}</p>
-        </div>
-        <p className="rounded-lg bg-[#edf4f0] px-2 py-1 text-xs font-black uppercase text-[#17613d]">
-          {rating.result}
-        </p>
-      </div>
-    </div>
   );
 }
 

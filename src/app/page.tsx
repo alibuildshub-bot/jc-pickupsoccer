@@ -24,6 +24,7 @@ type MatchRow = {
   team_a_score: number;
   team_b_score: number;
   status: string;
+  created_at?: string;
 };
 
 type MatchPlayerRow = {
@@ -33,10 +34,6 @@ type MatchPlayerRow = {
   goals: number;
   assists: number;
   result: string;
-  minutes_played: number | null;
-  match_rating: number | null;
-  rating_label: string | null;
-  show_rating_public: boolean | null;
 };
 
 type LeaderboardPlayer = {
@@ -84,6 +81,7 @@ type TeamRoster = {
 
 const fallbackMatches = [
   {
+    game: "Game 1",
     week: "Week 1",
     date: "Schedule a match",
     teamA: "Team A",
@@ -318,50 +316,6 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold text-black/50">Player Ratings</p>
-              <h2 className="text-2xl font-black">Team of the Week</h2>
-            </div>
-            <Trophy className="text-[#b7791f]" size={28} />
-          </div>
-          {data.teamOfWeek.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              {data.teamOfWeek.map((player, index) => (
-                <article key={`${player.name}-${player.match}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
-                      {index + 1}
-                    </span>
-                    <div className="text-right">
-                      <p className="text-2xl font-black">{player.rating.toFixed(1)}</p>
-                      <p className="text-xs font-black uppercase text-black/40">Rating</p>
-                    </div>
-                  </div>
-                  <h3 className="break-words font-black leading-tight">{player.name}</h3>
-                  <p className="mt-1 text-sm font-bold text-black/50">{player.team}</p>
-                  <p className="mt-3 text-xs font-bold text-black/45">{player.match}</p>
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                    <MiniStat label="G" value={String(player.goals)} />
-                    <MiniStat label="A" value={String(player.assists)} />
-                    <MiniStat label="Form" value={player.label} />
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
-              <p className="font-black">Team of the Week will appear after ratings are published.</p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-black/55">
-                In admin, check “Show this rating on the public site” when saving player stats.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
       <section className="mx-auto grid max-w-7xl gap-6 px-4 pb-12 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
         <div id="matches" className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
@@ -377,6 +331,7 @@ export default async function Home() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold text-black/50">{match.date}</p>
+                    <p className="mt-1 text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
                     <h3 className="mt-1 text-lg font-black">{match.week}</h3>
                   </div>
                   <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-base font-black text-white sm:text-lg">{match.score}</p>
@@ -490,7 +445,6 @@ async function getDashboardData() {
       recentMatches: fallbackMatches,
       teamStandings: fallbackStandings(),
       teamRosters: fallbackRosters(),
-      teamOfWeek: [],
       tournamentLabel: "Tournament Day",
       tournamentGames: 0,
       completedTournamentGames: 0,
@@ -501,10 +455,10 @@ async function getDashboardData() {
     supabase.from("players").select("id,name,position").eq("is_active", true).order("name"),
     supabase
       .from("matches")
-      .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status")
+      .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
       .order("match_date", { ascending: false })
       .limit(50),
-    supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result,minutes_played,match_rating,rating_label,show_rating_public"),
+    supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result"),
     supabase
       .from("tournament_teams")
       .select("id,name,color,sort_order,is_active")
@@ -518,11 +472,12 @@ async function getDashboardData() {
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
-  const matches = dedupeMatches((matchRows || []) as MatchRow[]);
+  const matches = sortMatchesForDisplay(dedupeMatches((matchRows || []) as MatchRow[]));
   const matchStats = (statRows || []) as MatchPlayerRow[];
   const rawTeams = (teamRows || []) as TeamRow[];
   const teams = dedupeTeams(rawTeams);
   const teamRosters = buildTeamRosters(teams, rawTeams, (rosterRows || []) as unknown as RosterRow[]);
+  const gameLabels = buildGameLabels(matches);
   const tournamentDate = matches[0]?.match_date || "";
   const tournamentMatches = tournamentDate
     ? matches.filter((match) => match.match_date === tournamentDate)
@@ -530,7 +485,6 @@ async function getDashboardData() {
   const teamStandings = buildTeamStandings(teams, tournamentMatches);
   const teamDisplayNames = buildTeamDisplayNames(teams);
   const playerNames = new Map(players.map((player) => [player.id, player.name]));
-  const matchLabels = new Map(matches.map((match) => [match.id, `${match.week_label} - ${formatDate(match.match_date)}`]));
   const statsByMatch = new Map<string, MatchPlayerRow[]>();
 
   for (const stat of matchStats) {
@@ -565,11 +519,12 @@ async function getDashboardData() {
   const activeLeaderboard = leaderboard.filter((player) => player.games > 0);
 
   const recentMatches = matches.slice(0, 5).map((match) => ({
+    game: gameLabels.get(match.id) || "Game",
     week: match.week_label,
     date: formatDate(match.match_date),
     teamA: getTeamDisplayName(match.team_a_name, teamDisplayNames),
     teamB: getTeamDisplayName(match.team_b_name, teamDisplayNames),
-    score: match.status === "completed" ? `${match.team_a_score} - ${match.team_b_score}` : "Not started",
+    score: getMatchScoreLabel(match),
     mvp: getMatchMvp(match, statsByMatch.get(match.id) || [], playerNames),
   }));
 
@@ -586,7 +541,6 @@ async function getDashboardData() {
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
     teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
     teamRosters: teamRosters.length > 0 ? teamRosters : fallbackRosters(),
-    teamOfWeek: buildTeamOfWeek(matchStats, playerNames, matchLabels, teamDisplayNames),
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
     tournamentGames: tournamentMatches.length,
     completedTournamentGames: tournamentMatches.filter((match) => match.status === "completed").length,
@@ -718,6 +672,41 @@ function dedupeMatches(matches: MatchRow[]) {
   return Array.from(matchesByKey.values());
 }
 
+function sortMatchesForDisplay(matches: MatchRow[]) {
+  return [...matches].sort(
+    (first, second) =>
+      second.match_date.localeCompare(first.match_date) ||
+      sortMatchesByGameOrder(first, second),
+  );
+}
+
+function buildGameLabels(matches: MatchRow[]) {
+  const labels = new Map<string, string>();
+  const matchesByDate = new Map<string, MatchRow[]>();
+
+  for (const match of matches) {
+    const dateMatches = matchesByDate.get(match.match_date) || [];
+    dateMatches.push(match);
+    matchesByDate.set(match.match_date, dateMatches);
+  }
+
+  for (const dateMatches of matchesByDate.values()) {
+    dateMatches.sort(sortMatchesByGameOrder).forEach((match, index) => {
+      labels.set(match.id, `Game ${index + 1}`);
+    });
+  }
+
+  return labels;
+}
+
+function sortMatchesByGameOrder(first: MatchRow, second: MatchRow) {
+  return (
+    (first.created_at || "").localeCompare(second.created_at || "") ||
+    first.week_label.localeCompare(second.week_label) ||
+    first.id.localeCompare(second.id)
+  );
+}
+
 function buildTeamRosters(teams: TeamRow[], rawTeams: TeamRow[], rosterRows: RosterRow[]) {
   const rawTeamKeys = new Map(rawTeams.map((team) => [team.id, normalizeTeamName(team.name)]));
   const rostersByTeam = new Map<string, TeamRoster>();
@@ -746,27 +735,6 @@ function buildTeamRosters(teams: TeamRow[], rawTeams: TeamRow[], rosterRows: Ros
     ...team,
     players: team.players.sort((a, b) => a.localeCompare(b)),
   }));
-}
-
-function buildTeamOfWeek(
-  stats: MatchPlayerRow[],
-  playerNames: Map<string, string>,
-  matchLabels: Map<string, string>,
-  teamDisplayNames: Map<string, string>,
-) {
-  return stats
-    .filter((stat) => stat.show_rating_public && stat.match_rating !== null)
-    .map((stat) => ({
-      name: playerNames.get(stat.player_id) || "Unknown player",
-      team: getTeamDisplayName(stat.team_name, teamDisplayNames),
-      match: matchLabels.get(stat.match_id) || "Match",
-      rating: Number(stat.match_rating || 0),
-      label: stat.rating_label || "Rated",
-      goals: stat.goals || 0,
-      assists: stat.assists || 0,
-    }))
-    .sort((a, b) => b.rating - a.rating || b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name))
-    .slice(0, 5);
 }
 
 function getRosterPlayerName(players: RosterRow["players"]) {
@@ -838,8 +806,12 @@ function getMatchMvp(
   stats: MatchPlayerRow[],
   playerNames: Map<string, string>,
 ) {
-  if (match.status !== "completed") {
+  if (match.status === "scheduled") {
     return "Not started";
+  }
+
+  if (match.status === "live") {
+    return "In progress";
   }
 
   const playerTotals = new Map<string, { goals: number; assists: number; points: number }>();
@@ -863,6 +835,13 @@ function getMatchMvp(
     });
 
   return mvp ? playerNames.get(mvp[0]) || "No MVP yet" : "No MVP yet";
+}
+
+function getMatchScoreLabel(match: MatchRow) {
+  if (match.status === "scheduled") return "Not started";
+  if (match.status === "live") return `Live ${match.team_a_score} - ${match.team_b_score}`;
+
+  return `${match.team_a_score} - ${match.team_b_score}`;
 }
 
 function fallbackStandings() {
