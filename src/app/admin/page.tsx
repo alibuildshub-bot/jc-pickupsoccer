@@ -190,21 +190,38 @@ export default function AdminPage() {
         return;
       }
 
+      const loadErrors: string[] = [];
+      const loadSection = async <T,>(label: string, callback: () => Promise<T>) => {
+        try {
+          return await callback();
+        } catch (error) {
+          loadErrors.push(`${label}: ${getErrorMessage(error)}`);
+          return null;
+        }
+      };
+
       const [playersResponse, matchesResponse, statsResponse, teamsResponse, pollsResponse] = await Promise.all([
-        adminFetch("/api/admin/players", { method: "GET" }, credential),
-        adminFetch("/api/admin/matches", { method: "GET" }, credential),
-        adminFetch("/api/admin/stats", { method: "GET" }, credential),
-        adminFetch("/api/admin/teams", { method: "GET" }, credential),
-        adminFetch("/api/admin/polls", { method: "GET" }, credential),
+        loadSection("Players", () => adminFetch("/api/admin/players", { method: "GET" }, credential)),
+        loadSection("Matches", () => adminFetch("/api/admin/matches", { method: "GET" }, credential)),
+        loadSection("Stats", () => adminFetch("/api/admin/stats", { method: "GET" }, credential)),
+        loadSection("Teams", () => adminFetch("/api/admin/teams", { method: "GET" }, credential)),
+        loadSection("Polls", () => adminFetch("/api/admin/polls", { method: "GET" }, credential)),
       ]);
 
-      setPlayers(playersResponse.players || []);
-      setMatches(matchesResponse.matches || []);
-      setStats(statsResponse.stats || []);
-      setTeams(teamsResponse.teams || []);
-      setRoster(teamsResponse.roster || []);
-      setPolls(pollsResponse.polls || []);
-      setPollSetupNeeded(Boolean(pollsResponse.setupNeeded));
+      if (playersResponse) setPlayers(playersResponse.players || []);
+      if (matchesResponse) setMatches(matchesResponse.matches || []);
+      if (statsResponse) setStats(statsResponse.stats || []);
+      if (teamsResponse) {
+        setTeams(teamsResponse.teams || []);
+        setRoster(teamsResponse.roster || []);
+      }
+      if (pollsResponse) {
+        setPolls(pollsResponse.polls || []);
+        setPollSetupNeeded(Boolean(pollsResponse.setupNeeded));
+      }
+      if (loadErrors.length > 0) {
+        setMessage(`Some admin data did not load. ${loadErrors.join(" | ")}`);
+      }
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
