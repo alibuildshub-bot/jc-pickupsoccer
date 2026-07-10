@@ -87,7 +87,7 @@ const fallbackMatches = [
     teamA: "Team A",
     teamB: "Team B",
     score: "0 - 0",
-    mvp: "Coming soon",
+    winner: "Coming soon",
     status: "Coming soon",
   },
 ];
@@ -175,7 +175,7 @@ export default async function Home() {
             </div>
           </div>
           <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
-            <MiniStat label="MVP" value={latestMatch.mvp} />
+            <MiniStat label="Winner" value={latestMatch.winner} />
             <MiniStat label="Date" value={latestMatch.date} />
             <MiniStat label="Status" value={latestMatch.status} />
           </div>
@@ -342,7 +342,7 @@ export default async function Home() {
                   <span className="text-black/35">vs</span>
                   <span className="min-w-0 break-words text-right">{match.teamB}</span>
                 </div>
-                <p className="mt-3 text-sm font-semibold text-black/55">MVP: {match.mvp}</p>
+                <p className="mt-3 text-sm font-semibold text-black/55">Winner: {match.winner}</p>
               </article>
             ))}
           </div>
@@ -485,14 +485,6 @@ async function getDashboardData() {
     : [];
   const teamStandings = buildTeamStandings(teams, tournamentMatches);
   const teamDisplayNames = buildTeamDisplayNames(teams);
-  const playerNames = new Map(players.map((player) => [player.id, player.name]));
-  const statsByMatch = new Map<string, MatchPlayerRow[]>();
-
-  for (const stat of matchStats) {
-    const currentStats = statsByMatch.get(stat.match_id) || [];
-    currentStats.push(stat);
-    statsByMatch.set(stat.match_id, currentStats);
-  }
 
   const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name">>();
 
@@ -526,7 +518,7 @@ async function getDashboardData() {
     teamA: getTeamDisplayName(match.team_a_name, teamDisplayNames),
     teamB: getTeamDisplayName(match.team_b_name, teamDisplayNames),
     score: getMatchScoreLabel(match),
-    mvp: getMatchMvp(match, statsByMatch.get(match.id) || [], playerNames),
+    winner: getMatchWinner(match, teamDisplayNames),
     status: getMatchStatusLabel(match.status),
   }));
 
@@ -803,47 +795,21 @@ function prefersExistingTeamName(existingName: string, nextName: string) {
   return existingName.toLowerCase().startsWith("team ") || !nextName.toLowerCase().startsWith("team ");
 }
 
-function getMatchMvp(
-  match: MatchRow,
-  stats: MatchPlayerRow[],
-  playerNames: Map<string, string>,
-) {
-  if (match.status === "scheduled") {
-    return "Not started";
-  }
-
-  if (match.status === "live") {
-    return "In progress";
-  }
-
-  const playerTotals = new Map<string, { goals: number; assists: number; points: number }>();
-
-  for (const stat of stats) {
-    const current = playerTotals.get(stat.player_id) || { goals: 0, assists: 0, points: 0 };
-
-    current.goals += stat.goals || 0;
-    current.assists += stat.assists || 0;
-    current.points = current.goals + current.assists;
-    playerTotals.set(stat.player_id, current);
-  }
-
-  const [mvp] = Array.from(playerTotals.entries())
-    .filter(([, totals]) => totals.points > 0)
-    .sort((a, b) => {
-      const nameA = playerNames.get(a[0]) || "";
-      const nameB = playerNames.get(b[0]) || "";
-
-      return b[1].points - a[1].points || b[1].goals - a[1].goals || nameA.localeCompare(nameB);
-    });
-
-  return mvp ? playerNames.get(mvp[0]) || "No MVP yet" : "No MVP yet";
-}
-
 function getMatchScoreLabel(match: MatchRow) {
   if (match.status === "scheduled") return "Not started";
   if (match.status === "live") return `Live ${match.team_a_score} - ${match.team_b_score}`;
 
   return `${match.team_a_score} - ${match.team_b_score}`;
+}
+
+function getMatchWinner(match: MatchRow, teamDisplayNames: Map<string, string>) {
+  if (match.status === "scheduled") return "Not started";
+  if (match.status === "live") return "In progress";
+  if (match.team_a_score === match.team_b_score) return "Draw";
+
+  const winnerName = match.team_a_score > match.team_b_score ? match.team_a_name : match.team_b_name;
+
+  return getTeamDisplayName(winnerName, teamDisplayNames);
 }
 
 function getMatchStatusLabel(status: string) {
