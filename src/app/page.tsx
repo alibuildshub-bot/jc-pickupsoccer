@@ -1,6 +1,5 @@
 import {
   CalendarDays,
-  Medal,
   Target,
   Trophy,
   Users,
@@ -92,11 +91,18 @@ const fallbackMatches = [
   },
 ];
 
+const fallbackTeamOfTheWeek = {
+  name: "Coming soon",
+  goalsFor: 0,
+  points: 0,
+  record: "0W - 0D - 0L",
+};
+
 export const revalidate = 0;
 
 export default async function Home() {
   const data = await getDashboardData();
-  const latestMatch = data.recentMatches[0] || fallbackMatches[0];
+  const teamOfTheWeek = data.teamOfTheWeek || fallbackTeamOfTheWeek;
 
   const statCards = [
     { label: "Active Players", value: String(data.activePlayers), icon: Users },
@@ -156,28 +162,22 @@ export default async function Home() {
         <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between border-b border-black/10 pb-4">
             <div>
-              <p className="text-sm font-bold text-black/50">Latest Result</p>
-              <h2 className="text-2xl font-black">{latestMatch.week}</h2>
+              <p className="text-sm font-bold text-black/50">Team of the Week</p>
+              <h2 className="text-2xl font-black">{data.tournamentLabel}</h2>
             </div>
-            <Medal className="text-[#b7791f]" size={32} />
+            <Trophy className="text-[#b7791f]" size={32} />
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 py-6 text-center sm:gap-4 sm:py-7">
-            <div className="min-w-0">
-              <p className="break-words text-xl font-black leading-tight sm:text-3xl">{latestMatch.teamA}</p>
-              <p className="mt-2 text-sm font-semibold text-black/55">Team A</p>
+          <div className="py-8 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-lg bg-[#f7f3ec] text-[#b7791f]">
+              <Trophy size={36} />
             </div>
-            <div className="rounded-lg bg-[#171717] px-3 py-2 text-xl font-black text-white sm:px-4 sm:py-3 sm:text-3xl">
-              {latestMatch.score}
-            </div>
-            <div className="min-w-0">
-              <p className="break-words text-xl font-black leading-tight sm:text-3xl">{latestMatch.teamB}</p>
-              <p className="mt-2 text-sm font-semibold text-black/55">Team B</p>
-            </div>
+            <p className="break-words text-3xl font-black leading-tight sm:text-5xl">{teamOfTheWeek.name}</p>
+            <p className="mt-3 text-sm font-bold uppercase text-black/45">Tournament winner</p>
           </div>
           <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
-            <MiniStat label="Winner" value={latestMatch.winner} />
-            <MiniStat label="Date" value={latestMatch.date} />
-            <MiniStat label="Team of the Week" value={latestMatch.winner} icon={Trophy} />
+            <MiniStat label="Goals Scored" value={String(teamOfTheWeek.goalsFor)} />
+            <MiniStat label="Points" value={String(teamOfTheWeek.points)} />
+            <MiniStat label="Record" value={teamOfTheWeek.record} icon={Trophy} />
           </div>
         </div>
       </section>
@@ -434,6 +434,7 @@ async function getDashboardData() {
       recentMatches: fallbackMatches,
       teamStandings: fallbackStandings(),
       teamRosters: fallbackRosters(),
+      teamOfTheWeek: fallbackTeamOfTheWeek,
       tournamentLabel: "Tournament Day",
       tournamentGames: 0,
       completedTournamentGames: 0,
@@ -472,6 +473,7 @@ async function getDashboardData() {
     ? matches.filter((match) => match.match_date === tournamentDate)
     : [];
   const teamStandings = buildTeamStandings(teams, tournamentMatches);
+  const teamOfTheWeek = buildTeamOfTheWeek(teamStandings);
   const teamDisplayNames = buildTeamDisplayNames(teams);
 
   const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name">>();
@@ -523,9 +525,23 @@ async function getDashboardData() {
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
     teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
     teamRosters: teamRosters.length > 0 ? teamRosters : fallbackRosters(),
+    teamOfTheWeek,
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
     tournamentGames: tournamentMatches.length,
     completedTournamentGames: tournamentMatches.filter((match) => match.status === "completed").length,
+  };
+}
+
+function buildTeamOfTheWeek(standings: TeamStanding[]) {
+  const [winner] = standings.filter((team) => team.played > 0);
+
+  if (!winner) return fallbackTeamOfTheWeek;
+
+  return {
+    name: winner.name,
+    goalsFor: winner.goalsFor,
+    points: winner.points,
+    record: `${winner.wins}W - ${winner.draws}D - ${winner.losses}L`,
   };
 }
 
