@@ -79,6 +79,30 @@ type TeamRoster = {
   players: string[];
 };
 
+type MvpPollRow = {
+  id: string;
+  title: string;
+  match_date: string;
+};
+
+type MvpPollOptionRow = {
+  id: string;
+  label: string;
+};
+
+type MvpVoteRow = {
+  option_id: string;
+};
+
+type MvpWinner = {
+  name: string;
+  votes: number;
+  totalVotes: number;
+  title: string;
+  date: string;
+  isReady: boolean;
+};
+
 const fallbackMatches = [
   {
     game: "Game 1",
@@ -99,11 +123,21 @@ const fallbackTeamOfTheWeek = {
   record: "0W - 0D - 0L",
 };
 
+const fallbackMvpWinner: MvpWinner = {
+  name: "Coming soon",
+  votes: 0,
+  totalVotes: 0,
+  title: "Tournament MVP",
+  date: "After voting closes",
+  isReady: false,
+};
+
 export const revalidate = 0;
 
 export default async function Home() {
   const data = await getDashboardData();
   const teamOfTheWeek = data.teamOfTheWeek || fallbackTeamOfTheWeek;
+  const mvpWinner = data.mvpWinner || fallbackMvpWinner;
 
   const statCards = [
     { label: "Active Players", value: String(data.activePlayers), icon: Users },
@@ -191,6 +225,28 @@ export default async function Home() {
             <p className="mt-1 text-sm font-semibold text-black/55">{item.label}</p>
           </div>
         ))}
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-bold text-black/50">Tournament MVP</p>
+              <h2 className="mt-1 break-words text-3xl font-black leading-tight">{mvpWinner.name}</h2>
+              <p className="mt-2 text-sm font-semibold text-black/55">
+                {mvpWinner.isReady ? "Fan vote winner" : "MVP will appear here when voting is closed."}
+              </p>
+            </div>
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-[#f7f3ec] text-[#b7791f]">
+              <Trophy size={36} />
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
+            <MiniStat label="Winning Votes" value={mvpWinner.isReady ? String(mvpWinner.votes) : "-"} />
+            <MiniStat label="Total Votes" value={mvpWinner.isReady ? String(mvpWinner.totalVotes) : "-"} />
+            <MiniStat label="Poll Date" value={mvpWinner.date} />
+          </div>
+        </div>
       </section>
 
       <section id="progress" className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
@@ -488,6 +544,7 @@ async function getDashboardData() {
       teamStandings: fallbackStandings(),
       teamRosters: fallbackRosters(),
       teamOfTheWeek: fallbackTeamOfTheWeek,
+      mvpWinner: fallbackMvpWinner,
       tournamentLabel: "Tournament Day",
       tournamentGames: 0,
       completedTournamentGames: 0,
@@ -527,6 +584,7 @@ async function getDashboardData() {
     : [];
   const teamStandings = buildTeamStandings(teams, tournamentMatches);
   const teamOfTheWeek = buildTeamOfTheWeek(teamStandings);
+  const mvpWinner = await getClosedMvpWinner(supabase);
   const teamDisplayNames = buildTeamDisplayNames(teams);
   const playerTeamNames = buildPlayerTeamNames(rawTeams, (rosterRows || []) as RosterRow[], teamDisplayNames);
 
@@ -583,9 +641,65 @@ async function getDashboardData() {
     teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
     teamRosters: teamRosters.length > 0 ? teamRosters : fallbackRosters(),
     teamOfTheWeek,
+    mvpWinner,
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
     tournamentGames: tournamentMatches.length,
     completedTournamentGames: tournamentMatches.filter((match) => match.status === "completed").length,
+  };
+}
+
+async function getClosedMvpWinner(supabase: NonNullable<ReturnType<typeof createSupabaseClient>>): Promise<MvpWinner> {
+  const { data: poll, error: pollError } = await supabase
+    .from("mvp_polls")
+    .select("id,title,match_date")
+    .eq("status", "closed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (pollError || !poll) return fallbackMvpWinner;
+
+  const latestPoll = poll as MvpPollRow;
+  const [{ data: optionRows, error: optionError }, { data: voteRows, error: voteError }] = await Promise.all([
+    supabase.from("mvp_poll_options").select("id,label").eq("poll_id", latestPoll.id),
+    supabase.from("mvp_votes").select("option_id").eq("poll_id", latestPoll.id),
+  ]);
+
+  if (optionError || voteError) return fallbackMvpWinner;
+
+  const options = (optionRows || []) as MvpPollOptionRow[];
+  const votes = (voteRows || []) as MvpVoteRow[];
+  const voteCounts = new Map<string, number>();
+
+  for (const vote of votes) {
+    voteCounts.set(vote.option_id, (voteCounts.get(vote.option_id) || 0) + 1);
+  }
+
+  const rankedOptions = options
+    .map((option) => ({
+      label: option.label,
+      votes: voteCounts.get(option.id) || 0,
+    }))
+    .sort((a, b) => b.votes - a.votes || a.label.localeCompare(b.label));
+  const [winner] = rankedOptions;
+
+  if (!winner || winner.votes === 0) {
+    return {
+      ...fallbackMvpWinner,
+      title: latestPoll.title,
+      date: formatDate(latestPoll.match_date),
+    };
+  }
+
+  const tiedWinners = rankedOptions.filter((option) => option.votes === winner.votes);
+
+  return {
+    name: tiedWinners.map((option) => option.label).join(" / "),
+    votes: winner.votes,
+    totalVotes: votes.length,
+    title: latestPoll.title,
+    date: formatDate(latestPoll.match_date),
+    isReady: true,
   };
 }
 
