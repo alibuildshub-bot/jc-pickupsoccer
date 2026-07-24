@@ -155,6 +155,8 @@ const fallbackMvpWinner: MvpWinner = {
   isReady: false,
 };
 
+const nextSessionDate = "2026-07-25";
+
 export const revalidate = 0;
 
 export default async function Home() {
@@ -653,13 +655,15 @@ async function getDashboardData() {
   const teams = dedupeTeams(rawTeams);
   const teamRosters = buildTeamRosters(teams, rawTeams, (rosterRows || []) as unknown as RosterRow[]);
   const gameLabels = buildGameLabels(matches);
-  const tournamentDate = matches[0]?.match_date || "";
+  const tournamentDate = getCurrentSessionDate(matches);
   const tournamentMatches = tournamentDate
     ? matches.filter((match) => match.match_date === tournamentDate)
     : [];
+  const tournamentMatchIds = new Set(tournamentMatches.map((match) => match.id));
+  const currentMatchStats = matchStats.filter((stat) => tournamentMatchIds.has(stat.match_id));
   const teamStandings = buildTeamStandings(teams, tournamentMatches);
   const teamOfTheWeek = buildTeamOfTheWeek(teamStandings);
-  const mvpWinner = await getClosedMvpWinner(supabase);
+  const mvpWinner = await getClosedMvpWinner(supabase, tournamentDate);
   const teamDisplayNames = buildTeamDisplayNames(teams);
   const playerTeamNames = buildPlayerTeamNames(rawTeams, (rosterRows || []) as RosterRow[], teamDisplayNames);
 
@@ -669,7 +673,7 @@ async function getDashboardData() {
     totalsByPlayer.set(player.id, { games: 0, wins: 0, goals: 0, assists: 0, points: 0 });
   }
 
-  for (const stat of matchStats) {
+  for (const stat of currentMatchStats) {
     const totals = totalsByPlayer.get(stat.player_id);
     if (!totals) continue;
 
@@ -689,7 +693,7 @@ async function getDashboardData() {
     .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
   const activeLeaderboard = leaderboard.filter((player) => player.games > 0);
 
-  const recentMatches = matches.map((match) => ({
+  const recentMatches = tournamentMatches.map((match) => ({
     game: gameLabels.get(match.id) || "Game",
     week: match.week_label,
     date: formatDate(match.match_date),
@@ -701,13 +705,13 @@ async function getDashboardData() {
   }));
   const resultsArchive = buildResultsArchive(matches, matchStats, players, teams, gameLabels, teamDisplayNames);
 
-  const goalsTracked = matchStats.reduce((total, stat) => total + (stat.goals || 0), 0);
+  const goalsTracked = currentMatchStats.reduce((total, stat) => total + (stat.goals || 0), 0);
 
   return {
     isConnected: true,
     activePlayers: players.length,
     activeTeams: teamStandings.length || teams.length,
-    gamesPlayed: matches.filter((match) => match.status === "completed").length,
+    gamesPlayed: tournamentMatches.filter((match) => match.status === "completed").length,
     goalsTracked,
     topPlayer: activeLeaderboard[0]?.name || "Coming soon",
     players: activeLeaderboard,
@@ -723,14 +727,20 @@ async function getDashboardData() {
   };
 }
 
-async function getClosedMvpWinner(supabase: NonNullable<ReturnType<typeof createSupabaseClient>>): Promise<MvpWinner> {
-  const { data: poll, error: pollError } = await supabase
+async function getClosedMvpWinner(
+  supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
+  matchDate: string,
+): Promise<MvpWinner> {
+  if (!matchDate) return fallbackMvpWinner;
+
+  const query = supabase
     .from("mvp_polls")
     .select("id,title,match_date")
     .eq("status", "closed")
+    .eq("match_date", matchDate)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  const { data: poll, error: pollError } = await query.maybeSingle();
 
   if (pollError || !poll) return fallbackMvpWinner;
 
@@ -776,6 +786,22 @@ async function getClosedMvpWinner(supabase: NonNullable<ReturnType<typeof create
     date: formatDate(latestPoll.match_date),
     isReady: true,
   };
+}
+
+function getCurrentSessionDate(matches: MatchRow[]) {
+  const today = getTodayIsoDate();
+  const currentMatch = [...matches]
+    .filter((match) => match.status !== "completed" || match.match_date >= today)
+    .sort((first, second) => first.match_date.localeCompare(second.match_date) || sortMatchesByGameOrder(first, second))[0];
+
+  if (currentMatch) return currentMatch.match_date;
+  if (nextSessionDate >= today) return nextSessionDate;
+
+  return "";
+}
+
+function getTodayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function buildTeamOfTheWeek(standings: TeamStanding[]) {
