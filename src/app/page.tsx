@@ -506,8 +506,8 @@ export default async function Home() {
         <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-black/50">Archive</p>
-              <h2 className="text-2xl font-black">Session Folders</h2>
+              <p className="text-sm font-bold text-black/50">Results</p>
+              <h2 className="text-2xl font-black">Past Games</h2>
             </div>
             <CalendarDays className="text-[#1f7a4d]" size={26} />
           </div>
@@ -517,7 +517,7 @@ export default async function Home() {
                 <div key={day.date} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-black uppercase text-[#1f7a4d]">Saved session</p>
+                      <p className="text-xs font-black uppercase text-[#1f7a4d]">Completed games</p>
                       <h3 className="text-xl font-black">{day.date}</h3>
                     </div>
                     <span className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-black/55">
@@ -594,7 +594,7 @@ export default async function Home() {
             </div>
           ) : (
             <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
-              <p className="font-black">Session folders will appear after completed games.</p>
+              <p className="font-black">Past games will appear after completed games.</p>
             </div>
           )}
         </div>
