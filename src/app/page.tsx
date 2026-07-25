@@ -384,7 +384,7 @@ export default async function Home() {
                   <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
                   <h3 className="break-words text-lg font-black leading-tight">{team.name}</h3>
                 </div>
-                <p className="shrink-0 text-sm font-black text-black/45">{team.players.length}/5</p>
+                <p className="shrink-0 text-sm font-black text-black/45">{formatPlayerCount(team.players.length)}</p>
               </div>
               {team.players.length > 0 ? (
                 <div className="grid gap-2">
@@ -981,6 +981,10 @@ function getTeamsForMatches(teams: TeamRow[], matches: MatchRow[]) {
   }
 
   return teams.filter((team) => matchTeamNames.has(normalizeTeamName(team.name)));
+}
+
+function formatPlayerCount(count: number) {
+  return `${count} ${count === 1 ? "player" : "players"}`;
 }
 
 function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {

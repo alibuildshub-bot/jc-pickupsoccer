@@ -1459,7 +1459,7 @@ export default function AdminPage() {
                         <div className="mb-3 h-2 w-14 rounded-full" style={{ backgroundColor: team.color || "#1f7a4d" }} />
                         <h2 className="font-black">{team.name}</h2>
                         <p className="text-sm font-semibold text-black/50">
-                          {teamRoster.length}/5 players {team.is_active ? "" : "| inactive"}
+                          {formatPlayerCount(teamRoster.length)} {team.is_active ? "" : "| inactive"}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -1964,6 +1964,10 @@ function formatMatchStatus(status: string) {
   return status;
 }
 
+function formatPlayerCount(count: number) {
+  return `${count} ${count === 1 ? "player" : "players"}`;
+}
+
 function formatDateLabel(value: string) {
   if (!value) return "Tournament Day";
 
@@ -2230,7 +2234,7 @@ function QuickStatTeamSheet({
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="font-black">{teamName}</h3>
         <span className="rounded-lg bg-[#edf4f0] px-2 py-1 text-xs font-black text-[#17613d]">
-          {players.length}/5
+          {formatPlayerCount(players.length)}
         </span>
       </div>
       {players.length === 0 ? (
