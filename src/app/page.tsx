@@ -917,7 +917,8 @@ function buildResultsArchive(
       playerTotals.set(stat.player_id, existing);
     }
 
-    const standings = buildTeamStandings(teams, dayMatches);
+    const dayTeams = getTeamsForMatches(teams, dayMatches);
+    const standings = buildTeamStandings(dayTeams, dayMatches);
     const teamOfTheWeek = buildTeamOfTheWeek(standings);
     const sortedPlayers = Array.from(playerTotals.values()).sort(
       (a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name),
@@ -951,6 +952,17 @@ function getArchiveTopScorer(players: ArchivePlayer[]) {
     .filter((player) => player.goals === topGoalCount)
     .map((player) => `${player.name} (${player.goals})`)
     .join(" / ");
+}
+
+function getTeamsForMatches(teams: TeamRow[], matches: MatchRow[]) {
+  const matchTeamNames = new Set<string>();
+
+  for (const match of matches) {
+    matchTeamNames.add(normalizeTeamName(match.team_a_name));
+    matchTeamNames.add(normalizeTeamName(match.team_b_name));
+  }
+
+  return teams.filter((team) => matchTeamNames.has(normalizeTeamName(team.name)));
 }
 
 function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
