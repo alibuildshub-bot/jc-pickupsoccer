@@ -178,7 +178,6 @@ export default function AdminPage() {
   const adminCredential = session?.access_token || savedPassword;
   const isUnlocked = Boolean(adminCredential);
   const activePlayers = useMemo(() => players.filter((player) => player.is_active), [players]);
-  const activeTeams = useMemo(() => teams.filter((team) => team.is_active), [teams]);
   const matchGameLabels = useMemo(() => buildGameLabels(matches), [matches]);
   const gameDayMatches = useMemo(
     () =>
@@ -186,6 +185,10 @@ export default function AdminPage() {
         .filter((match) => match.match_date === gameDayForm.date)
         .sort(sortMatchesByGameOrder),
     [gameDayForm.date, matches],
+  );
+  const activeTeams = useMemo(
+    () => getCurrentSetupTeams(teams, matches, gameDayMatches, gameDayForm.date),
+    [gameDayForm.date, gameDayMatches, matches, teams],
   );
   const gameDayMatchIds = useMemo(() => new Set(gameDayMatches.map((match) => match.id)), [gameDayMatches]);
   const gameDayStats = useMemo(
@@ -1414,7 +1417,7 @@ export default function AdminPage() {
                     required
                   >
                     <option value="">Select team</option>
-                    {teams.map((team) => (
+                    {activeTeams.map((team) => (
                       <option key={team.id} value={team.id}>
                         {team.name}
                       </option>
@@ -1442,7 +1445,11 @@ export default function AdminPage() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
-              {teams.map((team) => {
+              {activeTeams.length === 0 ? (
+                <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4 text-sm font-bold text-black/50 md:col-span-3">
+                  Add the teams for {formatDateLabel(gameDayForm.date)} or schedule their games to show them here.
+                </div>
+              ) : activeTeams.map((team) => {
                 const teamRoster = getTeamRoster(team.id);
 
                 return (
@@ -1597,13 +1604,13 @@ export default function AdminPage() {
                 <TeamNameSelect
                   label="Team A"
                   value={matchForm.team_a_name}
-                  teams={teams}
+                  teams={activeTeams}
                   onChange={(value) => setMatchForm({ ...matchForm, team_a_name: value })}
                 />
                 <TeamNameSelect
                   label="Team B"
                   value={matchForm.team_b_name}
-                  teams={teams}
+                  teams={activeTeams}
                   onChange={(value) => setMatchForm({ ...matchForm, team_b_name: value })}
                 />
               </div>
@@ -2035,6 +2042,43 @@ function buildPastGameSessions(
       totalGoals: dateMatches.reduce((total, match) => total + match.team_a_score + match.team_b_score, 0),
     };
   });
+}
+
+function getCurrentSetupTeams(
+  teams: TournamentTeam[],
+  matches: Match[],
+  currentMatches: Match[],
+  currentDate: string,
+) {
+  const activeTeams = teams.filter((team) => team.is_active);
+
+  if (currentMatches.length > 0) {
+    const currentTeamNames = new Set<string>();
+
+    for (const match of currentMatches) {
+      currentTeamNames.add(normalizeAdminLabel(match.team_a_name));
+      currentTeamNames.add(normalizeAdminLabel(match.team_b_name));
+    }
+
+    return activeTeams.filter((team) => currentTeamNames.has(normalizeAdminLabel(team.name)));
+  }
+
+  const archivedTeamNames = buildArchivedTeamNames(matches, currentDate);
+
+  return activeTeams.filter((team) => !archivedTeamNames.has(normalizeAdminLabel(team.name)));
+}
+
+function buildArchivedTeamNames(matches: Match[], currentDate: string) {
+  const names = new Set<string>();
+
+  for (const match of matches) {
+    if (match.status !== "completed" || match.match_date === currentDate) continue;
+
+    names.add(normalizeAdminLabel(match.team_a_name));
+    names.add(normalizeAdminLabel(match.team_b_name));
+  }
+
+  return names;
 }
 
 function getPollUrl(token: string) {

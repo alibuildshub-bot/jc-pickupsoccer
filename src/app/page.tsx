@@ -653,15 +653,17 @@ async function getDashboardData() {
   const matchStats = (statRows || []) as MatchPlayerRow[];
   const rawTeams = (teamRows || []) as TeamRow[];
   const teams = dedupeTeams(rawTeams);
-  const teamRosters = buildTeamRosters(teams, rawTeams, (rosterRows || []) as unknown as RosterRow[]);
   const gameLabels = buildGameLabels(matches);
   const tournamentDate = getCurrentSessionDate(matches);
   const tournamentMatches = tournamentDate
     ? matches.filter((match) => match.match_date === tournamentDate)
     : [];
+  const archivedTeamNames = buildArchivedTeamNames(matches, tournamentDate);
+  const currentTeams = getCurrentSessionTeams(teams, tournamentMatches, archivedTeamNames);
+  const teamRosters = buildTeamRosters(currentTeams, rawTeams, (rosterRows || []) as unknown as RosterRow[]);
   const tournamentMatchIds = new Set(tournamentMatches.map((match) => match.id));
   const currentMatchStats = matchStats.filter((stat) => tournamentMatchIds.has(stat.match_id));
-  const teamStandings = buildTeamStandings(teams, tournamentMatches);
+  const teamStandings = buildTeamStandings(currentTeams, tournamentMatches);
   const teamOfTheWeek = buildTeamOfTheWeek(teamStandings);
   const mvpWinner = await getClosedMvpWinner(supabase, tournamentDate);
   const teamDisplayNames = buildTeamDisplayNames(teams);
@@ -710,15 +712,15 @@ async function getDashboardData() {
   return {
     isConnected: true,
     activePlayers: players.length,
-    activeTeams: teamStandings.length || teams.length,
+    activeTeams: currentTeams.length,
     gamesPlayed: tournamentMatches.filter((match) => match.status === "completed").length,
     goalsTracked,
     topPlayer: activeLeaderboard[0]?.name || "Coming soon",
     players: activeLeaderboard,
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
     resultsArchive,
-    teamStandings: teamStandings.length > 0 ? teamStandings : fallbackStandings(),
-    teamRosters: teamRosters.length > 0 ? teamRosters : fallbackRosters(),
+    teamStandings: teamStandings.length > 0 ? teamStandings : [],
+    teamRosters,
     teamOfTheWeek,
     mvpWinner,
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
@@ -802,6 +804,38 @@ function getCurrentSessionDate(matches: MatchRow[]) {
 
 function getTodayIsoDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function getCurrentSessionTeams(
+  teams: TeamRow[],
+  currentMatches: MatchRow[],
+  archivedTeamNames: Set<string>,
+) {
+  if (currentMatches.length > 0) {
+    const currentTeamNames = new Set<string>();
+
+    for (const match of currentMatches) {
+      currentTeamNames.add(normalizeTeamName(match.team_a_name));
+      currentTeamNames.add(normalizeTeamName(match.team_b_name));
+    }
+
+    return teams.filter((team) => currentTeamNames.has(normalizeTeamName(team.name)));
+  }
+
+  return teams.filter((team) => !archivedTeamNames.has(normalizeTeamName(team.name)));
+}
+
+function buildArchivedTeamNames(matches: MatchRow[], currentDate: string) {
+  const names = new Set<string>();
+
+  for (const match of matches) {
+    if (match.status !== "completed" || match.match_date === currentDate) continue;
+
+    names.add(normalizeTeamName(match.team_a_name));
+    names.add(normalizeTeamName(match.team_b_name));
+  }
+
+  return names;
 }
 
 function buildTeamOfTheWeek(standings: TeamStanding[]) {
