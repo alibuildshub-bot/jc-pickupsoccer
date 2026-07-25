@@ -1,5 +1,10 @@
 import { createSupabaseAdminClient } from "@/lib/admin";
 
+const excludedIps = (process.env.ANALYTICS_EXCLUDED_IPS || "")
+  .split(",")
+  .map((ip) => normalizeIp(ip))
+  .filter(Boolean);
+
 type AnalyticsPayload = {
   path?: string;
   referrer?: string;
@@ -7,6 +12,12 @@ type AnalyticsPayload = {
 };
 
 export async function POST(request: Request) {
+  const clientIp = getClientIp(request);
+
+  if (clientIp && excludedIps.includes(clientIp)) {
+    return Response.json({ ok: true, skipped: true, reason: "excluded-ip" });
+  }
+
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
@@ -53,6 +64,18 @@ function sanitizePath(value?: string) {
 
 function sanitizeText(value: string | null | undefined, maxLength: number) {
   return (value || "").trim().slice(0, maxLength);
+}
+
+function getClientIp(request: Request) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+  const firstForwardedIp = forwardedFor?.split(",")[0];
+
+  return normalizeIp(firstForwardedIp || realIp || "");
+}
+
+function normalizeIp(value: string) {
+  return value.trim().replace(/^::ffff:/, "");
 }
 
 function isMissingAnalyticsTable(error: { code?: string; message?: string }) {

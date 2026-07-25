@@ -34,3 +34,17 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Analytics
+
+To exclude your own visits from admin analytics, add this Vercel environment variable:
+
+```bash
+ANALYTICS_EXCLUDED_IPS=123.123.123.123
+```
+
+Use commas for more than one IP address:
+
+```bash
+ANALYTICS_EXCLUDED_IPS=123.123.123.123,456.456.456.456
+```
