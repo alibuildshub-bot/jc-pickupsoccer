@@ -10,6 +10,7 @@ import {
   LogIn,
   Loader2,
   Lock,
+  MousePointerClick,
   Plus,
   Target,
   Trash2,
@@ -106,7 +107,32 @@ type PastGameSession = {
   totalGoals: number;
 };
 
+type SiteAnalytics = {
+  totalVisits: number;
+  uniqueVisitors: number;
+  todayVisits: number;
+  todayVisitors: number;
+  daily: Array<{
+    date: string;
+    visits: number;
+    visitors: number;
+  }>;
+  topPages: Array<{
+    path: string;
+    visits: number;
+  }>;
+};
+
 const nextSessionDate = "2026-07-25";
+
+const emptyAnalytics: SiteAnalytics = {
+  totalVisits: 0,
+  uniqueVisitors: 0,
+  todayVisits: 0,
+  todayVisitors: 0,
+  daily: [],
+  topPages: [],
+};
 
 const emptyPlayer = {
   name: "",
@@ -154,6 +180,8 @@ export default function AdminPage() {
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [polls, setPolls] = useState<MvpPoll[]>([]);
   const [pollSetupNeeded, setPollSetupNeeded] = useState(false);
+  const [analytics, setAnalytics] = useState<SiteAnalytics>(emptyAnalytics);
+  const [analyticsSetupNeeded, setAnalyticsSetupNeeded] = useState(false);
   const [playerForm, setPlayerForm] = useState(emptyPlayer);
   const [matchForm, setMatchForm] = useState(emptyMatch);
   const [teamForm, setTeamForm] = useState(emptyTeam);
@@ -231,12 +259,13 @@ export default function AdminPage() {
         }
       };
 
-      const [playersResponse, matchesResponse, statsResponse, teamsResponse, pollsResponse] = await Promise.all([
+      const [playersResponse, matchesResponse, statsResponse, teamsResponse, pollsResponse, analyticsResponse] = await Promise.all([
         loadSection("Players", () => adminFetch("/api/admin/players", { method: "GET" }, credential)),
         loadSection("Matches", () => adminFetch("/api/admin/matches", { method: "GET" }, credential)),
         loadSection("Stats", () => adminFetch("/api/admin/stats", { method: "GET" }, credential)),
         loadSection("Teams", () => adminFetch("/api/admin/teams", { method: "GET" }, credential)),
         loadSection("Polls", () => adminFetch("/api/admin/polls", { method: "GET" }, credential)),
+        loadSection("Analytics", () => adminFetch("/api/admin/analytics", { method: "GET" }, credential)),
       ]);
 
       if (playersResponse) setPlayers(playersResponse.players || []);
@@ -249,6 +278,10 @@ export default function AdminPage() {
       if (pollsResponse) {
         setPolls(pollsResponse.polls || []);
         setPollSetupNeeded(Boolean(pollsResponse.setupNeeded));
+      }
+      if (analyticsResponse) {
+        setAnalytics(analyticsResponse.analytics || emptyAnalytics);
+        setAnalyticsSetupNeeded(Boolean(analyticsResponse.setupNeeded));
       }
       if (loadErrors.length > 0) {
         setMessage(`Some admin data did not load. ${loadErrors.join(" | ")}`);
@@ -355,6 +388,8 @@ export default function AdminPage() {
     setRoster([]);
     setPolls([]);
     setPollSetupNeeded(false);
+    setAnalytics(emptyAnalytics);
+    setAnalyticsSetupNeeded(false);
     setAuthInfo(null);
     setMessage("");
   }
@@ -975,6 +1010,68 @@ export default function AdminPage() {
           <AdminMetric icon={CalendarDays} label="Current Games" value={String(gameDayMatches.length)} />
           <AdminMetric icon={Target} label="Current Stat Rows" value={String(gameDayStats.length)} />
         </div>
+
+        <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-black/50">Site Analytics</p>
+              <h1 className="text-2xl font-black">Visitor Tracking</h1>
+            </div>
+            <MousePointerClick className="text-[#1f7a4d]" size={26} />
+          </div>
+
+          {analyticsSetupNeeded ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+              Analytics table is not set up yet. Run supabase-site-analytics.sql in Supabase, then refresh this page.
+            </div>
+          ) : (
+            <>
+              <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <AdminMiniMetric label="Total Visits" value={String(analytics.totalVisits)} />
+                <AdminMiniMetric label="Unique Visitors" value={String(analytics.uniqueVisitors)} />
+                <AdminMiniMetric label="Today" value={String(analytics.todayVisits)} />
+                <AdminMiniMetric label="Today Unique" value={String(analytics.todayVisitors)} />
+              </div>
+              <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                <div className="rounded-lg bg-[#fbfaf7] p-4">
+                  <p className="mb-3 text-xs font-black uppercase text-black/45">Recent Days</p>
+                  {analytics.daily.length > 0 ? (
+                    <div className="space-y-2">
+                      {analytics.daily.map((day) => (
+                        <div key={day.date} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-lg bg-white px-3 py-2 text-sm">
+                          <span className="font-black">{day.date}</span>
+                          <span className="font-bold text-black/55">{day.visits} visits</span>
+                          <span className="font-bold text-black/55">{day.visitors} unique</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-lg bg-white px-3 py-4 text-sm font-bold text-black/50">
+                      Visits will appear after people open the public site.
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-lg bg-[#fbfaf7] p-4">
+                  <p className="mb-3 text-xs font-black uppercase text-black/45">Top Pages</p>
+                  {analytics.topPages.length > 0 ? (
+                    <div className="space-y-2">
+                      {analytics.topPages.map((page) => (
+                        <div key={page.path} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm">
+                          <span className="min-w-0 truncate font-black">{page.path}</span>
+                          <span className="shrink-0 font-bold text-black/55">{page.visits}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-lg bg-white px-3 py-4 text-sm font-bold text-black/50">
+                      Top pages will appear after visits are tracked.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </section>
 
         {message && (
           <div className="mb-6 rounded-lg border border-black/10 bg-white p-4 text-sm font-bold text-black/70">
@@ -2111,6 +2208,15 @@ function AdminMetric({
       <Icon className="mb-4 text-[#1f7a4d]" size={24} />
       <p className="text-3xl font-black">{value}</p>
       <p className="mt-1 text-sm font-semibold text-black/55">{label}</p>
+    </div>
+  );
+}
+
+function AdminMiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-[#fbfaf7] p-4">
+      <p className="text-2xl font-black">{value}</p>
+      <p className="mt-1 text-sm font-bold text-black/50">{label}</p>
     </div>
   );
 }

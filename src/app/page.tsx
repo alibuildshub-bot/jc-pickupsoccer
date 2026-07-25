@@ -5,6 +5,7 @@ import {
   Users,
 } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
+import SiteVisitTracker from "@/components/SiteVisitTracker";
 import { createSupabaseClient } from "@/lib/supabase";
 
 type PlayerRow = {
@@ -174,6 +175,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[#f7f3ec] text-[#171717]">
+      <SiteVisitTracker />
       <nav className="border-b border-black/10 bg-[#f7f3ec]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
