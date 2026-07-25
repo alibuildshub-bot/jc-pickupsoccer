@@ -41,6 +41,10 @@ export async function GET(request: Request) {
   return Response.json({
     setupNeeded: false,
     analytics: buildAnalytics((data || []) as VisitRow[]),
+  }, {
+    headers: {
+      "Cache-Control": "no-store",
+    },
   });
 }
 

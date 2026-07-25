@@ -10,6 +10,7 @@ export default function SiteVisitTracker() {
 
     fetch("/api/analytics", {
       method: "POST",
+      cache: "no-store",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         path: window.location.pathname,
@@ -26,11 +27,19 @@ export default function SiteVisitTracker() {
 }
 
 function getVisitorId() {
-  const existingId = window.localStorage.getItem(visitorStorageKey);
-  if (existingId) return existingId;
+  try {
+    const existingId = window.localStorage.getItem(visitorStorageKey);
+    if (existingId) return existingId;
 
-  const nextId = crypto.randomUUID();
-  window.localStorage.setItem(visitorStorageKey, nextId);
+    const nextId =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `visitor-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-  return nextId;
+    window.localStorage.setItem(visitorStorageKey, nextId);
+
+    return nextId;
+  } catch {
+    return `visitor-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
 }

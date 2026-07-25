@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
+    console.warn("Analytics skipped: Supabase admin client is not configured.");
     return Response.json({ ok: true, skipped: true });
   }
 
@@ -32,10 +33,12 @@ export async function POST(request: Request) {
   });
 
   if (error && isMissingAnalyticsTable(error)) {
+    console.warn("Analytics skipped: site_visits table is missing or incomplete.", error);
     return Response.json({ ok: true, setupNeeded: true });
   }
 
   if (error) {
+    console.error("Analytics insert failed:", error);
     return Response.json({ ok: true, skipped: true });
   }
 
