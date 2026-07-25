@@ -124,6 +124,7 @@ type ArchiveDay = {
   players: ArchivePlayer[];
   totalGoals: number;
   teamOfTheWeek: string;
+  topScorer: string;
 };
 
 const fallbackMatches = [
@@ -527,7 +528,7 @@ export default async function Home() {
                   <div className="mb-4 grid gap-3 sm:grid-cols-3">
                     <MiniStat label="Team of the Week" value={day.teamOfTheWeek} icon={Trophy} />
                     <MiniStat label="Total Goals" value={String(day.totalGoals)} />
-                    <MiniStat label="Stat Leaders" value={String(day.players.length)} />
+                    <MiniStat label="Top Scorer" value={day.topScorer} />
                   </div>
                   <div className="grid gap-2 md:grid-cols-2">
                     {day.matches.map((match) => (
@@ -918,6 +919,10 @@ function buildResultsArchive(
 
     const standings = buildTeamStandings(teams, dayMatches);
     const teamOfTheWeek = buildTeamOfTheWeek(standings);
+    const sortedPlayers = Array.from(playerTotals.values()).sort(
+      (a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name),
+    );
+    const topScorer = getArchiveTopScorer(sortedPlayers);
 
     return {
       date: formatDate(rawDate),
@@ -929,13 +934,23 @@ function buildResultsArchive(
         winner: getMatchWinner(match, teamDisplayNames),
       })),
       standings,
-      players: Array.from(playerTotals.values()).sort(
-        (a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name),
-      ),
+      players: sortedPlayers,
       totalGoals: dayMatches.reduce((total, match) => total + match.team_a_score + match.team_b_score, 0),
       teamOfTheWeek: teamOfTheWeek.name,
+      topScorer,
     };
   });
+}
+
+function getArchiveTopScorer(players: ArchivePlayer[]) {
+  const topGoalCount = players[0]?.goals || 0;
+
+  if (topGoalCount === 0) return "No goals entered";
+
+  return players
+    .filter((player) => player.goals === topGoalCount)
+    .map((player) => `${player.name} (${player.goals})`)
+    .join(" / ");
 }
 
 function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
