@@ -12,16 +12,11 @@ create table if not exists public.site_visits (
 -- Repair-safe setup: if the table already existed from an older/incomplete
 -- script, add any missing columns before creating indexes.
 alter table public.site_visits
-  add column if not exists id uuid default gen_random_uuid(),
   add column if not exists path text default '/',
   add column if not exists referrer text,
   add column if not exists visitor_id text default gen_random_uuid()::text,
   add column if not exists user_agent text,
   add column if not exists created_at timestamptz default now();
-
-update public.site_visits
-set id = gen_random_uuid()
-where id is null;
 
 update public.site_visits
 set path = '/'
