@@ -192,45 +192,45 @@ export default async function Home() {
         </div>
       </nav>
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-12">
+      <section className="mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-12">
         <div className="flex flex-col justify-center">
-          <p className="mb-4 inline-flex w-fit rounded-lg bg-[#dff0e7] px-3 py-2 text-sm font-extrabold text-[#17613d]">
+          <p className="mb-4 inline-flex w-fit rounded-lg bg-[#dff0e7] px-3 py-2 text-xs font-extrabold text-[#17613d] sm:text-sm">
             3 teams. 5 players each. One tournament day.
           </p>
-          <h1 className="max-w-4xl text-4xl font-black leading-tight tracking-normal sm:text-5xl lg:text-6xl">
+          <h1 className="max-w-4xl text-[2.35rem] font-black leading-[1.05] tracking-normal sm:text-5xl lg:text-6xl">
             Track every game, score, table, goal, and assist.
           </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-black/65">
+          <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-black/60 sm:text-lg sm:leading-8">
             Follow each week&apos;s matchups, scores, and player stats as the group
             competes through the season.
           </p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:flex-row">
             <a
               href="#leaderboard"
-              className="inline-flex h-12 items-center justify-center rounded-lg bg-[#171717] px-5 text-sm font-bold text-white transition hover:bg-black"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-[#171717] px-3 text-center text-sm font-bold text-white transition hover:bg-black sm:h-12 sm:px-5"
             >
               View Leaderboard
             </a>
             <a
               href="#matches"
-              className="inline-flex h-12 items-center justify-center rounded-lg border border-black/15 bg-white px-5 text-sm font-bold text-black transition hover:border-black/30"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-black/15 bg-white px-3 text-center text-sm font-bold text-black transition hover:border-black/30 sm:h-12 sm:px-5"
             >
               See Recent Matches
             </a>
           </div>
         </div>
 
-        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+        <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-center justify-between border-b border-black/10 pb-4">
             <div>
               <p className="text-sm font-bold text-black/50">Team of the Week</p>
-              <h2 className="text-2xl font-black">{data.tournamentLabel}</h2>
+              <h2 className="text-xl font-black sm:text-2xl">{data.tournamentLabel}</h2>
             </div>
             <Trophy className="text-[#b7791f]" size={32} />
           </div>
-          <div className="py-8 text-center">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-lg bg-[#f7f3ec] text-[#b7791f]">
-              <Trophy size={36} />
+          <div className="py-6 text-center sm:py-8">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-[#f7f3ec] text-[#b7791f] sm:h-16 sm:w-16">
+              <Trophy size={32} />
             </div>
             <p className="break-words text-3xl font-black leading-tight sm:text-5xl">{teamOfTheWeek.name}</p>
             <p className="mt-3 text-sm font-bold uppercase text-black/45">Tournament winner</p>
@@ -243,28 +243,28 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-4 px-4 pb-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
+      <section className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-4 pb-6 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
         {statCards.map((item) => (
-          <div key={item.label} className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
-            <item.icon className="mb-4 text-[#1f7a4d]" size={24} />
-            <p className="text-3xl font-black">{item.value}</p>
-            <p className="mt-1 text-sm font-semibold text-black/55">{item.label}</p>
+          <div key={item.label} className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+            <item.icon className="mb-3 text-[#1f7a4d]" size={22} />
+            <p className="text-2xl font-black sm:text-3xl">{item.value}</p>
+            <p className="mt-1 text-xs font-semibold text-black/55 sm:text-sm">{item.label}</p>
           </div>
         ))}
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+      <section className="mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Tournament MVP</p>
-              <h2 className="mt-1 break-words text-3xl font-black leading-tight">{mvpWinner.name}</h2>
+              <h2 className="mt-1 break-words text-2xl font-black leading-tight sm:text-3xl">{mvpWinner.name}</h2>
               <p className="mt-2 text-sm font-semibold text-black/55">
                 {mvpWinner.isReady ? "Fan vote winner" : "MVP will appear here when voting is closed."}
               </p>
             </div>
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-[#f7f3ec] text-[#b7791f]">
-              <Trophy size={36} />
+            <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-[#f7f3ec] text-[#b7791f] sm:flex">
+              <Trophy size={34} />
             </div>
           </div>
           <div className="mt-5 grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
@@ -275,8 +275,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="progress" className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+      <section id="progress" className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Tournament Progress</p>
@@ -287,7 +287,7 @@ export default async function Home() {
             </p>
           </div>
           <div className="grid gap-3 md:hidden">
-            {data.teamStandings.map((team, index) => (
+            {data.teamStandings.length > 0 ? data.teamStandings.map((team, index) => (
               <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
@@ -316,7 +316,14 @@ export default async function Home() {
                   <MiniStat label="GD" value={String(team.goalDiff)} />
                 </div>
               </article>
-            ))}
+            )) : (
+              <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                <p className="font-black">No standings yet.</p>
+                <p className="mt-1 text-sm font-semibold text-black/50">
+                  Teams will appear here once tomorrow&apos;s games are scheduled.
+                </p>
+              </div>
+            )}
           </div>
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[720px] border-collapse text-left">
@@ -361,7 +368,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="teams" className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+      <section id="teams" className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-bold text-black/50">Rosters</p>
@@ -370,15 +377,15 @@ export default async function Home() {
           <Users className="hidden text-[#1f7a4d] sm:block" size={26} />
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {data.teamRosters.map((team) => (
-            <article key={team.name} className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
-	              <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
-	                <div className="flex min-w-0 items-center gap-3">
-	                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
-	                  <h3 className="break-words text-lg font-black leading-tight">{team.name}</h3>
-	                </div>
-	                <p className="shrink-0 text-sm font-black text-black/45">{team.players.length}/5</p>
-	              </div>
+          {data.teamRosters.length > 0 ? data.teamRosters.map((team) => (
+            <article key={team.name} className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
+                  <h3 className="break-words text-lg font-black leading-tight">{team.name}</h3>
+                </div>
+                <p className="shrink-0 text-sm font-black text-black/45">{team.players.length}/5</p>
+              </div>
               {team.players.length > 0 ? (
                 <div className="grid gap-2">
                   {team.players.map((player, index) => (
@@ -386,7 +393,7 @@ export default async function Home() {
                       <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
                         {index + 1}
                       </span>
-	                      <span className="min-w-0 break-words text-sm font-bold">{player}</span>
+                      <span className="min-w-0 break-words text-sm font-bold">{player}</span>
                     </div>
                   ))}
                 </div>
@@ -396,12 +403,19 @@ export default async function Home() {
                 </p>
               )}
             </article>
-          ))}
+          )) : (
+            <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm md:col-span-2 xl:col-span-3">
+              <p className="font-black">Rosters coming soon.</p>
+              <p className="mt-1 text-sm font-semibold text-black/50">
+                Add tomorrow&apos;s teams and players in the admin portal.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl items-start gap-6 px-4 pb-12 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
-        <div id="matches" className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+      <section className="mx-auto grid max-w-7xl items-start gap-5 px-4 pb-10 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
+        <div id="matches" className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Game Log</p>
@@ -418,9 +432,9 @@ export default async function Home() {
                     <p className="mt-1 text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
                     <h3 className="mt-1 text-lg font-black">{match.week}</h3>
                   </div>
-                  <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-base font-black text-white sm:text-lg">{match.score}</p>
+                  <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white sm:text-lg">{match.score}</p>
                 </div>
-                <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-sm font-bold">
+                <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-sm font-bold">
                   <span className="min-w-0 break-words">{match.teamA}</span>
                   <span className="text-black/35">vs</span>
                   <span className="min-w-0 break-words text-right">{match.teamB}</span>
@@ -431,7 +445,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <div id="leaderboard" className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+        <div id="leaderboard" className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Season Table</p>
@@ -503,8 +517,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+      <section className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Results</p>
@@ -549,28 +563,32 @@ export default async function Home() {
                     ))}
                   </div>
                   <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                    <div className="rounded-lg bg-white p-3">
+                    <div className="rounded-lg bg-white p-3 sm:p-4">
                       <p className="mb-2 text-xs font-black uppercase text-black/45">Team table</p>
                       <div className="space-y-2">
                         {day.standings.map((team, index) => (
-                          <div key={`${day.date}-${team.name}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] items-center gap-3 text-sm">
-                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
-                              {index + 1}
-                            </span>
-                            <span className="min-w-0 break-words font-black">{team.name}</span>
-                            <span className="font-bold text-black/55">{team.points} pts</span>
-                            <span className="font-bold text-black/55">{team.goalsFor} GF</span>
-                            <span className="font-bold text-black/55">{team.goalDiff} GD</span>
+                          <div key={`${day.date}-${team.name}`} className="rounded-lg bg-[#fbfaf7] p-3">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
+                                {index + 1}
+                              </span>
+                              <span className="min-w-0 flex-1 break-words text-sm font-black">{team.name}</span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-3 gap-2 pl-10 text-center">
+                              <MiniStat label="PTS" value={String(team.points)} />
+                              <MiniStat label="GF" value={String(team.goalsFor)} />
+                              <MiniStat label="GD" value={String(team.goalDiff)} />
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="rounded-lg bg-white p-3">
+                    <div className="rounded-lg bg-white p-3 sm:p-4">
                       <p className="mb-2 text-xs font-black uppercase text-black/45">Player stats</p>
                       {day.players.length > 0 ? (
                         <div className="space-y-2">
                           {day.players.slice(0, 6).map((player, index) => (
-                            <div key={`${day.date}-${player.name}-${player.team}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-3 text-sm">
+                            <div key={`${day.date}-${player.name}-${player.team}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg bg-[#fbfaf7] p-3 text-sm">
                               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
                                 {index + 1}
                               </span>
@@ -578,8 +596,8 @@ export default async function Home() {
                                 <p className="break-words font-black">{player.name}</p>
                                 <p className="break-words text-xs font-bold text-black/45">{player.team}</p>
                               </div>
-                              <span className="font-bold text-black/55">{player.goals} G</span>
-                              <span className="font-bold text-black/55">{player.assists} A</span>
+                              <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.goals} G</span>
+                              <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.assists} A</span>
                             </div>
                           ))}
                         </div>
