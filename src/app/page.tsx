@@ -65,6 +65,7 @@ type TeamStanding = {
   goalsAgainst: number;
   goalDiff: number;
   points: number;
+  form: Array<"W" | "D" | "L">;
 };
 
 type RosterRow = {
@@ -318,6 +319,10 @@ export default async function Home() {
                   <MiniStat label="GA" value={String(team.goalsAgainst)} />
                   <MiniStat label="GD" value={String(team.goalDiff)} />
                 </div>
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-[#f7f3ec] px-3 py-2">
+                  <span className="text-xs font-black uppercase text-black/40">Form</span>
+                  <TeamForm form={team.form} />
+                </div>
               </article>
             )) : (
               <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
@@ -329,44 +334,68 @@ export default async function Home() {
             )}
           </div>
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[720px] border-collapse text-left">
+            <table className="w-full min-w-[920px] border-collapse text-left">
               <thead>
-                <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
-                  <th className="py-3">Team</th>
-                  <th className="py-3 text-center">P</th>
-                  <th className="py-3 text-center">W</th>
-                  <th className="py-3 text-center">D</th>
-                  <th className="py-3 text-center">L</th>
-                  <th className="py-3 text-center">GF</th>
-                  <th className="py-3 text-center">GA</th>
-                  <th className="py-3 text-center">GD</th>
-                  <th className="py-3 text-center">PTS</th>
+                <tr className="border-b border-black/10 bg-[#fbfaf7] text-xs font-black uppercase text-black/45">
+                  <th className="w-16 rounded-l-lg px-4 py-4 text-center">Pos</th>
+                  <th className="px-4 py-4">Club</th>
+                  <th className="py-4 text-center">MP</th>
+                  <th className="py-4 text-center">W</th>
+                  <th className="py-4 text-center">D</th>
+                  <th className="py-4 text-center">L</th>
+                  <th className="py-4 text-center">GF</th>
+                  <th className="py-4 text-center">GA</th>
+                  <th className="py-4 text-center">GD</th>
+                  <th className="py-4 text-center">Form</th>
+                  <th className="rounded-r-lg py-4 text-center">Pts</th>
                 </tr>
               </thead>
               <tbody>
                 {data.teamStandings.map((team, index) => (
-                  <tr key={team.name} className="border-b border-black/10 last:border-0">
-                    <td className="py-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
-                          {index + 1}
-                        </span>
-                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: team.color }} />
-                        <span className="font-black">{team.name}</span>
+                  <tr key={team.name} className="border-b border-black/10 last:border-0 hover:bg-[#fbfaf7]">
+                    <td className="px-4 py-5 text-center">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                        {index + 1}
+                      </span>
+                    </td>
+                    <td className="px-4 py-5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="h-4 w-4 shrink-0 rounded-full ring-2 ring-black/5" style={{ backgroundColor: team.color }} />
+                        <div className="min-w-0">
+                          <span className="block truncate text-base font-black">{team.name}</span>
+                          <span className="text-xs font-bold uppercase text-black/35">
+                            {team.played === 0 ? "Awaiting first match" : `${team.wins}W ${team.draws}D ${team.losses}L`}
+                          </span>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-4 text-center font-bold">{team.played}</td>
-                    <td className="py-4 text-center font-bold">{team.wins}</td>
-                    <td className="py-4 text-center font-bold">{team.draws}</td>
-                    <td className="py-4 text-center font-bold">{team.losses}</td>
-                    <td className="py-4 text-center font-bold">{team.goalsFor}</td>
-                    <td className="py-4 text-center font-bold">{team.goalsAgainst}</td>
-                    <td className="py-4 text-center font-bold">{team.goalDiff}</td>
-                    <td className="py-4 text-center font-black">{team.points}</td>
+                    <LeagueNumber value={team.played} />
+                    <LeagueNumber value={team.wins} />
+                    <LeagueNumber value={team.draws} />
+                    <LeagueNumber value={team.losses} />
+                    <LeagueNumber value={team.goalsFor} />
+                    <LeagueNumber value={team.goalsAgainst} />
+                    <LeagueNumber value={team.goalDiff} strong={team.goalDiff !== 0} />
+                    <td className="py-5">
+                      <div className="flex justify-center">
+                        <TeamForm form={team.form} />
+                      </div>
+                    </td>
+                    <td className="py-5 text-center">
+                      <span className="inline-flex min-w-12 justify-center rounded-lg bg-[#171717] px-3 py-2 text-base font-black text-white">
+                        {team.points}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <div className="mt-3 flex flex-wrap gap-3 text-xs font-bold text-black/45">
+              <span>MP: Matches Played</span>
+              <span>GF: Goals For</span>
+              <span>GA: Goals Against</span>
+              <span>GD: Goal Difference</span>
+            </div>
           </div>
         </div>
       </section>
@@ -1028,6 +1057,7 @@ function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
       goalsAgainst: existing?.goalsAgainst || 0,
       goalDiff: existing?.goalDiff || 0,
       points: existing?.points || 0,
+      form: existing?.form || [],
     });
   }
 
@@ -1050,15 +1080,21 @@ function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
       teamA.wins += 1;
       teamB.losses += 1;
       teamA.points += 3;
+      teamA.form.push("W");
+      teamB.form.push("L");
     } else if (match.team_b_score > match.team_a_score) {
       teamB.wins += 1;
       teamA.losses += 1;
       teamB.points += 3;
+      teamB.form.push("W");
+      teamA.form.push("L");
     } else {
       teamA.draws += 1;
       teamB.draws += 1;
       teamA.points += 1;
       teamB.points += 1;
+      teamA.form.push("D");
+      teamB.form.push("D");
     }
   }
 
@@ -1066,6 +1102,7 @@ function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
     .map((team) => ({
       ...team,
       goalDiff: team.goalsFor - team.goalsAgainst,
+      form: team.form.slice(-5),
     }))
     .sort((a, b) => b.points - a.points || b.goalDiff - a.goalDiff || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name));
 }
@@ -1215,6 +1252,7 @@ function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
       goalsAgainst: 0,
       goalDiff: 0,
       points: 0,
+      form: [],
     });
   }
 
@@ -1295,6 +1333,7 @@ function fallbackStandings() {
     goalsAgainst: 0,
     goalDiff: 0,
     points: 0,
+    form: [],
   }));
 }
 
@@ -1313,6 +1352,39 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
   }).format(date);
+}
+
+function LeagueNumber({ value, strong = false }: { value: number; strong?: boolean }) {
+  return (
+    <td className={`py-5 text-center ${strong ? "font-black" : "font-bold text-black/70"}`}>
+      {value > 0 && strong ? `+${value}` : value}
+    </td>
+  );
+}
+
+function TeamForm({ form }: { form: TeamStanding["form"] }) {
+  if (form.length === 0) {
+    return <span className="text-xs font-black uppercase text-black/35">-</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      {form.map((result, index) => (
+        <span
+          key={`${result}-${index}`}
+          className={`flex h-6 w-6 items-center justify-center rounded-md text-xs font-black ${
+            result === "W"
+              ? "bg-[#dff0e7] text-[#17613d]"
+              : result === "D"
+                ? "bg-[#efe9dd] text-black/55"
+                : "bg-red-50 text-red-700"
+          }`}
+        >
+          {result}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function MiniStat({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof Trophy }) {
