@@ -158,6 +158,7 @@ const fallbackMvpWinner: MvpWinner = {
 };
 
 const nextSessionDate = "2026-07-25";
+const siteTimeZone = "America/Chicago";
 
 export const revalidate = 0;
 
@@ -824,7 +825,17 @@ function getCurrentSessionDate(matches: MatchRow[]) {
 }
 
 function getTodayIsoDate() {
-  return new Date().toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: siteTimeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value || "";
+  const month = parts.find((part) => part.type === "month")?.value || "";
+  const day = parts.find((part) => part.type === "day")?.value || "";
+
+  return `${year}-${month}-${day}`;
 }
 
 function getCurrentSessionTeams(
@@ -840,7 +851,11 @@ function getCurrentSessionTeams(
       currentTeamNames.add(normalizeTeamName(match.team_b_name));
     }
 
-    return teams.filter((team) => currentTeamNames.has(normalizeTeamName(team.name)));
+    return teams.filter((team) => {
+      const teamName = normalizeTeamName(team.name);
+
+      return currentTeamNames.has(teamName) || !archivedTeamNames.has(teamName);
+    });
   }
 
   return teams.filter((team) => !archivedTeamNames.has(normalizeTeamName(team.name)));
