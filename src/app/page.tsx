@@ -731,6 +731,7 @@ async function getDashboardData() {
   const mvpWinner = await getClosedMvpWinner(supabase, tournamentDate);
   const teamDisplayNames = buildTeamDisplayNames(teams);
   const playerTeamNames = buildPlayerTeamNames(rawTeams, (rosterRows || []) as RosterRow[], teamDisplayNames);
+  const currentPlayerTeamNames = buildCurrentPlayerTeamNames(currentMatchStats, teamDisplayNames);
 
   const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name" | "team">>();
 
@@ -752,7 +753,7 @@ async function getDashboardData() {
   const leaderboard = players
     .map((player) => ({
       name: player.name,
-      team: playerTeamNames.get(player.id) || "Unassigned",
+      team: currentPlayerTeamNames.get(player.id) || playerTeamNames.get(player.id) || "Unassigned",
       ...(totalsByPlayer.get(player.id) || { games: 0, wins: 0, goals: 0, assists: 0, points: 0 }),
     }))
     .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
@@ -932,6 +933,21 @@ function buildPlayerTeamNames(
     if (!teamName || playerTeams.has(row.player_id)) continue;
 
     playerTeams.set(row.player_id, teamName);
+  }
+
+  return playerTeams;
+}
+
+function buildCurrentPlayerTeamNames(
+  currentMatchStats: MatchPlayerRow[],
+  teamDisplayNames: Map<string, string>,
+) {
+  const playerTeams = new Map<string, string>();
+
+  for (const stat of currentMatchStats) {
+    if (playerTeams.has(stat.player_id)) continue;
+
+    playerTeams.set(stat.player_id, getTeamDisplayName(stat.team_name, teamDisplayNames));
   }
 
   return playerTeams;
