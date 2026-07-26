@@ -5,6 +5,7 @@ import {
   Users,
 } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
+import PlayerLeaderboard from "@/components/PlayerLeaderboard";
 import SiteVisitTracker from "@/components/SiteVisitTracker";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -488,58 +489,7 @@ export default async function Home() {
             <Trophy className="text-[#b7791f]" size={28} />
           </div>
           {data.players.length > 0 ? (
-            <>
-            <div className="grid gap-3 md:hidden">
-              {data.players.map((player, index) => (
-                <article key={player.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <h3 className="break-words font-black leading-tight">{player.name}</h3>
-                        <p className="mt-1 break-words text-xs font-bold text-black/45">{player.team}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-center">
-                    <MiniStat label="G" value={String(player.goals)} />
-                    <MiniStat label="A" value={String(player.assists)} />
-                  </div>
-                </article>
-              ))}
-            </div>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[640px] border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
-                    <th className="py-3">Player</th>
-                    <th className="py-3">Team</th>
-                    <th className="py-3 text-center">G</th>
-                    <th className="py-3 text-center">A</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.players.map((player, index) => (
-                    <tr key={player.name} className="border-b border-black/10 last:border-0">
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
-                            {index + 1}
-                          </span>
-                          <span className="font-black">{player.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 font-bold text-black/55">{player.team}</td>
-                      <td className="py-4 text-center font-bold">{player.goals}</td>
-                      <td className="py-4 text-center font-bold">{player.assists}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            </>
+            <PlayerLeaderboard players={data.players} />
           ) : (
             <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
               <p className="font-black">Leaderboard will appear after the first game.</p>
