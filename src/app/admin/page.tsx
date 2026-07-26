@@ -159,15 +159,6 @@ const emptyTeam = {
   is_active: true,
 };
 
-const emptyStat = {
-  match_id: "",
-  player_id: "",
-  team_name: "",
-  goals: 0,
-  assists: 0,
-  result: "draw",
-};
-
 export default function AdminPage() {
   const [password, setPassword] = useState(getStoredPassword);
   const [savedPassword, setSavedPassword] = useState(getStoredPassword);
@@ -186,7 +177,6 @@ export default function AdminPage() {
   const [matchForm, setMatchForm] = useState(emptyMatch);
   const [teamForm, setTeamForm] = useState(emptyTeam);
   const [rosterForm, setRosterForm] = useState({ team_id: "", player_id: "" });
-  const [statForm, setStatForm] = useState(emptyStat);
   const [gameDayForm, setGameDayForm] = useState({
     date: nextSessionDate,
     label: "Game",
@@ -204,7 +194,6 @@ export default function AdminPage() {
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
-  const [editingStatId, setEditingStatId] = useState<string | null>(null);
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -864,37 +853,6 @@ export default function AdminPage() {
     }
   }
 
-  async function saveStat(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoading(true);
-    setMessage("");
-
-    try {
-      const payload = {
-        ...statForm,
-        id: editingStatId || undefined,
-      };
-
-      const response = await adminFetch(
-        "/api/admin/stats",
-        {
-          method: editingStatId ? "PATCH" : "POST",
-          body: JSON.stringify(payload),
-        },
-        adminCredential,
-      );
-
-      setStatForm(emptyStat);
-      setEditingStatId(null);
-      setMessage(editingStatId || response.updatedExisting ? "Player stat updated." : "Player stat added.");
-      await loadData();
-    } catch (error) {
-      setMessage(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function saveQuickPlayerStat(match: Match, player: Player, teamName: string) {
     setLoading(true);
     setMessage("");
@@ -1022,15 +980,13 @@ export default function AdminPage() {
   }
 
   function editStat(stat: PlayerStat) {
-    setEditingStatId(stat.id);
-    setStatForm({
-      match_id: stat.match_id,
+    setQuickSingleStat({
       player_id: stat.player_id,
       team_name: stat.team_name,
-      goals: stat.goals,
-      assists: stat.assists,
-      result: stat.result,
+      goals: String(stat.goals),
+      assists: String(stat.assists),
     });
+    setMessage("Loaded player into Tournament Day Totals. Save totals to update.");
   }
 
   if (!isUnlocked) {
@@ -1978,76 +1934,63 @@ export default function AdminPage() {
             <Target className="text-[#1f7a4d]" size={26} />
           </div>
 
-          <form onSubmit={saveStat} className="mb-6 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
+          <form onSubmit={saveQuickSinglePlayerStat} className="mb-6 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
+            <div>
+              <p className="text-sm font-black">Tournament Day Totals</p>
+              <p className="mt-1 text-xs font-bold text-black/45">
+                Add or update a player&apos;s total goals and assists for {formatDateLabel(gameDayForm.date)}. No match selection needed.
+              </p>
+            </div>
             <div className="grid gap-3 lg:grid-cols-2">
               <AdminSelect
-                label="Match"
-                value={statForm.match_id}
-                onChange={(value) => setStatForm({ ...statForm, match_id: value, team_name: "" })}
-                required
-              >
-                <option value="">Select match</option>
-                {gameDayMatches.map((match) => (
-                  <option key={match.id} value={match.id}>
-                    {formatMatchOption(match, matchGameLabels)} - {match.match_date}
-                  </option>
-                ))}
-              </AdminSelect>
-              <AdminSelect
                 label="Player"
-                value={statForm.player_id}
-                onChange={(value) => setStatForm({ ...statForm, player_id: value })}
+                value={quickSingleStat.player_id}
+                onChange={(value) => setQuickSingleStat({ ...quickSingleStat, player_id: value })}
                 required
               >
                 <option value="">Select player</option>
-                {players.map((player) => (
+                {activePlayers.map((player) => (
                   <option key={player.id} value={player.id}>
                     {player.name}
                   </option>
                 ))}
               </AdminSelect>
+              <AdminSelect
+                label="Team"
+                value={quickSingleStat.team_name}
+                onChange={(value) => setQuickSingleStat({ ...quickSingleStat, team_name: value })}
+                required
+              >
+                <option value="">Select team</option>
+                {activeTeams.map((team) => (
+                  <option key={team.id} value={team.name}>
+                    {team.name}
+                  </option>
+                ))}
+              </AdminSelect>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
-              <div>
-                <GameTeamSelect
-                  match={matches.find((match) => match.id === statForm.match_id) || null}
-                  value={statForm.team_name}
-                  onChange={(value) => setStatForm({ ...statForm, team_name: value })}
-                />
-                <p className="mt-2 text-xs font-bold text-black/45">Result is calculated from the saved score.</p>
-              </div>
+            <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
               <AdminInput
                 type="number"
-                label="Goals"
-                value={String(statForm.goals)}
-                onChange={(value) => setStatForm({ ...statForm, goals: Number(value) })}
+                label="Total goals"
+                value={quickSingleStat.goals}
+                onChange={(value) => setQuickSingleStat({ ...quickSingleStat, goals: value })}
               />
               <AdminInput
                 type="number"
-                label="Assists"
-                value={String(statForm.assists)}
-                onChange={(value) => setStatForm({ ...statForm, assists: Number(value) })}
+                label="Total assists"
+                value={quickSingleStat.assists}
+                onChange={(value) => setQuickSingleStat({ ...quickSingleStat, assists: value })}
               />
-            </div>
-
-            <div className="flex gap-2">
-              <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white">
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 <Plus size={16} />
-                {editingStatId ? "Update Stat" : "Add Stat"}
+                Save Totals
               </button>
-              {editingStatId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingStatId(null);
-                    setStatForm(emptyStat);
-                  }}
-                  className="h-11 rounded-lg border border-black/15 bg-white px-4 text-sm font-bold"
-                >
-                  Cancel
-                </button>
-              )}
             </div>
           </form>
 
@@ -2610,32 +2553,6 @@ function StatStepper({
         </button>
       </div>
     </label>
-  );
-}
-
-function GameTeamSelect({
-  match,
-  value,
-  onChange,
-}: {
-  match: Match | null;
-  value: string;
-  onChange: (teamName: string) => void;
-}) {
-  if (!match) {
-    return (
-      <AdminSelect label="Team" value={value} onChange={onChange} required>
-        <option value="">Select game first</option>
-      </AdminSelect>
-    );
-  }
-
-  return (
-    <AdminSelect label="Team" value={value} onChange={onChange} required>
-      <option value="">Select team</option>
-      <option value={match.team_a_name}>{match.team_a_name}</option>
-      <option value={match.team_b_name}>{match.team_b_name}</option>
-    </AdminSelect>
   );
 }
 
