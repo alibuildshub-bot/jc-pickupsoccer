@@ -160,7 +160,6 @@ const fallbackMvpWinner: MvpWinner = {
 };
 
 const nextSessionDate = "2026-07-25";
-const siteTimeZone = "America/Chicago";
 
 export const revalidate = 0;
 
@@ -855,29 +854,14 @@ async function getClosedMvpWinner(
 }
 
 function getCurrentSessionDate(matches: MatchRow[]) {
-  const today = getTodayIsoDate();
-  const currentMatch = [...matches]
-    .filter((match) => match.status !== "completed" || match.match_date >= today)
-    .sort((first, second) => first.match_date.localeCompare(second.match_date) || sortMatchesByGameOrder(first, second))[0];
+  const currentMatch = [...matches].sort(
+    (first, second) =>
+      second.match_date.localeCompare(first.match_date) ||
+      sortMatchesByGameOrder(first, second),
+  )[0];
 
   if (currentMatch) return currentMatch.match_date;
-  if (nextSessionDate >= today) return nextSessionDate;
-
-  return "";
-}
-
-function getTodayIsoDate() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: siteTimeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const year = parts.find((part) => part.type === "year")?.value || "";
-  const month = parts.find((part) => part.type === "month")?.value || "";
-  const day = parts.find((part) => part.type === "day")?.value || "";
-
-  return `${year}-${month}-${day}`;
+  return nextSessionDate;
 }
 
 function getCurrentSessionTeams(
