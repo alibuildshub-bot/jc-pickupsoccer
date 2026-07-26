@@ -13,13 +13,13 @@ export type LeaderboardPlayer = {
 type LeaderboardMode = "ga" | "goals" | "assists";
 
 const leaderboardTabs: Array<{ id: LeaderboardMode; label: string }> = [
-  { id: "ga", label: "G+A" },
   { id: "goals", label: "Goals" },
   { id: "assists", label: "Assists" },
+  { id: "ga", label: "G+A" },
 ];
 
 export default function PlayerLeaderboard({ players }: { players: LeaderboardPlayer[] }) {
-  const [mode, setMode] = useState<LeaderboardMode>("ga");
+  const [mode, setMode] = useState<LeaderboardMode>("goals");
   const sortedPlayers = useMemo(() => sortPlayers(players, mode), [mode, players]);
 
   return (
@@ -58,9 +58,9 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
-              <MiniStat label="G+A" value={String(player.points)} />
               <MiniStat label="G" value={String(player.goals)} />
               <MiniStat label="A" value={String(player.assists)} />
+              <MiniStat label="G+A" value={String(player.points)} />
             </div>
           </article>
         ))}
@@ -71,9 +71,9 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
             <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
               <th className="py-3">Player</th>
               <th className="py-3">Team</th>
-              <th className="py-3 text-center">G+A</th>
               <th className="py-3 text-center">G</th>
               <th className="py-3 text-center">A</th>
+              <th className="py-3 text-center">G+A</th>
             </tr>
           </thead>
           <tbody>
@@ -88,9 +88,9 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
                   </div>
                 </td>
                 <td className="py-4 font-bold text-black/55">{player.team}</td>
-                <td className="py-4 text-center font-black">{player.points}</td>
                 <td className="py-4 text-center font-bold">{player.goals}</td>
                 <td className="py-4 text-center font-bold">{player.assists}</td>
+                <td className="py-4 text-center font-black">{player.points}</td>
               </tr>
             ))}
           </tbody>
