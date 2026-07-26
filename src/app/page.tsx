@@ -561,86 +561,96 @@ export default async function Home() {
           {data.resultsArchive.length > 0 ? (
             <div className="grid gap-5">
               {data.resultsArchive.map((day) => (
-                <div key={day.date} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-black uppercase text-[#1f7a4d]">Completed games</p>
-                      <h3 className="text-xl font-black">{day.date}</h3>
+                <details key={day.date} className="group rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                  <summary className="list-none cursor-pointer">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase text-[#1f7a4d]">Completed games</p>
+                        <h3 className="text-xl font-black">{day.date}</h3>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-black/55">
+                          {day.matches.length} games
+                        </span>
+                        <span className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
+                          <span className="group-open:hidden">View stats</span>
+                          <span className="hidden group-open:inline">Hide stats</span>
+                        </span>
+                      </div>
                     </div>
-                    <span className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-black/55">
-                      {day.matches.length} games
-                    </span>
-                  </div>
-                  <div className="mb-4 grid gap-3 sm:grid-cols-3">
+                  </summary>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
                     <MiniStat label="Team of the Week" value={day.teamOfTheWeek} icon={Trophy} />
                     <MiniStat label="Total Goals" value={String(day.totalGoals)} />
                     <MiniStat label="Top Scorer" value={day.topScorer} />
                   </div>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {day.matches.map((match) => (
-                      <article key={`${day.date}-${match.game}-${match.teamA}-${match.teamB}`} className="rounded-lg bg-white p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
-                            <p className="mt-1 text-sm font-black">
-                              {match.teamA} vs {match.teamB}
+                  <div className="mt-4 border-t border-black/10 pt-4">
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {day.matches.map((match) => (
+                        <article key={`${day.date}-${match.game}-${match.teamA}-${match.teamB}`} className="rounded-lg bg-white p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
+                              <p className="mt-1 text-sm font-black">
+                                {match.teamA} vs {match.teamB}
+                              </p>
+                            </div>
+                            <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
+                              {match.score}
                             </p>
                           </div>
-                          <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
-                            {match.score}
-                          </p>
-                        </div>
-                        <p className="mt-2 text-xs font-bold text-black/50">Winner: {match.winner}</p>
-                      </article>
-                    ))}
-                  </div>
-                  <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                    <div className="rounded-lg bg-white p-3 sm:p-4">
-                      <p className="mb-2 text-xs font-black uppercase text-black/45">Team table</p>
-                      <div className="space-y-2">
-                        {day.standings.map((team, index) => (
-                          <div key={`${day.date}-${team.name}`} className="rounded-lg bg-[#fbfaf7] p-3">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
-                                {index + 1}
-                              </span>
-                              <span className="min-w-0 flex-1 break-words text-sm font-black">{team.name}</span>
-                            </div>
-                            <div className="mt-3 grid grid-cols-3 gap-2 pl-10 text-center">
-                              <MiniStat label="PTS" value={String(team.points)} />
-                              <MiniStat label="GF" value={String(team.goalsFor)} />
-                              <MiniStat label="GD" value={String(team.goalDiff)} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                          <p className="mt-2 text-xs font-bold text-black/50">Winner: {match.winner}</p>
+                        </article>
+                      ))}
                     </div>
-                    <div className="rounded-lg bg-white p-3 sm:p-4">
-                      <p className="mb-2 text-xs font-black uppercase text-black/45">Player stats</p>
-                      {day.players.length > 0 ? (
+                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                      <div className="rounded-lg bg-white p-3 sm:p-4">
+                        <p className="mb-2 text-xs font-black uppercase text-black/45">Team table</p>
                         <div className="space-y-2">
-                          {day.players.slice(0, 6).map((player, index) => (
-                            <div key={`${day.date}-${player.name}-${player.team}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg bg-[#fbfaf7] p-3 text-sm">
-                              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
-                                {index + 1}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="break-words font-black">{player.name}</p>
-                                <p className="break-words text-xs font-bold text-black/45">{player.team}</p>
+                          {day.standings.map((team, index) => (
+                            <div key={`${day.date}-${team.name}`} className="rounded-lg bg-[#fbfaf7] p-3">
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
+                                  {index + 1}
+                                </span>
+                                <span className="min-w-0 flex-1 break-words text-sm font-black">{team.name}</span>
                               </div>
-                              <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.goals} G</span>
-                              <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.assists} A</span>
+                              <div className="mt-3 grid grid-cols-3 gap-2 pl-10 text-center">
+                                <MiniStat label="PTS" value={String(team.points)} />
+                                <MiniStat label="GF" value={String(team.goalsFor)} />
+                                <MiniStat label="GD" value={String(team.goalDiff)} />
+                              </div>
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold text-black/50">
-                          Player stats were not entered for this session.
-                        </p>
-                      )}
+                      </div>
+                      <div className="rounded-lg bg-white p-3 sm:p-4">
+                        <p className="mb-2 text-xs font-black uppercase text-black/45">Player stats</p>
+                        {day.players.length > 0 ? (
+                          <div className="space-y-2">
+                            {day.players.slice(0, 6).map((player, index) => (
+                              <div key={`${day.date}-${player.name}-${player.team}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg bg-[#fbfaf7] p-3 text-sm">
+                                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
+                                  {index + 1}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="break-words font-black">{player.name}</p>
+                                  <p className="break-words text-xs font-bold text-black/45">{player.team}</p>
+                                </div>
+                                <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.goals} G</span>
+                                <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.assists} A</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold text-black/50">
+                            Player stats were not entered for this session.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </details>
               ))}
             </div>
           ) : (
