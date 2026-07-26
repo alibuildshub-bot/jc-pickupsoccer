@@ -929,8 +929,10 @@ export default function AdminPage() {
   async function saveQuickSinglePlayerStat(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!quickStatMatch) {
-      setMessage("Select a game first.");
+    const statMatch = getStatMatchForTeam(quickSingleStat.team_name);
+
+    if (!statMatch) {
+      setMessage("Mark at least one game for that team Live or Completed first.");
       return;
     }
 
@@ -938,12 +940,25 @@ export default function AdminPage() {
     setMessage("");
 
     try {
+      const existingStatsForDay = stats.filter(
+        (stat) =>
+          gameDayMatchIds.has(stat.match_id) &&
+          stat.player_id === quickSingleStat.player_id &&
+          normalizeAdminLabel(stat.team_name) === normalizeAdminLabel(quickSingleStat.team_name),
+      );
+
+      await Promise.all(
+        existingStatsForDay.map((stat) =>
+          adminFetch(`/api/admin/stats?id=${stat.id}`, { method: "DELETE" }, adminCredential),
+        ),
+      );
+
       const response = await adminFetch(
         "/api/admin/stats",
         {
           method: "POST",
           body: JSON.stringify({
-            match_id: quickStatMatch.id,
+            match_id: statMatch.id,
             player_id: quickSingleStat.player_id,
             team_name: quickSingleStat.team_name,
             goals: Number(quickSingleStat.goals || 0),
@@ -960,7 +975,7 @@ export default function AdminPage() {
         goals: "0",
         assists: "0",
       });
-      setMessage(response.updatedExisting ? `${playerName} updated.` : `${playerName} added to stats.`);
+      setMessage(response.updatedExisting ? `${playerName} updated.` : `${playerName} day totals saved.`);
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -1402,13 +1417,68 @@ export default function AdminPage() {
             <div>
               <h2 className="mb-3 font-black">Quick Stats</h2>
               <div className="grid gap-3 rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                <form onSubmit={saveQuickSinglePlayerStat} className="grid gap-3 rounded-lg border border-black/10 bg-white p-3">
+                  <div>
+                    <p className="text-sm font-black">Tournament Day Totals</p>
+                    <p className="mt-1 text-xs font-bold text-black/45">
+                      Pick a player and team once, then save their total goals and assists for {formatDateLabel(gameDayForm.date)}.
+                    </p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <AdminSelect
+                      label="Player"
+                      value={quickSingleStat.player_id}
+                      onChange={(value) => setQuickSingleStat({ ...quickSingleStat, player_id: value })}
+                      required
+                    >
+                      <option value="">Select player</option>
+                      {activePlayers.map((player) => (
+                        <option key={player.id} value={player.id}>
+                          {player.name}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                    <AdminSelect
+                      label="Team"
+                      value={quickSingleStat.team_name}
+                      onChange={(value) => setQuickSingleStat({ ...quickSingleStat, team_name: value })}
+                      required
+                    >
+                      <option value="">Select team</option>
+                      {activeTeams.map((team) => (
+                        <option key={team.id} value={team.name}>
+                          {team.name}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                    <AdminInput
+                      type="number"
+                      label="Total goals"
+                      value={quickSingleStat.goals}
+                      onChange={(value) => setQuickSingleStat({ ...quickSingleStat, goals: value })}
+                    />
+                    <AdminInput
+                      type="number"
+                      label="Total assists"
+                      value={quickSingleStat.assists}
+                      onChange={(value) => setQuickSingleStat({ ...quickSingleStat, assists: value })}
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Plus size={16} />
+                      Save Totals
+                    </button>
+                  </div>
+                </form>
                 <AdminSelect
                   label="Game"
                   value={quickStatSelectedMatchId}
-                  onChange={(value) => {
-                    setQuickStatMatchId(value);
-                    setQuickSingleStat({ ...quickSingleStat, team_name: "" });
-                  }}
+                  onChange={(value) => setQuickStatMatchId(value)}
                   required
                 >
                   <option value="">Select game</option>
@@ -1425,63 +1495,8 @@ export default function AdminPage() {
                 ) : (
                   <div className="grid gap-3">
                     <p className="text-xs font-bold text-black/45">
-                      Mark the game Live or Completed, then enter goals and assists. Use the single player form for quick edits.
+                      Optional per-game entry: use this only if you want to track stats game by game.
                     </p>
-                    <form onSubmit={saveQuickSinglePlayerStat} className="grid gap-3 rounded-lg border border-black/10 bg-white p-3">
-                      <div>
-                        <p className="text-sm font-black">Single Player Entry</p>
-                        <p className="mt-1 text-xs font-bold text-black/45">
-                          Select one player, their team, then save goals and assists for this game.
-                        </p>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <AdminSelect
-                          label="Player"
-                          value={quickSingleStat.player_id}
-                          onChange={(value) => setQuickSingleStat({ ...quickSingleStat, player_id: value })}
-                          required
-                        >
-                          <option value="">Select player</option>
-                          {activePlayers.map((player) => (
-                            <option key={player.id} value={player.id}>
-                              {player.name}
-                            </option>
-                          ))}
-                        </AdminSelect>
-                        <AdminSelect
-                          label="Team"
-                          value={quickSingleStat.team_name}
-                          onChange={(value) => setQuickSingleStat({ ...quickSingleStat, team_name: value })}
-                          required
-                        >
-                          <option value="">Select team</option>
-                          <option value={quickStatMatch.team_a_name}>{quickStatMatch.team_a_name}</option>
-                          <option value={quickStatMatch.team_b_name}>{quickStatMatch.team_b_name}</option>
-                        </AdminSelect>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                        <AdminInput
-                          type="number"
-                          label="Goals"
-                          value={quickSingleStat.goals}
-                          onChange={(value) => setQuickSingleStat({ ...quickSingleStat, goals: value })}
-                        />
-                        <AdminInput
-                          type="number"
-                          label="Assists"
-                          value={quickSingleStat.assists}
-                          onChange={(value) => setQuickSingleStat({ ...quickSingleStat, assists: value })}
-                        />
-                        <button
-                          type="submit"
-                          disabled={loading}
-                          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <Plus size={16} />
-                          Save Stat
-                        </button>
-                      </div>
-                    </form>
                     <QuickStatTeamSheet
                       match={quickStatMatch}
                       teamName={quickStatMatch.team_a_name}
@@ -2101,6 +2116,17 @@ export default function AdminPage() {
     const teamPlayerIds = new Set(getTeamRoster(team.id).map((row) => row.player_id));
 
     return activePlayers.filter((player) => teamPlayerIds.has(player.id));
+  }
+
+  function getStatMatchForTeam(teamName: string) {
+    const normalizedTeamName = normalizeAdminLabel(teamName);
+
+    return gameDayMatches.find(
+      (match) =>
+        (match.status === "live" || match.status === "completed") &&
+        (normalizeAdminLabel(match.team_a_name) === normalizedTeamName ||
+          normalizeAdminLabel(match.team_b_name) === normalizedTeamName),
+    );
   }
 
   function getQuickStatDraft(matchId: string, playerId: string, teamName: string) {
