@@ -769,7 +769,7 @@ async function getDashboardData() {
     winner: getMatchWinner(match, teamDisplayNames),
     status: getMatchStatusLabel(match.status),
   }));
-  const resultsArchive = buildResultsArchive(matches, matchStats, players, teams, gameLabels, teamDisplayNames);
+  const resultsArchive = buildResultsArchive(matches, matchStats, players, teams, gameLabels, teamDisplayNames, tournamentDate);
 
   const goalsTracked = currentMatchStats.reduce((total, stat) => total + (stat.goals || 0), 0);
 
@@ -960,12 +960,14 @@ function buildResultsArchive(
   teams: TeamRow[],
   gameLabels: Map<string, string>,
   teamDisplayNames: Map<string, string>,
+  currentDate: string,
 ) : ArchiveDay[] {
   const archiveByRawDate = new Map<string, MatchRow[]>();
   const playerNames = new Map(players.map((player) => [player.id, player.name]));
 
   for (const match of matches) {
     if (match.status !== "completed") continue;
+    if (match.match_date === currentDate) continue;
 
     const dayMatches = archiveByRawDate.get(match.match_date) || [];
     dayMatches.push(match);

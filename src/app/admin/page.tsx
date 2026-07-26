@@ -905,12 +905,6 @@ export default function AdminPage() {
           normalizeAdminLabel(stat.team_name) === normalizeAdminLabel(quickSingleStat.team_name),
       );
 
-      await Promise.all(
-        existingStatsForDay.map((stat) =>
-          adminFetch(`/api/admin/stats?id=${stat.id}`, { method: "DELETE" }, adminCredential),
-        ),
-      );
-
       const response = await adminFetch(
         "/api/admin/stats",
         {
@@ -926,6 +920,14 @@ export default function AdminPage() {
         adminCredential,
       );
       const playerName = getPlayerName(quickSingleStat.player_id);
+      const savedStatId = response.stat?.id;
+      const duplicateStats = existingStatsForDay.filter((stat) => stat.id !== savedStatId);
+
+      await Promise.all(
+        duplicateStats.map((stat) =>
+          adminFetch(`/api/admin/stats?id=${stat.id}`, { method: "DELETE" }, adminCredential),
+        ),
+      );
 
       setQuickSingleStat({
         player_id: "",
