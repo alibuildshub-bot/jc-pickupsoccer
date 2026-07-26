@@ -7,7 +7,8 @@ import {
 
 type PollPayload = {
   id?: string;
-  action?: "reset_votes" | "close" | "open";
+  action?: "reset_votes" | "close" | "open" | "remove_option";
+  option_id?: string;
   title?: string;
   match_date?: string;
   player_ids?: string[];
@@ -158,6 +159,22 @@ async function updatePoll(
 
   if (payload.action === "reset_votes") {
     const { error } = await supabase.from("mvp_votes").delete().eq("poll_id", payload.id);
+
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+
+    return Response.json({ ok: true });
+  }
+
+  if (payload.action === "remove_option") {
+    if (!payload.option_id) {
+      return Response.json({ error: "Poll player option is required." }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from("mvp_poll_options")
+      .delete()
+      .eq("poll_id", payload.id)
+      .eq("id", payload.option_id);
 
     if (error) return Response.json({ error: error.message }, { status: 500 });
 

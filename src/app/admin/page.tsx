@@ -223,6 +223,12 @@ export default function AdminPage() {
     () => stats.filter((stat) => gameDayMatchIds.has(stat.match_id)),
     [gameDayMatchIds, stats],
   );
+  const pollCandidatePlayers = useMemo(() => {
+    const playerIdsWithStats = new Set(gameDayStats.map((stat) => stat.player_id));
+    const playersWithStats = activePlayers.filter((player) => playerIdsWithStats.has(player.id));
+
+    return playersWithStats.length >= 2 ? playersWithStats : activePlayers;
+  }, [activePlayers, gameDayStats]);
   const pastGameSessions = useMemo(
     () => buildPastGameSessions(matches, stats, players, gameDayForm.date),
     [gameDayForm.date, matches, players, stats],
@@ -406,6 +412,7 @@ export default function AdminPage() {
           body: JSON.stringify({
             title: `JC Footy Tournament MVP - ${formatDateLabel(gameDayForm.date)}`,
             match_date: gameDayForm.date,
+            player_ids: pollCandidatePlayers.map((player) => player.id),
           }),
         },
         adminCredential,
@@ -443,6 +450,42 @@ export default function AdminPage() {
         adminCredential,
       );
       setMessage("MVP poll votes reset.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function removePollPlayer(poll: MvpPoll, option: MvpPoll["options"][number]) {
+    if (
+      !window.confirm(
+        option.votes > 0
+          ? `Remove ${option.label} from this poll? This will also remove their ${option.votes} vote${option.votes === 1 ? "" : "s"}.`
+          : `Remove ${option.label} from this poll?`,
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await adminFetch(
+        "/api/admin/polls",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            id: poll.id,
+            action: "remove_option",
+            option_id: option.id,
+          }),
+        },
+        adminCredential,
+      );
+      setMessage(`${option.label} removed from the MVP poll.`);
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -1366,12 +1409,15 @@ export default function AdminPage() {
               <h1 className="text-2xl font-black">Tournament MVP Poll</h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
                 Create one vote for the full tournament day after all games are finished, then send it to the group chat.
+                {gameDayStats.length > 0
+                  ? ` Polls will include the ${pollCandidatePlayers.length} players with stats entered for this day.`
+                  : " Add player stats first to limit the poll to players who participated."}
               </p>
             </div>
             <button
               type="button"
               onClick={createMvpPoll}
-              disabled={loading || activePlayers.length < 2}
+              disabled={loading || pollCandidatePlayers.length < 2}
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white transition hover:bg-[#17613d] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Vote size={16} />
@@ -1409,9 +1455,21 @@ export default function AdminPage() {
                   </div>
                   <div className="mt-4 space-y-2">
                     {poll.options.map((option) => (
-                      <div key={option.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2">
-                        <span className="text-sm font-bold">{option.label}</span>
-                        <span className="text-sm font-black">{option.votes}</span>
+                      <div key={option.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
+                        <span className="min-w-0 break-words text-sm font-bold">{option.label}</span>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="text-sm font-black">{option.votes}</span>
+                          <button
+                            type="button"
+                            onClick={() => removePollPlayer(poll, option)}
+                            disabled={loading}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label={`Remove ${option.label} from poll`}
+                            title={`Remove ${option.label}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
