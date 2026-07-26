@@ -13,13 +13,13 @@ export type LeaderboardPlayer = {
 type LeaderboardMode = "ga" | "goals" | "assists";
 
 const leaderboardTabs: Array<{ id: LeaderboardMode; label: string }> = [
+  { id: "ga", label: "G+A" },
   { id: "goals", label: "Goals" },
   { id: "assists", label: "Assists" },
-  { id: "ga", label: "G+A" },
 ];
 
 export default function PlayerLeaderboard({ players }: { players: LeaderboardPlayer[] }) {
-  const [mode, setMode] = useState<LeaderboardMode>("goals");
+  const [mode, setMode] = useState<LeaderboardMode>("ga");
   const sortedPlayers = useMemo(() => sortPlayers(players, mode), [mode, players]);
 
   return (
@@ -39,6 +39,9 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
             {tab.label}
           </button>
         ))}
+        <span className="inline-flex h-10 items-center rounded-lg bg-[#f7f3ec] px-3 text-xs font-black uppercase text-black/45">
+          Ranked by {getModeLabel(mode)}
+        </span>
       </div>
       <div className="grid gap-3 md:hidden">
         {sortedPlayers.map((player, index) => (
@@ -125,6 +128,13 @@ function getModeValue(player: LeaderboardPlayer, mode: LeaderboardMode) {
   if (mode === "assists") return player.assists;
 
   return player.points;
+}
+
+function getModeLabel(mode: LeaderboardMode) {
+  if (mode === "goals") return "Goals";
+  if (mode === "assists") return "Assists";
+
+  return "G+A";
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
