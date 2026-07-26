@@ -2210,6 +2210,7 @@ function getCurrentSetupTeams(
   currentDate: string,
 ) {
   const activeTeams = teams.filter((team) => team.is_active);
+  const archivedTeamNames = buildArchivedTeamNames(matches, currentDate);
 
   if (currentMatches.length > 0) {
     const currentTeamNames = new Set<string>();
@@ -2219,10 +2220,12 @@ function getCurrentSetupTeams(
       currentTeamNames.add(normalizeAdminLabel(match.team_b_name));
     }
 
-    return activeTeams.filter((team) => currentTeamNames.has(normalizeAdminLabel(team.name)));
-  }
+    return activeTeams.filter((team) => {
+      const teamName = normalizeAdminLabel(team.name);
 
-  const archivedTeamNames = buildArchivedTeamNames(matches, currentDate);
+      return currentTeamNames.has(teamName) || !archivedTeamNames.has(teamName);
+    });
+  }
 
   return activeTeams.filter((team) => !archivedTeamNames.has(normalizeAdminLabel(team.name)));
 }
