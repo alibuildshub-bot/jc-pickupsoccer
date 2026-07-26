@@ -147,6 +147,7 @@ const fallbackTeamOfTheWeek = {
   goalsFor: 0,
   points: 0,
   record: "0W - 0D - 0L",
+  isReady: false,
 };
 
 const fallbackMvpWinner: MvpWinner = {
@@ -237,7 +238,9 @@ export default async function Home() {
               <Trophy size={32} />
             </div>
             <p className="break-words text-3xl font-black leading-tight sm:text-5xl">{teamOfTheWeek.name}</p>
-            <p className="mt-3 text-sm font-bold uppercase text-black/45">Tournament winner</p>
+            <p className="mt-3 text-sm font-bold uppercase text-black/45">
+              {teamOfTheWeek.isReady ? "Tournament winner" : "Updates from the standings table"}
+            </p>
           </div>
           <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
             <MiniStat label="Goals Scored" value={String(teamOfTheWeek.goalsFor)} />
@@ -914,7 +917,7 @@ function buildArchivedTeamNames(matches: MatchRow[], currentDate: string) {
 }
 
 function buildTeamOfTheWeek(standings: TeamStanding[]) {
-  const [winner] = standings.filter((team) => team.played > 0);
+  const winner = standings.find((team) => team.played > 0);
 
   if (!winner) return fallbackTeamOfTheWeek;
 
@@ -923,6 +926,7 @@ function buildTeamOfTheWeek(standings: TeamStanding[]) {
     goalsFor: winner.goalsFor,
     points: winner.points,
     record: `${winner.wins}W - ${winner.draws}D - ${winner.losses}L`,
+    isReady: true,
   };
 }
 
