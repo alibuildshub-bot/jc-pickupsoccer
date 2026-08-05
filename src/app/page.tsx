@@ -537,23 +537,26 @@ export default async function Home() {
                     <MiniStat label="Top Scorer" value={day.topScorer} />
                   </div>
                   <div className="mt-4 border-t border-black/10 pt-4">
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {day.matches.map((match) => (
-                        <article key={`${day.date}-${match.game}-${match.teamA}-${match.teamB}`} className="rounded-lg bg-white p-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
-                              <p className="mt-1 text-sm font-black">
-                                {match.teamA} vs {match.teamB}
+                    <div>
+                      <p className="mb-2 text-xs font-black uppercase text-black/45">Games</p>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {day.matches.map((match) => (
+                          <article key={`${day.date}-${match.game}-${match.teamA}-${match.teamB}`} className="rounded-lg bg-white p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
+                                <p className="mt-1 text-sm font-black">
+                                  {match.teamA} vs {match.teamB}
+                                </p>
+                              </div>
+                              <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
+                                {match.score}
                               </p>
                             </div>
-                            <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
-                              {match.score}
-                            </p>
-                          </div>
-                          <p className="mt-2 text-xs font-bold text-black/50">Winner: {match.winner}</p>
-                        </article>
-                      ))}
+                            <p className="mt-2 text-xs font-bold text-black/50">Winner: {match.winner}</p>
+                          </article>
+                        ))}
+                      </div>
                     </div>
                     <div className="mt-4 grid gap-3 lg:grid-cols-2">
                       <div className="rounded-lg bg-white p-3 sm:p-4">
@@ -580,8 +583,8 @@ export default async function Home() {
                         <p className="mb-2 text-xs font-black uppercase text-black/45">Player stats</p>
                         {day.players.length > 0 ? (
                           <div className="space-y-2">
-                            {day.players.slice(0, 6).map((player, index) => (
-                              <div key={`${day.date}-${player.name}-${player.team}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg bg-[#fbfaf7] p-3 text-sm">
+                            {day.players.map((player, index) => (
+                              <div key={`${day.date}-${player.name}-${player.team}`} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-lg bg-[#fbfaf7] p-3 text-sm sm:grid-cols-[auto_minmax(0,1fr)_auto]">
                                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
                                   {index + 1}
                                 </span>
@@ -589,8 +592,11 @@ export default async function Home() {
                                   <p className="break-words font-black">{player.name}</p>
                                   <p className="break-words text-xs font-bold text-black/45">{player.team}</p>
                                 </div>
-                                <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.goals} G</span>
-                                <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.assists} A</span>
+                                <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
+                                  <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.goals} G</span>
+                                  <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.assists} A</span>
+                                  <span className="rounded-lg bg-[#171717] px-2 py-1 font-black text-white">{player.points} G+A</span>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -944,63 +950,74 @@ function buildResultsArchive(
 ) : ArchiveDay[] {
   const archiveByRawDate = new Map<string, MatchRow[]>();
   const playerNames = new Map(players.map((player) => [player.id, player.name]));
+  const matchesByRawDate = new Map<string, MatchRow[]>();
 
   for (const match of matches) {
-    if (match.status !== "completed") continue;
-    if (match.match_date === currentDate) continue;
-
-    const dayMatches = archiveByRawDate.get(match.match_date) || [];
-    dayMatches.push(match);
-    archiveByRawDate.set(match.match_date, dayMatches);
+    const dateMatches = matchesByRawDate.get(match.match_date) || [];
+    dateMatches.push(match);
+    matchesByRawDate.set(match.match_date, dateMatches);
   }
 
-  return Array.from(archiveByRawDate.entries()).map(([rawDate, dayMatches]) => {
-    const matchIds = new Set(dayMatches.map((match) => match.id));
-    const dayStats = matchStats.filter((stat) => matchIds.has(stat.match_id));
-    const playerTotals = new Map<string, ArchivePlayer>();
+  for (const [matchDate, dateMatches] of matchesByRawDate.entries()) {
+    const isCurrentDate = matchDate === currentDate;
+    const completedMatches = dateMatches.filter((match) => match.status === "completed");
+    const allDateMatchesCompleted = dateMatches.every((match) => match.status === "completed");
 
-    for (const stat of dayStats) {
-      const playerName = playerNames.get(stat.player_id);
-      if (!playerName) continue;
+    if (completedMatches.length === 0) continue;
+    if (isCurrentDate && !allDateMatchesCompleted) continue;
 
-      const existing = playerTotals.get(stat.player_id) || {
-        name: playerName,
-        team: getTeamDisplayName(stat.team_name, teamDisplayNames),
-        goals: 0,
-        assists: 0,
-        points: 0,
+    archiveByRawDate.set(matchDate, completedMatches);
+  }
+
+  return Array.from(archiveByRawDate.entries())
+    .sort(([firstDate], [secondDate]) => secondDate.localeCompare(firstDate))
+    .map(([rawDate, dayMatches]) => {
+      const matchIds = new Set(dayMatches.map((match) => match.id));
+      const dayStats = matchStats.filter((stat) => matchIds.has(stat.match_id));
+      const playerTotals = new Map<string, ArchivePlayer>();
+
+      for (const stat of dayStats) {
+        const playerName = playerNames.get(stat.player_id);
+        if (!playerName) continue;
+
+        const existing = playerTotals.get(stat.player_id) || {
+          name: playerName,
+          team: getTeamDisplayName(stat.team_name, teamDisplayNames),
+          goals: 0,
+          assists: 0,
+          points: 0,
+        };
+
+        existing.goals += stat.goals || 0;
+        existing.assists += stat.assists || 0;
+        existing.points = existing.goals + existing.assists;
+        playerTotals.set(stat.player_id, existing);
+      }
+
+      const dayTeams = getTeamsForMatches(teams, dayMatches);
+      const standings = buildTeamStandings(dayTeams, dayMatches);
+      const teamOfTheWeek = buildTeamOfTheWeek(standings);
+      const sortedPlayers = Array.from(playerTotals.values()).sort(
+        (a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name),
+      );
+      const topScorer = getArchiveTopScorer(sortedPlayers);
+
+      return {
+        date: formatDate(rawDate),
+        matches: dayMatches.sort(sortMatchesByGameOrder).map((match) => ({
+          game: gameLabels.get(match.id) || "Game",
+          teamA: getTeamDisplayName(match.team_a_name, teamDisplayNames),
+          teamB: getTeamDisplayName(match.team_b_name, teamDisplayNames),
+          score: `${match.team_a_score} - ${match.team_b_score}`,
+          winner: getMatchWinner(match, teamDisplayNames),
+        })),
+        standings,
+        players: sortedPlayers,
+        totalGoals: dayMatches.reduce((total, match) => total + match.team_a_score + match.team_b_score, 0),
+        teamOfTheWeek: teamOfTheWeek.name,
+        topScorer,
       };
-
-      existing.goals += stat.goals || 0;
-      existing.assists += stat.assists || 0;
-      existing.points = existing.goals + existing.assists;
-      playerTotals.set(stat.player_id, existing);
-    }
-
-    const dayTeams = getTeamsForMatches(teams, dayMatches);
-    const standings = buildTeamStandings(dayTeams, dayMatches);
-    const teamOfTheWeek = buildTeamOfTheWeek(standings);
-    const sortedPlayers = Array.from(playerTotals.values()).sort(
-      (a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name),
-    );
-    const topScorer = getArchiveTopScorer(sortedPlayers);
-
-    return {
-      date: formatDate(rawDate),
-      matches: dayMatches.sort(sortMatchesByGameOrder).map((match) => ({
-        game: gameLabels.get(match.id) || "Game",
-        teamA: getTeamDisplayName(match.team_a_name, teamDisplayNames),
-        teamB: getTeamDisplayName(match.team_b_name, teamDisplayNames),
-        score: `${match.team_a_score} - ${match.team_b_score}`,
-        winner: getMatchWinner(match, teamDisplayNames),
-      })),
-      standings,
-      players: sortedPlayers,
-      totalGoals: dayMatches.reduce((total, match) => total + match.team_a_score + match.team_b_score, 0),
-      teamOfTheWeek: teamOfTheWeek.name,
-      topScorer,
-    };
-  });
+    });
 }
 
 function getArchiveTopScorer(players: ArchivePlayer[]) {
