@@ -182,6 +182,7 @@ export default function AdminPage() {
     label: "Game",
     location: "",
   });
+  const [manualGameDayDateSelected, setManualGameDayDateSelected] = useState(false);
   const [quickScores, setQuickScores] = useState<Record<string, { team_a_score: string; team_b_score: string }>>({});
   const [quickStatMatchId, setQuickStatMatchId] = useState("");
   const [quickStatDrafts, setQuickStatDrafts] = useState<Record<string, { goals: string; assists: string }>>({});
@@ -218,6 +219,10 @@ export default function AdminPage() {
     () => stats.filter((stat) => gameDayMatchIds.has(stat.match_id)),
     [gameDayMatchIds, stats],
   );
+  const selectedDateIsCompletedSession = useMemo(
+    () => gameDayMatches.length > 0 && gameDayMatches.every((match) => match.status === "completed"),
+    [gameDayMatches],
+  );
   const pollCandidatePlayers = useMemo(() => {
     const playerIdsWithStats = new Set(gameDayStats.map((stat) => stat.player_id));
     const playersWithStats = activePlayers.filter((player) => playerIdsWithStats.has(player.id));
@@ -235,6 +240,12 @@ export default function AdminPage() {
     () => gameDayMatches.find((match) => match.id === quickStatSelectedMatchId) || null,
     [gameDayMatches, quickStatSelectedMatchId],
   );
+
+  function selectGameDayDate(date: string) {
+    setManualGameDayDateSelected(true);
+    setGameDayForm((current) => ({ ...current, date }));
+  }
+
   const loadData = useCallback(async (credential = adminCredential) => {
     if (!credential) return;
 
@@ -332,6 +343,16 @@ export default function AdminPage() {
       setMatchForm((current) => ({ ...current, match_date: gameDayForm.date }));
     }
   }, [editingMatchId, gameDayForm.date]);
+
+  useEffect(() => {
+    if (manualGameDayDateSelected || matches.length === 0) return;
+    if (!isCompletedSessionDate(matches, gameDayForm.date)) return;
+
+    const nextWorkDate = getDefaultAdminWorkDate(matches);
+    if (nextWorkDate !== gameDayForm.date) {
+      setGameDayForm((current) => ({ ...current, date: nextWorkDate }));
+    }
+  }, [gameDayForm.date, manualGameDayDateSelected, matches]);
 
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1217,7 +1238,7 @@ export default function AdminPage() {
                         <p className="text-xs font-black uppercase text-black/45">Games</p>
                         <button
                           type="button"
-                          onClick={() => setGameDayForm({ ...gameDayForm, date: session.rawDate })}
+                          onClick={() => selectGameDayDate(session.rawDate)}
                           className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-black text-black/70 hover:bg-black/5"
                         >
                           Edit This Date
@@ -1312,7 +1333,7 @@ export default function AdminPage() {
               type="date"
               label="Tournament date"
               value={gameDayForm.date}
-              onChange={(value) => setGameDayForm({ ...gameDayForm, date: value })}
+              onChange={selectGameDayDate}
             />
             <AdminInput
               label="Game label"
@@ -1327,6 +1348,12 @@ export default function AdminPage() {
               placeholder="Field name"
             />
           </div>
+
+          {selectedDateIsCompletedSession && (
+            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+              This completed session is saved in Past Games. Only edit it here if you need to correct an old score or stat.
+            </div>
+          )}
 
           <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
             <div>
@@ -2235,6 +2262,29 @@ function formatDateLabel(value: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function getDefaultAdminWorkDate(matches: Match[]) {
+  const nextOpenMatch = [...matches]
+    .filter((match) => match.status !== "completed")
+    .sort((first, second) => second.match_date.localeCompare(first.match_date) || sortMatchesByGameOrder(first, second))[0];
+
+  return nextOpenMatch?.match_date || getTodayDateInput();
+}
+
+function isCompletedSessionDate(matches: Match[], matchDate: string) {
+  const dateMatches = matches.filter((match) => match.match_date === matchDate);
+
+  return dateMatches.length > 0 && dateMatches.every((match) => match.status === "completed");
+}
+
+function getTodayDateInput() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function getTournamentPollTitle(poll: Pick<MvpPoll, "title" | "match_date">) {
