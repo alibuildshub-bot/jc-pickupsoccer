@@ -1174,7 +1174,7 @@ export default function AdminPage() {
               <p className="text-sm font-bold text-black/50">Results</p>
               <h1 className="text-2xl font-black">Past Games</h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
-                Old sessions are saved here. Change the tournament date above if you ever need to edit one.
+                Completed sessions are saved here in one place. Open a date only when you need to review games, teams, or player stats.
               </p>
             </div>
             <CalendarDays className="text-[#1f7a4d]" size={26} />
@@ -1186,35 +1186,52 @@ export default function AdminPage() {
           ) : (
             <div className="grid gap-4">
               {pastGameSessions.map((session) => (
-                <article key={session.rawDate} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                  <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-black uppercase text-[#1f7a4d]">Completed games</p>
-                      <h2 className="text-xl font-black">{session.date}</h2>
+                <details key={session.rawDate} className="group rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                  <summary className="list-none cursor-pointer">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase text-[#1f7a4d]">Completed session</p>
+                        <h2 className="text-xl font-black">{session.date}</h2>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-lg bg-white px-3 py-2 text-xs font-black text-black/55">
+                          {session.matches.length} games
+                        </span>
+                        <span className="rounded-lg bg-white px-3 py-2 text-xs font-black text-black/55">
+                          {session.totalGoals} goals
+                        </span>
+                        <span className="rounded-lg bg-white px-3 py-2 text-xs font-black text-black/55">
+                          {session.players.length} players
+                        </span>
+                        <span className="rounded-lg bg-[#171717] px-3 py-2 text-xs font-black text-white">
+                          <span className="group-open:hidden">View details</span>
+                          <span className="hidden group-open:inline">Hide details</span>
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-lg bg-white px-3 py-2 text-xs font-black text-black/55">
-                        {session.matches.length} games
-                      </span>
-                      <span className="rounded-lg bg-white px-3 py-2 text-xs font-black text-black/55">
-                        {session.totalGoals} goals
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setGameDayForm({ ...gameDayForm, date: session.rawDate })}
-                        className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-black text-black/70 hover:bg-black/5"
-                      >
-                        Open in Admin
-                      </button>
-                    </div>
-                  </div>
-                  <div className="grid gap-3 lg:grid-cols-3">
-                    <div className="rounded-lg bg-white p-3">
-                      <p className="mb-2 text-xs font-black uppercase text-black/45">Games</p>
-                      <div className="space-y-2">
+                  </summary>
+
+                  <div className="mt-4 grid gap-3 border-t border-black/10 pt-4 lg:grid-cols-[1fr_0.75fr]">
+                    <div className="rounded-lg bg-white p-3 sm:p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <p className="text-xs font-black uppercase text-black/45">Games</p>
+                        <button
+                          type="button"
+                          onClick={() => setGameDayForm({ ...gameDayForm, date: session.rawDate })}
+                          className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-black text-black/70 hover:bg-black/5"
+                        >
+                          Edit This Date
+                        </button>
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2">
                         {session.matches.map((match) => (
                           <div key={match.id} className="rounded-lg bg-[#f7f3ec] px-3 py-2">
-                            <p className="text-xs font-black uppercase text-[#1f7a4d]">{matchGameLabels.get(match.id)}</p>
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                              <p className="text-xs font-black uppercase text-[#1f7a4d]">{matchGameLabels.get(match.id)}</p>
+                              <span className="rounded-lg bg-white px-2 py-1 text-xs font-black text-black/45">
+                                {formatMatchStatus(match.status)}
+                              </span>
+                            </div>
                             <p className="text-sm font-black">
                               {match.team_a_name} {match.team_a_score} - {match.team_b_score} {match.team_b_name}
                             </p>
@@ -1222,8 +1239,9 @@ export default function AdminPage() {
                         ))}
                       </div>
                     </div>
-                    <div className="rounded-lg bg-white p-3">
-                      <p className="mb-2 text-xs font-black uppercase text-black/45">Teams</p>
+
+                    <div className="rounded-lg bg-white p-3 sm:p-4">
+                      <p className="mb-3 text-xs font-black uppercase text-black/45">Teams</p>
                       <div className="flex flex-wrap gap-2">
                         {session.teams.map((team) => (
                           <span key={`${session.rawDate}-${team}`} className="rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-black">
@@ -1232,29 +1250,38 @@ export default function AdminPage() {
                         ))}
                       </div>
                     </div>
-                    <div className="rounded-lg bg-white p-3">
-                      <p className="mb-2 text-xs font-black uppercase text-black/45">Players</p>
+
+                    <div className="rounded-lg bg-white p-3 sm:p-4 lg:col-span-2">
+                      <p className="mb-3 text-xs font-black uppercase text-black/45">Player Stats</p>
                       {session.players.length === 0 ? (
                         <p className="rounded-lg bg-[#f7f3ec] px-3 py-4 text-sm font-semibold text-black/50">
                           No player stats entered.
                         </p>
                       ) : (
-                        <div className="space-y-2">
-                          {session.players.map((player) => (
-                            <div key={`${session.rawDate}-${player.name}-${player.team}`} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm">
+                        <div className="grid gap-2 lg:grid-cols-2">
+                          {session.players.map((player, index) => (
+                            <div key={`${session.rawDate}-${player.name}-${player.team}`} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
+                                {index + 1}
+                              </span>
                               <div className="min-w-0">
                                 <p className="truncate font-black">{player.name}</p>
                                 <p className="truncate text-xs font-bold text-black/45">{player.team}</p>
                               </div>
-                              <span className="font-bold text-black/55">{player.goals} G</span>
-                              <span className="font-bold text-black/55">{player.assists} A</span>
+                              <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
+                                <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.goals} G</span>
+                                <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.assists} A</span>
+                                <span className="rounded-lg bg-[#171717] px-2 py-1 font-black text-white">
+                                  {player.goals + player.assists} G+A
+                                </span>
+                              </div>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
                   </div>
-                </article>
+                </details>
               ))}
             </div>
           )}
@@ -2228,57 +2255,67 @@ function buildPastGameSessions(
   players: Player[],
   currentDate: string,
 ): PastGameSession[] {
-  const completedMatches = matches
-    .filter((match) => match.status === "completed" && match.match_date !== currentDate)
-    .sort((first, second) => second.match_date.localeCompare(first.match_date) || sortMatchesByGameOrder(first, second));
   const sessionsByDate = new Map<string, Match[]>();
+  const matchesByDate = new Map<string, Match[]>();
   const playerNames = new Map(players.map((player) => [player.id, player.name]));
 
-  for (const match of completedMatches) {
-    const dateMatches = sessionsByDate.get(match.match_date) || [];
+  for (const match of matches) {
+    const dateMatches = matchesByDate.get(match.match_date) || [];
     dateMatches.push(match);
-    sessionsByDate.set(match.match_date, dateMatches);
+    matchesByDate.set(match.match_date, dateMatches);
   }
 
-  return Array.from(sessionsByDate.entries()).map(([rawDate, dateMatches]) => {
-    const matchIds = new Set(dateMatches.map((match) => match.id));
-    const playerTotals = new Map<string, PastGameSession["players"][number]>();
-    const teams = new Set<string>();
+  for (const [matchDate, dateMatches] of matchesByDate.entries()) {
+    const completedMatches = dateMatches.filter((match) => match.status === "completed");
+    const allDateMatchesCompleted = dateMatches.every((match) => match.status === "completed");
 
-    for (const match of dateMatches) {
-      teams.add(match.team_a_name);
-      teams.add(match.team_b_name);
-    }
+    if (completedMatches.length === 0) continue;
+    if (matchDate === currentDate && !allDateMatchesCompleted) continue;
 
-    for (const stat of stats) {
-      if (!matchIds.has(stat.match_id)) continue;
+    sessionsByDate.set(matchDate, completedMatches);
+  }
 
-      const existing = playerTotals.get(stat.player_id) || {
-        name: stat.players?.name || playerNames.get(stat.player_id) || "Unknown player",
-        team: stat.team_name,
-        goals: 0,
-        assists: 0,
+  return Array.from(sessionsByDate.entries())
+    .sort(([firstDate], [secondDate]) => secondDate.localeCompare(firstDate))
+    .map(([rawDate, dateMatches]) => {
+      const matchIds = new Set(dateMatches.map((match) => match.id));
+      const playerTotals = new Map<string, PastGameSession["players"][number]>();
+      const teams = new Set<string>();
+
+      for (const match of dateMatches) {
+        teams.add(match.team_a_name);
+        teams.add(match.team_b_name);
+      }
+
+      for (const stat of stats) {
+        if (!matchIds.has(stat.match_id)) continue;
+
+        const existing = playerTotals.get(stat.player_id) || {
+          name: stat.players?.name || playerNames.get(stat.player_id) || "Unknown player",
+          team: stat.team_name,
+          goals: 0,
+          assists: 0,
+        };
+
+        existing.goals += stat.goals || 0;
+        existing.assists += stat.assists || 0;
+        playerTotals.set(stat.player_id, existing);
+      }
+
+      return {
+        rawDate,
+        date: formatDateLabel(rawDate),
+        matches: dateMatches.sort(sortMatchesByGameOrder),
+        teams: Array.from(teams).sort((a, b) => a.localeCompare(b)),
+        players: Array.from(playerTotals.values()).sort(
+          (first, second) =>
+            second.goals + second.assists - (first.goals + first.assists) ||
+            second.goals - first.goals ||
+            first.name.localeCompare(second.name),
+        ),
+        totalGoals: dateMatches.reduce((total, match) => total + match.team_a_score + match.team_b_score, 0),
       };
-
-      existing.goals += stat.goals || 0;
-      existing.assists += stat.assists || 0;
-      playerTotals.set(stat.player_id, existing);
-    }
-
-    return {
-      rawDate,
-      date: formatDateLabel(rawDate),
-      matches: dateMatches.sort(sortMatchesByGameOrder),
-      teams: Array.from(teams).sort((a, b) => a.localeCompare(b)),
-      players: Array.from(playerTotals.values()).sort(
-        (first, second) =>
-          second.goals + second.assists - (first.goals + first.assists) ||
-          second.goals - first.goals ||
-          first.name.localeCompare(second.name),
-      ),
-      totalGoals: dateMatches.reduce((total, match) => total + match.team_a_score + match.team_b_score, 0),
-    };
-  });
+    });
 }
 
 function getCurrentSetupTeams(
