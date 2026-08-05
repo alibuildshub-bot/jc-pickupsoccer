@@ -85,7 +85,7 @@ type TeamRoster = {
 type MvpPollRow = {
   id: string;
   title: string;
-  match_date: string;
+  match_date: string | null;
 };
 
 type MvpPollOptionRow = {
@@ -747,20 +747,50 @@ async function getClosedMvpWinner(
   supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
   matchDate: string,
 ): Promise<MvpWinner> {
-  if (!matchDate) return fallbackMvpWinner;
+  if (matchDate) {
+    const currentSessionWinner = await getClosedMvpWinnerFromPolls(supabase, matchDate);
+    if (currentSessionWinner.isReady) return currentSessionWinner;
+  }
 
-  const query = supabase
+  return getClosedMvpWinnerFromPolls(supabase);
+}
+
+async function getClosedMvpWinnerFromPolls(
+  supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
+  matchDate?: string,
+): Promise<MvpWinner> {
+  let query = supabase
     .from("mvp_polls")
     .select("id,title,match_date")
     .eq("status", "closed")
-    .eq("match_date", matchDate)
     .order("created_at", { ascending: false })
-    .limit(1);
-  const { data: poll, error: pollError } = await query.maybeSingle();
+    .limit(5);
 
-  if (pollError || !poll) return fallbackMvpWinner;
+  if (matchDate) {
+    query = query.eq("match_date", matchDate);
+  }
 
-  const latestPoll = poll as MvpPollRow;
+  const { data: polls, error: pollError } = await query;
+
+  if (pollError || !polls?.length) return fallbackMvpWinner;
+
+  for (const poll of polls as MvpPollRow[]) {
+    const winner = await getMvpWinnerForPoll(supabase, poll);
+    if (winner.isReady) return winner;
+  }
+
+  const latestPoll = polls[0] as MvpPollRow;
+  return {
+    ...fallbackMvpWinner,
+    title: latestPoll.title,
+    date: latestPoll.match_date ? formatDate(latestPoll.match_date) : "Latest poll",
+  };
+}
+
+async function getMvpWinnerForPoll(
+  supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
+  latestPoll: MvpPollRow,
+): Promise<MvpWinner> {
   const [{ data: optionRows, error: optionError }, { data: voteRows, error: voteError }] = await Promise.all([
     supabase.from("mvp_poll_options").select("id,label").eq("poll_id", latestPoll.id),
     supabase.from("mvp_votes").select("option_id").eq("poll_id", latestPoll.id),
@@ -788,7 +818,7 @@ async function getClosedMvpWinner(
     return {
       ...fallbackMvpWinner,
       title: latestPoll.title,
-      date: formatDate(latestPoll.match_date),
+      date: latestPoll.match_date ? formatDate(latestPoll.match_date) : "Latest poll",
     };
   }
 
@@ -799,7 +829,7 @@ async function getClosedMvpWinner(
     votes: winner.votes,
     totalVotes: votes.length,
     title: latestPoll.title,
-    date: formatDate(latestPoll.match_date),
+    date: latestPoll.match_date ? formatDate(latestPoll.match_date) : "Latest poll",
     isReady: true,
   };
 }
