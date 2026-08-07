@@ -232,6 +232,7 @@ export default function AdminPage() {
     () => buildPastGameSessions(matches, stats, players, gameDayForm.date),
     [gameDayForm.date, matches, players, stats],
   );
+  const sessionOptions = useMemo(() => buildSessionOptions(matches, stats), [matches, stats]);
   const quickStatSelectedMatchId = gameDayMatches.some((match) => match.id === quickStatMatchId)
     ? quickStatMatchId
     : gameDayMatches[0]?.id || "";
@@ -1316,7 +1317,21 @@ export default function AdminPage() {
             </button>
           </div>
 
-          <div className="mb-5 grid gap-3 md:grid-cols-3">
+          <div className="mb-5 grid gap-3 md:grid-cols-4">
+            <AdminSelect
+              label="Previous sessions"
+              value={sessionOptions.some((sessionOption) => sessionOption.date === gameDayForm.date) ? gameDayForm.date : ""}
+              onChange={(value) => {
+                if (value) selectGameDayDate(value);
+              }}
+            >
+              <option value="">Open previous match date</option>
+              {sessionOptions.map((sessionOption) => (
+                <option key={sessionOption.date} value={sessionOption.date}>
+                  {sessionOption.label}
+                </option>
+              ))}
+            </AdminSelect>
             <AdminInput
               type="date"
               label="Tournament date"
@@ -2250,6 +2265,37 @@ function formatDateLabel(value: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function buildSessionOptions(matches: Match[], stats: PlayerStat[]) {
+  const statsByMatchId = new Map<string, number>();
+
+  for (const stat of stats) {
+    statsByMatchId.set(stat.match_id, (statsByMatchId.get(stat.match_id) || 0) + 1);
+  }
+
+  const sessions = new Map<string, { date: string; games: number; statRows: number; completedGames: number }>();
+
+  for (const match of matches) {
+    const session = sessions.get(match.match_date) || {
+      date: match.match_date,
+      games: 0,
+      statRows: 0,
+      completedGames: 0,
+    };
+
+    session.games += 1;
+    session.statRows += statsByMatchId.get(match.id) || 0;
+    session.completedGames += match.status === "completed" ? 1 : 0;
+    sessions.set(match.match_date, session);
+  }
+
+  return Array.from(sessions.values())
+    .sort((first, second) => second.date.localeCompare(first.date))
+    .map((session) => ({
+      date: session.date,
+      label: `${formatDateLabel(session.date)} - ${session.completedGames}/${session.games} completed, ${session.statRows} stat rows`,
+    }));
 }
 
 function getTournamentPollTitle(poll: Pick<MvpPoll, "title" | "match_date">) {
