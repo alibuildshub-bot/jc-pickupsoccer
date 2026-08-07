@@ -182,7 +182,6 @@ export default function AdminPage() {
     label: "Game",
     location: "",
   });
-  const [manualGameDayDateSelected, setManualGameDayDateSelected] = useState(false);
   const [quickScores, setQuickScores] = useState<Record<string, { team_a_score: string; team_b_score: string }>>({});
   const [quickStatMatchId, setQuickStatMatchId] = useState("");
   const [quickStatDrafts, setQuickStatDrafts] = useState<Record<string, { goals: string; assists: string }>>({});
@@ -242,7 +241,6 @@ export default function AdminPage() {
   );
 
   function selectGameDayDate(date: string) {
-    setManualGameDayDateSelected(true);
     setGameDayForm((current) => ({ ...current, date }));
   }
 
@@ -343,16 +341,6 @@ export default function AdminPage() {
       setMatchForm((current) => ({ ...current, match_date: gameDayForm.date }));
     }
   }, [editingMatchId, gameDayForm.date]);
-
-  useEffect(() => {
-    if (manualGameDayDateSelected || matches.length === 0) return;
-    if (!isCompletedSessionDate(matches, gameDayForm.date)) return;
-
-    const nextWorkDate = getDefaultAdminWorkDate(matches);
-    if (nextWorkDate !== gameDayForm.date) {
-      setGameDayForm((current) => ({ ...current, date: nextWorkDate }));
-    }
-  }, [gameDayForm.date, manualGameDayDateSelected, matches]);
 
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2262,29 +2250,6 @@ function formatDateLabel(value: string) {
     month: "short",
     day: "numeric",
   });
-}
-
-function getDefaultAdminWorkDate(matches: Match[]) {
-  const nextOpenMatch = [...matches]
-    .filter((match) => match.status !== "completed")
-    .sort((first, second) => second.match_date.localeCompare(first.match_date) || sortMatchesByGameOrder(first, second))[0];
-
-  return nextOpenMatch?.match_date || getTodayDateInput();
-}
-
-function isCompletedSessionDate(matches: Match[], matchDate: string) {
-  const dateMatches = matches.filter((match) => match.match_date === matchDate);
-
-  return dateMatches.length > 0 && dateMatches.every((match) => match.status === "completed");
-}
-
-function getTodayDateInput() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
 }
 
 function getTournamentPollTitle(poll: Pick<MvpPoll, "title" | "match_date">) {
