@@ -7,7 +7,7 @@ import {
 
 type PollPayload = {
   id?: string;
-  action?: "reset_votes" | "close" | "open" | "remove_option";
+  action?: "reset_votes" | "close" | "open" | "remove_option" | "sync_options";
   option_id?: string;
   title?: string;
   match_date?: string;
@@ -179,6 +179,44 @@ async function updatePoll(
     if (error) return Response.json({ error: error.message }, { status: 500 });
 
     return Response.json({ ok: true });
+  }
+
+  if (payload.action === "sync_options") {
+    const playerIds = Array.isArray(payload.player_ids) ? Array.from(new Set(payload.player_ids.filter(Boolean))) : [];
+
+    if (playerIds.length === 0) {
+      return Response.json({ error: "No players were provided to sync." }, { status: 400 });
+    }
+
+    const [{ data: existingOptions, error: optionsError }, { data: players, error: playersError }] = await Promise.all([
+      supabase.from("mvp_poll_options").select("player_id,label").eq("poll_id", payload.id),
+      supabase.from("players").select("id,name").in("id", playerIds).order("name"),
+    ]);
+
+    if (optionsError) return Response.json({ error: optionsError.message }, { status: 500 });
+    if (playersError) return Response.json({ error: playersError.message }, { status: 500 });
+
+    const existingPlayerIds = new Set((existingOptions || []).map((option) => option.player_id).filter(Boolean));
+    const existingLabels = new Set((existingOptions || []).map((option) => option.label.trim().toLowerCase()));
+    const missingPlayers = (players || []).filter(
+      (player) => !existingPlayerIds.has(player.id) && !existingLabels.has(player.name.trim().toLowerCase()),
+    );
+
+    if (missingPlayers.length === 0) {
+      return Response.json({ ok: true, added: 0 });
+    }
+
+    const { error: insertError } = await supabase.from("mvp_poll_options").insert(
+      missingPlayers.map((player) => ({
+        poll_id: payload.id,
+        player_id: player.id,
+        label: player.name,
+      })),
+    );
+
+    if (insertError) return Response.json({ error: insertError.message }, { status: 500 });
+
+    return Response.json({ ok: true, added: missingPlayers.length });
   }
 
   if (payload.action === "close" || payload.action === "open") {

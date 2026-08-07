@@ -497,6 +497,47 @@ export default function AdminPage() {
     }
   }
 
+  async function syncPollPlayers(poll: MvpPoll) {
+    const pollDate = poll.match_date || gameDayForm.date;
+    const pollMatches = matches.filter((match) => match.match_date === pollDate);
+    const pollStats = stats.filter((stat) => pollMatches.some((match) => match.id === stat.match_id));
+    const candidates = buildPollCandidatePlayers(pollMatches, teams, roster, players, pollStats, activePlayers);
+
+    if (candidates.length < 2) {
+      setMessage("No rostered players found for this poll date.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const response = await adminFetch(
+        "/api/admin/polls",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            id: poll.id,
+            action: "sync_options",
+            player_ids: candidates.map((player) => player.id),
+          }),
+        },
+        adminCredential,
+      );
+
+      setMessage(
+        response.added > 0
+          ? `${response.added} missing player${response.added === 1 ? "" : "s"} added to the MVP poll.`
+          : "MVP poll already has every rostered player for this date.",
+      );
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function togglePollStatus(poll: MvpPoll) {
     setLoading(true);
     setMessage("");
@@ -1609,6 +1650,14 @@ export default function AdminPage() {
                     ))}
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2 border-t border-black/10 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => syncPollPlayers(poll)}
+                      disabled={loading}
+                      className="h-10 rounded-lg border border-black/10 bg-white px-3 text-xs font-black text-black/70 hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Sync Players
+                    </button>
                     <button
                       type="button"
                       onClick={() => resetPollVotes(poll.id)}
