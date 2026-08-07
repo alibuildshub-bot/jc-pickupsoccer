@@ -1,5 +1,7 @@
 import {
   CalendarDays,
+  Clock,
+  MapPin,
   Target,
   Trophy,
   Users,
@@ -82,6 +84,15 @@ type TeamRoster = {
   players: string[];
 };
 
+type UpcomingSession = {
+  date: string;
+  rawDate: string;
+  location: string;
+  calendarUrl: string;
+  googleCalendarUrl: string;
+  teams: TeamRoster[];
+};
+
 type MvpPollRow = {
   id: string;
   title: string;
@@ -159,8 +170,6 @@ const fallbackMvpWinner: MvpWinner = {
   date: "After voting closes",
   isReady: false,
 };
-
-const nextSessionDate = "2026-07-25";
 
 export const revalidate = 0;
 
@@ -249,6 +258,66 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {data.upcomingSession ? (
+        <section className="mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:px-8">
+          <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-black/50">Upcoming Session</p>
+                <h2 className="mt-1 text-2xl font-black sm:text-3xl">{data.upcomingSession.date}</h2>
+                <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55 sm:text-base">
+                  Teams are set before kickoff. Game order can be figured out at the field.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-bold text-black/60">
+                    <MapPin size={16} />
+                    {data.upcomingSession.location}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-bold text-black/60">
+                    <Users size={16} />
+                    {data.upcomingSession.teams.length} teams
+                  </span>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[330px]">
+                <a
+                  href={data.upcomingSession.calendarUrl}
+                  download={`jc-footy-${data.upcomingSession.rawDate}.ics`}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#171717] px-4 text-center text-sm font-black text-white transition hover:bg-black"
+                >
+                  <CalendarDays size={18} />
+                  Add to Calendar
+                </a>
+                <a
+                  href={data.upcomingSession.googleCalendarUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-black text-black transition hover:border-black/30"
+                >
+                  <Clock size={18} />
+                  Google Calendar
+                </a>
+              </div>
+            </div>
+            {data.upcomingSession.teams.length > 0 ? (
+              <div className="mt-5 grid gap-3 border-t border-black/10 pt-4 md:grid-cols-2 lg:grid-cols-3">
+                {data.upcomingSession.teams.map((team) => (
+                  <div key={`upcoming-${team.name}`} className="rounded-lg bg-[#fbfaf7] p-3">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
+                      <p className="font-black">{team.name}</p>
+                    </div>
+                    <p className="text-sm font-semibold leading-6 text-black/55">
+                      {team.players.length > 0 ? team.players.join(", ") : "Roster coming soon"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-4 pb-6 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
         {statCards.map((item) => (
@@ -641,6 +710,7 @@ async function getDashboardData() {
       teamRosters: fallbackRosters(),
       teamOfTheWeek: fallbackTeamOfTheWeek,
       mvpWinner: fallbackMvpWinner,
+      upcomingSession: null,
       tournamentLabel: "Tournament Day",
       tournamentGames: 0,
       completedTournamentGames: 0,
@@ -686,6 +756,7 @@ async function getDashboardData() {
   const teamOfTheWeek = buildTeamOfTheWeek(teamStandings);
   const mvpWinner = await getClosedMvpWinner(supabase, tournamentDate);
   const teamDisplayNames = buildTeamDisplayNames(teams);
+  const upcomingSession = buildUpcomingSession(matches, teams, rawTeams, (rosterRows || []) as unknown as RosterRow[], teamDisplayNames);
   const playerTeamNames = buildPlayerTeamNames(rawTeams, (rosterRows || []) as RosterRow[], teamDisplayNames);
   const currentPlayerTeamNames = buildCurrentPlayerTeamNames(currentMatchStats, teamDisplayNames);
 
@@ -743,6 +814,7 @@ async function getDashboardData() {
     teamRosters,
     teamOfTheWeek,
     mvpWinner,
+    upcomingSession,
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
     tournamentGames: tournamentMatches.length,
     completedTournamentGames: tournamentMatches.filter((match) => match.status === "completed").length,
@@ -848,7 +920,39 @@ function getCurrentSessionDate(matches: MatchRow[]) {
   )[0];
 
   if (currentMatch) return currentMatch.match_date;
-  return nextSessionDate;
+  return "";
+}
+
+function buildUpcomingSession(
+  matches: MatchRow[],
+  teams: TeamRow[],
+  rawTeams: TeamRow[],
+  rosterRows: RosterRow[],
+  teamDisplayNames: Map<string, string>,
+): UpcomingSession | null {
+  const today = getTodayDateInput();
+  const upcomingMatches = matches
+    .filter((match) => match.match_date >= today && match.status !== "completed")
+    .sort((first, second) => first.match_date.localeCompare(second.match_date) || sortMatchesByGameOrder(first, second));
+
+  const sessionDate = upcomingMatches[0]?.match_date;
+
+  if (!sessionDate) return null;
+
+  const sessionMatches = upcomingMatches.filter((match) => match.match_date === sessionDate);
+  const sessionTeams = getTeamsForMatches(teams, sessionMatches);
+  const rosters = buildTeamRosters(sessionTeams, rawTeams, rosterRows);
+  const location = sessionMatches.find((match) => match.location?.trim())?.location?.trim() || "Field TBD";
+  const details = buildCalendarDetails(rosters);
+
+  return {
+    date: formatDate(sessionDate),
+    rawDate: sessionDate,
+    location,
+    calendarUrl: buildIcsCalendarUrl(sessionDate, location, details),
+    googleCalendarUrl: buildGoogleCalendarUrl(sessionDate, location, details),
+    teams: rosters,
+  };
 }
 
 function getCurrentSessionTeams(
@@ -1356,6 +1460,92 @@ function fallbackRosters() {
     color: team.color,
     players: [],
   }));
+}
+
+function getTodayDateInput() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = new Map(parts.map((part) => [part.type, part.value]));
+
+  return `${values.get("year")}-${values.get("month")}-${values.get("day")}`;
+}
+
+function buildCalendarDetails(teams: TeamRoster[]) {
+  const rosterDetails = teams
+    .map((team) => {
+      const players = team.players.length > 0 ? team.players.map((player) => `- ${player}`).join("\n") : "- Roster coming soon";
+
+      return `${team.name}\n${players}`;
+    })
+    .join("\n\n");
+
+  return [
+    "JC Footy pickup soccer session.",
+    "Teams are set before kickoff. Game order can be figured out at the field.",
+    rosterDetails ? `Teams:\n${rosterDetails}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function buildGoogleCalendarUrl(rawDate: string, location: string, details: string) {
+  const start = formatCalendarDate(rawDate);
+  const end = formatCalendarDate(addDaysToDateInput(rawDate, 1));
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: "JC Footy Pickup Soccer",
+    dates: `${start}/${end}`,
+    details,
+    location,
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function buildIcsCalendarUrl(rawDate: string, location: string, details: string) {
+  const start = formatCalendarDate(rawDate);
+  const end = formatCalendarDate(addDaysToDateInput(rawDate, 1));
+  const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//JC Footy//Pickup Soccer//EN",
+    "BEGIN:VEVENT",
+    `UID:jc-footy-${rawDate}@jcfooty.com`,
+    `DTSTAMP:${timestamp}`,
+    `DTSTART;VALUE=DATE:${start}`,
+    `DTEND;VALUE=DATE:${end}`,
+    "SUMMARY:JC Footy Pickup Soccer",
+    `LOCATION:${escapeCalendarText(location)}`,
+    `DESCRIPTION:${escapeCalendarText(details)}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
+}
+
+function addDaysToDateInput(rawDate: string, days: number) {
+  const date = new Date(`${rawDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+
+  return date.toISOString().slice(0, 10);
+}
+
+function formatCalendarDate(rawDate: string) {
+  return rawDate.replaceAll("-", "");
+}
+
+function escapeCalendarText(value: string) {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
 }
 
 function formatDate(value: string) {
