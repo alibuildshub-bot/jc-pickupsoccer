@@ -222,12 +222,10 @@ export default function AdminPage() {
     () => gameDayMatches.length > 0 && gameDayMatches.every((match) => match.status === "completed"),
     [gameDayMatches],
   );
-  const pollCandidatePlayers = useMemo(() => {
-    const playerIdsWithStats = new Set(gameDayStats.map((stat) => stat.player_id));
-    const playersWithStats = activePlayers.filter((player) => playerIdsWithStats.has(player.id));
-
-    return playersWithStats.length >= 2 ? playersWithStats : activePlayers;
-  }, [activePlayers, gameDayStats]);
+  const pollCandidatePlayers = useMemo(
+    () => buildPollCandidatePlayers(gameDayMatches, teams, roster, players, gameDayStats, activePlayers),
+    [activePlayers, gameDayMatches, gameDayStats, players, roster, teams],
+  );
   const pastGameSessions = useMemo(
     () => buildPastGameSessions(matches, stats, players, gameDayForm.date),
     [gameDayForm.date, matches, players, stats],
@@ -1546,9 +1544,9 @@ export default function AdminPage() {
               <h1 className="text-2xl font-black">Tournament MVP Poll</h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
                 Create one vote for the full tournament day after all games are finished, then send it to the group chat.
-                {gameDayStats.length > 0
-                  ? ` Polls will include the ${pollCandidatePlayers.length} players with stats entered for this day.`
-                  : " Add player stats first to limit the poll to players who participated."}
+                {pollCandidatePlayers.length > 0
+                  ? ` Polls will include ${pollCandidatePlayers.length} players from the teams that played this day.`
+                  : " Add teams, rosters, or player stats first to limit the poll to players who participated."}
               </p>
             </div>
             <button
@@ -2296,6 +2294,47 @@ function buildSessionOptions(matches: Match[], stats: PlayerStat[]) {
       date: session.date,
       label: `${formatDateLabel(session.date)} - ${session.completedGames}/${session.games} completed, ${session.statRows} stat rows`,
     }));
+}
+
+function buildPollCandidatePlayers(
+  gameDayMatches: Match[],
+  teams: TournamentTeam[],
+  roster: RosterRow[],
+  players: Player[],
+  gameDayStats: PlayerStat[],
+  activePlayers: Player[],
+) {
+  const gameDayTeamNames = new Set<string>();
+
+  for (const match of gameDayMatches) {
+    gameDayTeamNames.add(normalizeAdminLabel(match.team_a_name));
+    gameDayTeamNames.add(normalizeAdminLabel(match.team_b_name));
+  }
+
+  const gameDayTeamIds = new Set(
+    teams
+      .filter((team) => gameDayTeamNames.has(normalizeAdminLabel(team.name)))
+      .map((team) => team.id),
+  );
+  const rosterPlayerIds = new Set(
+    roster
+      .filter((row) => gameDayTeamIds.has(row.team_id))
+      .map((row) => row.player_id),
+  );
+  const rosterPlayers = players
+    .filter((player) => rosterPlayerIds.has(player.id))
+    .sort((first, second) => first.name.localeCompare(second.name));
+
+  if (rosterPlayers.length >= 2) return rosterPlayers;
+
+  const statPlayerIds = new Set(gameDayStats.map((stat) => stat.player_id));
+  const statPlayers = players
+    .filter((player) => statPlayerIds.has(player.id))
+    .sort((first, second) => first.name.localeCompare(second.name));
+
+  if (statPlayers.length >= 2) return statPlayers;
+
+  return activePlayers;
 }
 
 function getTournamentPollTitle(poll: Pick<MvpPoll, "title" | "match_date">) {
