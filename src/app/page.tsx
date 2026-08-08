@@ -2,7 +2,6 @@ import {
   CalendarDays,
   Clock,
   MapPin,
-  Target,
   Trophy,
   Users,
 } from "lucide-react";
@@ -186,15 +185,12 @@ export const revalidate = 0;
 
 export default async function Home() {
   const data = await getDashboardData();
-  const teamOfTheWeek = data.teamOfTheWeek || fallbackTeamOfTheWeek;
-  const mvpWinner = data.mvpWinner || fallbackMvpWinner;
-
-  const statCards = [
-    { label: "Active Players", value: String(data.activePlayers), icon: Users },
-    { label: "Teams", value: String(data.activeTeams), icon: Users },
-    { label: "Games Played", value: String(data.gamesPlayed), icon: CalendarDays },
-    { label: "Goals Tracked", value: String(data.goalsTracked), icon: Target },
-  ];
+  const latestSession = data.latestSession || {
+    label: "Latest Session",
+    winner: "Waiting on results",
+    mvp: "Voting pending",
+  };
+  const topPlayers = data.players.slice(0, 3);
 
   return (
     <main className="min-h-screen bg-[#f7f3ec] text-[#171717]">
@@ -218,70 +214,33 @@ export default async function Home() {
         </div>
       </nav>
 
-      <section className="mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-12">
-        <div className="flex flex-col justify-center">
-          <p className="mb-4 inline-flex w-fit rounded-lg bg-[#dff0e7] px-3 py-2 text-xs font-extrabold text-[#17613d] sm:text-sm">
-            3 teams. 5 players each. One tournament day.
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+        <div className="mb-6">
+          <p className="mb-3 inline-flex w-fit rounded-lg bg-[#dff0e7] px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-[#17613d] sm:text-sm">
+            JC Footy
           </p>
-          <h1 className="max-w-4xl text-[2.35rem] font-black leading-[1.05] tracking-normal sm:text-5xl lg:text-6xl">
-            Track every game, score, table, goal, and assist.
+          <h1 className="text-[2.5rem] font-black leading-none tracking-normal sm:text-6xl">
+            Matchday Dashboard
           </h1>
-          <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-black/60 sm:text-lg sm:leading-8">
-            Follow each week&apos;s matchups, scores, and player stats as the group
-            competes through the season.
+          <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-black/55 sm:text-lg">
+            Quick view of the next pickup, latest session, and the players leading the group.
           </p>
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:flex-row">
-            <a
-              href="#leaderboard"
-              className="inline-flex h-11 items-center justify-center rounded-lg bg-[#171717] px-3 text-center text-sm font-bold text-white transition hover:bg-black sm:h-12 sm:px-5"
-            >
-              View Leaderboard
-            </a>
-            <a
-              href="#matches"
-              className="inline-flex h-11 items-center justify-center rounded-lg border border-black/15 bg-white px-3 text-center text-sm font-bold text-black transition hover:border-black/30 sm:h-12 sm:px-5"
-            >
-              See Recent Matches
-            </a>
-          </div>
         </div>
 
-        <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-          <div className="flex items-center justify-between border-b border-black/10 pb-4">
-            <div>
-              <p className="text-sm font-bold text-black/50">Team of the Week</p>
-              <h2 className="text-xl font-black sm:text-2xl">{data.tournamentLabel}</h2>
+        <div className="grid gap-4 lg:grid-cols-[1fr_1fr_0.9fr]">
+          <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
+              <div>
+                <p className="text-sm font-bold text-black/50">Next Pickup</p>
+                <h2 className="mt-1 text-2xl font-black">
+                  {data.upcomingSession ? data.upcomingSession.date : "Not scheduled yet"}
+                </h2>
+              </div>
+              <CalendarDays className="text-[#1f7a4d]" size={30} />
             </div>
-            <Trophy className="text-[#b7791f]" size={32} />
-          </div>
-          <div className="py-6 text-center sm:py-8">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-[#f7f3ec] text-[#b7791f] sm:h-16 sm:w-16">
-              <Trophy size={32} />
-            </div>
-            <p className="break-words text-3xl font-black leading-tight sm:text-5xl">{teamOfTheWeek.name}</p>
-            <p className="mt-3 text-sm font-bold uppercase text-black/45">
-              {teamOfTheWeek.isReady ? "Tournament winner" : "Updates from the standings table"}
-            </p>
-          </div>
-          <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
-            <MiniStat label="Goals Scored" value={String(teamOfTheWeek.goalsFor)} />
-            <MiniStat label="Points" value={String(teamOfTheWeek.points)} />
-            <MiniStat label="Record" value={teamOfTheWeek.record} icon={Trophy} />
-          </div>
-        </div>
-      </section>
-
-      {data.upcomingSession ? (
-        <section className="mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:px-8">
-          <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-black/50">Upcoming Session</p>
-                <h2 className="mt-1 text-2xl font-black sm:text-3xl">{data.upcomingSession.date}</h2>
-                <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55 sm:text-base">
-                  Teams are set before kickoff. Game order can be figured out at the field.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
+            {data.upcomingSession ? (
+              <>
+                <div className="flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-bold text-black/60">
                     <MapPin size={16} />
                     {data.upcomingSession.location}
@@ -291,75 +250,104 @@ export default async function Home() {
                     {data.upcomingSession.teams.length} teams
                   </span>
                 </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <a
+                    href={data.upcomingSession.calendarUrl}
+                    download={`jc-footy-${data.upcomingSession.rawDate}.ics`}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#171717] px-4 text-center text-sm font-black text-white transition hover:bg-black"
+                  >
+                    <CalendarDays size={17} />
+                    Add to Calendar
+                  </a>
+                  <a
+                    href={data.upcomingSession.googleCalendarUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-black text-black transition hover:border-black/30"
+                  >
+                    <Clock size={17} />
+                    Google
+                  </a>
+                </div>
+              </>
+            ) : (
+              <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold leading-6 text-black/55">
+                Create a scheduled game in the admin portal and the calendar option will appear here.
+              </p>
+            )}
+          </article>
+
+          <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
+              <div>
+                <p className="text-sm font-bold text-black/50">Latest Session</p>
+                <h2 className="mt-1 text-2xl font-black">{latestSession.label}</h2>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[330px]">
-                <a
-                  href={data.upcomingSession.calendarUrl}
-                  download={`jc-footy-${data.upcomingSession.rawDate}.ics`}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#171717] px-4 text-center text-sm font-black text-white transition hover:bg-black"
-                >
-                  <CalendarDays size={18} />
-                  Add to Calendar
-                </a>
-                <a
-                  href={data.upcomingSession.googleCalendarUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-black text-black transition hover:border-black/30"
-                >
-                  <Clock size={18} />
-                  Google Calendar
-                </a>
+              <Trophy className="text-[#b7791f]" size={30} />
+            </div>
+            <div className="grid gap-3">
+              <div className="rounded-lg bg-[#fbfaf7] px-3 py-4">
+                <p className="text-xs font-black uppercase text-black/45">Winner</p>
+                <p className="mt-1 break-words text-xl font-black">
+                  {latestSession.winner}
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#fbfaf7] px-3 py-4">
+                <p className="text-xs font-black uppercase text-black/45">MVP</p>
+                <p className="mt-1 break-words text-xl font-black">
+                  {latestSession.mvp}
+                </p>
               </div>
             </div>
-            {data.upcomingSession.teams.length > 0 ? (
-              <div className="mt-5 grid gap-3 border-t border-black/10 pt-4 md:grid-cols-2 lg:grid-cols-3">
-                {data.upcomingSession.teams.map((team) => (
-                  <div key={`upcoming-${team.name}`} className="rounded-lg bg-[#fbfaf7] p-3">
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
-                      <p className="font-black">{team.name}</p>
-                    </div>
-                    <p className="text-sm font-semibold leading-6 text-black/55">
-                      {team.players.length > 0 ? team.players.join(", ") : "Roster coming soon"}
-                    </p>
-                  </div>
+          </article>
+
+          <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
+              <div>
+                <p className="text-sm font-bold text-black/50">Top Players</p>
+                <h2 className="mt-1 text-2xl font-black">G+A Leaders</h2>
+              </div>
+              <Users className="text-[#1f7a4d]" size={30} />
+            </div>
+            {topPlayers.length > 0 ? (
+              <div className="grid gap-2">
+                {topPlayers.map((player, index) => (
+                  <a
+                    key={player.name}
+                    href={`#player-${slugify(player.name)}`}
+                    className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg bg-[#fbfaf7] px-3 py-3 transition hover:bg-[#f1ece3]"
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                      {getMedal(index)}
+                    </span>
+                    <span className="min-w-0 break-words font-black">{player.name}</span>
+                    <span className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
+                      {player.points} G+A
+                    </span>
+                  </a>
                 ))}
               </div>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-4 pb-6 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
-        {statCards.map((item) => (
-          <div key={item.label} className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-            <item.icon className="mb-3 text-[#1f7a4d]" size={22} />
-            <p className="text-2xl font-black sm:text-3xl">{item.value}</p>
-            <p className="mt-1 text-xs font-semibold text-black/55 sm:text-sm">{item.label}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-bold text-black/50">Tournament MVP</p>
-              <h2 className="mt-1 break-words text-2xl font-black leading-tight sm:text-3xl">{mvpWinner.name}</h2>
-              <p className="mt-2 text-sm font-semibold text-black/55">
-                {mvpWinner.isReady ? "Fan vote winner" : "MVP will appear here when voting is closed."}
+            ) : (
+              <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold leading-6 text-black/55">
+                Top players will appear after stats are entered.
               </p>
-            </div>
-            <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-[#f7f3ec] text-[#b7791f] sm:flex">
-              <Trophy size={34} />
-            </div>
-          </div>
-          <div className="mt-5 grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-3">
-            <MiniStat label="Winning Votes" value={mvpWinner.isReady ? String(mvpWinner.votes) : "-"} />
-            <MiniStat label="Total Votes" value={mvpWinner.isReady ? String(mvpWinner.totalVotes) : "-"} />
-            <MiniStat label="Poll Date" value={mvpWinner.date} />
-          </div>
+            )}
+          </article>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+          <a
+            href="#profiles"
+            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#171717] px-4 text-center text-sm font-bold text-white transition hover:bg-black"
+          >
+            View Players
+          </a>
+          <a
+            href="#progress"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-bold text-black transition hover:border-black/30"
+          >
+            Full Table
+          </a>
         </div>
       </section>
 
@@ -777,6 +765,11 @@ async function getDashboardData() {
       teamRosters: fallbackRosters(),
       teamOfTheWeek: fallbackTeamOfTheWeek,
       mvpWinner: fallbackMvpWinner,
+      latestSession: {
+        label: "Latest Session",
+        winner: "Waiting on results",
+        mvp: "Voting pending",
+      },
       upcomingSession: null,
       tournamentLabel: "Tournament Day",
       tournamentGames: 0,
@@ -823,6 +816,7 @@ async function getDashboardData() {
   const teamOfTheWeek = buildTeamOfTheWeek(teamStandings);
   const mvpWinner = await getClosedMvpWinner(supabase, tournamentDate);
   const teamDisplayNames = buildTeamDisplayNames(teams);
+  const latestSession = await buildLatestSessionSummary(supabase, matches, teams, teamDisplayNames);
   const upcomingSession = buildUpcomingSession(matches, teams, rawTeams, (rosterRows || []) as unknown as RosterRow[], teamDisplayNames);
   const playerTeamNames = buildPlayerTeamNames(rawTeams, (rosterRows || []) as RosterRow[], teamDisplayNames);
   const currentPlayerTeamNames = buildCurrentPlayerTeamNames(currentMatchStats, teamDisplayNames);
@@ -883,6 +877,7 @@ async function getDashboardData() {
     teamRosters,
     teamOfTheWeek,
     mvpWinner,
+    latestSession,
     upcomingSession,
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
     tournamentGames: tournamentMatches.length,
@@ -990,6 +985,42 @@ function getCurrentSessionDate(matches: MatchRow[]) {
 
   if (currentMatch) return currentMatch.match_date;
   return "";
+}
+
+async function buildLatestSessionSummary(
+  supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
+  matches: MatchRow[],
+  teams: TeamRow[],
+  teamDisplayNames: Map<string, string>,
+) {
+  const latestDate = getLatestCompletedSessionDate(matches);
+
+  if (!latestDate) {
+    return {
+      label: "Latest Session",
+      winner: "Waiting on results",
+      mvp: "Voting pending",
+    };
+  }
+
+  const latestMatches = matches.filter((match) => match.match_date === latestDate && match.status === "completed");
+  const latestTeams = getTeamsForMatches(teams, latestMatches);
+  const standings = buildTeamStandings(latestTeams, latestMatches);
+  const winner = buildTeamOfTheWeek(standings);
+  const latestMvp = await getClosedMvpWinner(supabase, latestDate);
+
+  return {
+    label: formatDate(latestDate),
+    winner: winner.isReady ? winner.name : "Waiting on results",
+    mvp: latestMvp.isReady ? latestMvp.name : "Voting pending",
+  };
+}
+
+function getLatestCompletedSessionDate(matches: MatchRow[]) {
+  return matches
+    .filter((match) => match.status === "completed")
+    .map((match) => match.match_date)
+    .sort((first, second) => second.localeCompare(first))[0] || "";
 }
 
 function buildUpcomingSession(
@@ -1664,6 +1695,14 @@ function getInitials(value: string) {
     .join("");
 
   return initials || "P";
+}
+
+function getMedal(index: number) {
+  if (index === 0) return "1";
+  if (index === 1) return "2";
+  if (index === 2) return "3";
+
+  return String(index + 1);
 }
 
 function formatDate(value: string) {
