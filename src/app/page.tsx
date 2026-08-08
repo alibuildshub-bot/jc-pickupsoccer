@@ -182,22 +182,22 @@ export default async function Home() {
   const topPlayers = data.players.slice(0, 3);
 
   return (
-    <main className="home-dark min-h-screen bg-[#070a08] text-[#f4f7f1]">
+    <main className="min-h-screen bg-[#f7f3ec] text-[#171717]">
       <SiteVisitTracker />
-      <nav className="sticky top-0 z-20 border-b border-white/10 bg-[#070a08]/95 backdrop-blur">
+      <nav className="sticky top-0 z-20 border-b border-black/10 bg-[#f7f3ec]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <LogoMark />
             <div>
               <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
-              <p className="text-xs font-medium text-white/55">Weekly rec league stats</p>
+              <p className="text-xs font-medium text-black/55">Weekly rec league stats</p>
             </div>
           </div>
-          <div className="hidden items-center gap-2 text-sm font-semibold text-white/65 md:flex">
-            <a href="#progress" className="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white">Standings</a>
-            <a href="/players" className="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white">Players</a>
-            <a href="#matches" className="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white">Matches</a>
-            <a href="#teams" className="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white">Teams</a>
+          <div className="hidden items-center gap-2 text-sm font-semibold text-black/65 md:flex">
+            <a href="#progress" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Standings</a>
+            <a href="/players" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Players</a>
+            <a href="#matches" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Matches</a>
+            <a href="#teams" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Teams</a>
           </div>
         </div>
       </nav>
@@ -221,7 +221,7 @@ export default async function Home() {
             </a>
             <a
               href="#progress"
-              className="inline-flex h-11 items-center justify-center rounded-lg border border-white/15 bg-white/5 px-4 text-center text-sm font-black text-white transition hover:bg-white/10"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-black text-black transition hover:border-black/30"
             >
               Standings
             </a>
@@ -229,14 +229,14 @@ export default async function Home() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.35fr_0.9fr]">
-          <article className="rounded-lg border border-white/10 bg-[#111811] p-5 shadow-xl shadow-black/20 sm:p-6">
+          <article className="rounded-lg border border-black/10 bg-[#171717] p-5 text-white shadow-sm sm:p-6">
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-black uppercase tracking-wide text-[#64d69a]">Next Pickup</p>
                 <h2 className="mt-2 text-4xl font-black leading-none sm:text-5xl">
                   {data.upcomingSession ? data.upcomingSession.date : "Not scheduled yet"}
                 </h2>
-                <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-white/55">
+                <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-white/60">
                   {data.upcomingSession
                     ? "Add it to your calendar and check back after games for updated stats."
                     : "Create a scheduled game in the admin portal and the calendar option will appear here."}
@@ -247,11 +247,11 @@ export default async function Home() {
             {data.upcomingSession ? (
               <>
                 <div className="mt-6 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/[0.07] px-3 py-2 text-sm font-bold text-white/70">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-bold text-white/75">
                     <MapPin size={16} />
                     {data.upcomingSession.location}
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/[0.07] px-3 py-2 text-sm font-bold text-white/70">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-bold text-white/75">
                     <Users size={16} />
                     {data.upcomingSession.teams.length} teams
                   </span>
@@ -269,7 +269,7 @@ export default async function Home() {
                     href={data.upcomingSession.googleCalendarUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 text-center text-sm font-black text-white transition hover:bg-white/10"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 text-center text-sm font-black text-white transition hover:bg-white/15"
                   >
                     <Clock size={17} />
                     Google
@@ -279,7 +279,7 @@ export default async function Home() {
                 {data.upcomingSession.teams.length > 0 ? (
                   <div className="mt-4 grid gap-2 md:grid-cols-3">
                     {data.upcomingSession.teams.map((team) => (
-                      <div key={`next-${team.name}`} className="rounded-lg border border-white/10 bg-black/20 p-3">
+                      <div key={`next-${team.name}`} className="rounded-lg border border-white/10 bg-white/10 p-3">
                         <div className="mb-1 flex items-center gap-2">
                           <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
                           <p className="truncate text-sm font-black">{team.name}</p>
@@ -315,9 +315,9 @@ export default async function Home() {
           </article>
 
           <div className="grid gap-4">
-            <article className="rounded-lg border border-white/10 bg-[#111811] p-4 shadow-xl shadow-black/20 sm:p-5">
+            <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
               <div>
-                <p className="text-sm font-bold text-white/45">Latest Session</p>
+                <p className="text-sm font-bold text-black/50">Latest Session</p>
                 <h2 className="mt-1 text-2xl font-black">{latestSession.label}</h2>
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
@@ -326,10 +326,10 @@ export default async function Home() {
               </div>
             </article>
 
-            <article className="rounded-lg border border-white/10 bg-[#111811] p-4 shadow-xl shadow-black/20 sm:p-5">
+            <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-bold text-white/45">Top Players</p>
+                  <p className="text-sm font-bold text-black/50">Top Players</p>
                   <h2 className="mt-1 text-2xl font-black">Top 3</h2>
                 </div>
                 <Trophy className="text-[#c7922b]" size={28} />
@@ -341,7 +341,7 @@ export default async function Home() {
                   ))}
                 </div>
               ) : (
-                <p className="rounded-lg bg-black/20 px-3 py-4 text-sm font-semibold leading-6 text-white/55">
+                <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold leading-6 text-black/55">
                   Top players will appear after stats are entered.
                 </p>
               )}
@@ -1651,8 +1651,8 @@ function LeagueNumber({ value, strong = false }: { value: number; strong?: boole
 
 function CompactResult({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-black/25 px-3 py-4">
-      <p className="text-xs font-black uppercase text-white/45">{label}</p>
+    <div className="rounded-lg bg-[#fbfaf7] px-3 py-4">
+      <p className="text-xs font-black uppercase text-black/45">{label}</p>
       <p className="mt-1 break-words text-lg font-black">{value}</p>
     </div>
   );
@@ -1662,13 +1662,13 @@ function TopPlayerCard({ player, rank }: { player: LeaderboardPlayer; rank: numb
   return (
     <a
       href={`/players/${slugify(player.name)}`}
-      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg bg-black/25 px-3 py-3 transition hover:bg-white/10"
+      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg bg-[#fbfaf7] px-3 py-3 transition hover:bg-[#f1ece3]"
     >
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1f7a4d]/25 text-sm font-black text-[#64d69a]">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
         {rank}
       </span>
       <span className="min-w-0 break-words font-black">{player.name}</span>
-      <span className="rounded-lg bg-[#f4f7f1] px-3 py-2 text-sm font-black text-[#071009]">
+      <span className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
         {player.points} G+A
       </span>
     </a>
