@@ -182,58 +182,76 @@ export default async function Home() {
   const topPlayers = data.players.slice(0, 3);
 
   return (
-    <main className="min-h-screen bg-[#f7f3ec] text-[#171717]">
+    <main className="home-dark min-h-screen bg-[#070a08] text-[#f4f7f1]">
       <SiteVisitTracker />
-      <nav className="border-b border-black/10 bg-[#f7f3ec]/95 backdrop-blur">
+      <nav className="sticky top-0 z-20 border-b border-white/10 bg-[#070a08]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <LogoMark />
             <div>
               <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
-              <p className="text-xs font-medium text-black/55">Weekly rec league stats</p>
+              <p className="text-xs font-medium text-white/55">Weekly rec league stats</p>
             </div>
           </div>
-          <div className="hidden items-center gap-6 text-sm font-semibold text-black/65 md:flex">
-            <a href="#progress" className="hover:text-black">Progress</a>
-            <a href="/players" className="hover:text-black">Players</a>
-            <a href="#teams" className="hover:text-black">Teams</a>
-            <a href="#matches" className="hover:text-black">Matches</a>
+          <div className="hidden items-center gap-2 text-sm font-semibold text-white/65 md:flex">
+            <a href="#progress" className="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white">Standings</a>
+            <a href="/players" className="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white">Players</a>
+            <a href="#matches" className="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white">Matches</a>
+            <a href="#teams" className="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white">Teams</a>
           </div>
         </div>
       </nav>
 
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        <div className="mb-6">
-          <p className="mb-3 inline-flex w-fit rounded-lg bg-[#dff0e7] px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-[#17613d] sm:text-sm">
-            JC Footy
-          </p>
-          <h1 className="text-[2.5rem] font-black leading-none tracking-normal sm:text-6xl">
-            Matchday Dashboard
-          </h1>
-          <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-black/55 sm:text-lg">
-            Quick view of the next pickup, latest session, and the players leading the group.
-          </p>
+      <section className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="mb-3 inline-flex w-fit rounded-lg bg-[#1f7a4d]/20 px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-[#64d69a] sm:text-sm">
+              JC Footy
+            </p>
+            <h1 className="text-[2.35rem] font-black leading-none tracking-normal sm:text-6xl">
+              Matchday Dashboard
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="/players"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-[#1f7a4d] px-4 text-center text-sm font-black text-white transition hover:bg-[#17613d]"
+            >
+              Players
+            </a>
+            <a
+              href="#progress"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-white/15 bg-white/5 px-4 text-center text-sm font-black text-white transition hover:bg-white/10"
+            >
+              Standings
+            </a>
+          </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_1fr_0.9fr]">
-          <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-            <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
-              <div>
-                <p className="text-sm font-bold text-black/50">Next Pickup</p>
-                <h2 className="mt-1 text-2xl font-black">
+        <div className="grid gap-4 lg:grid-cols-[1.35fr_0.9fr]">
+          <article className="rounded-lg border border-white/10 bg-[#111811] p-5 shadow-xl shadow-black/20 sm:p-6">
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-black uppercase tracking-wide text-[#64d69a]">Next Pickup</p>
+                <h2 className="mt-2 text-4xl font-black leading-none sm:text-5xl">
                   {data.upcomingSession ? data.upcomingSession.date : "Not scheduled yet"}
                 </h2>
+                <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-white/55">
+                  {data.upcomingSession
+                    ? "Add it to your calendar and check back after games for updated stats."
+                    : "Create a scheduled game in the admin portal and the calendar option will appear here."}
+                </p>
               </div>
-              <CalendarDays className="text-[#1f7a4d]" size={30} />
+              <CalendarDays className="shrink-0 text-[#64d69a]" size={38} />
             </div>
             {data.upcomingSession ? (
               <>
-                <div className="flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-bold text-black/60">
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/[0.07] px-3 py-2 text-sm font-bold text-white/70">
                     <MapPin size={16} />
                     {data.upcomingSession.location}
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-bold text-black/60">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/[0.07] px-3 py-2 text-sm font-bold text-white/70">
                     <Users size={16} />
                     {data.upcomingSession.teams.length} teams
                   </span>
@@ -242,7 +260,7 @@ export default async function Home() {
                   <a
                     href={data.upcomingSession.calendarUrl}
                     download={`jc-footy-${data.upcomingSession.rawDate}.ics`}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#171717] px-4 text-center text-sm font-black text-white transition hover:bg-black"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-center text-sm font-black text-white transition hover:bg-[#17613d]"
                   >
                     <CalendarDays size={17} />
                     Add to Calendar
@@ -251,95 +269,88 @@ export default async function Home() {
                     href={data.upcomingSession.googleCalendarUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-black text-black transition hover:border-black/30"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 text-center text-sm font-black text-white transition hover:bg-white/10"
                   >
                     <Clock size={17} />
                     Google
                   </a>
                 </div>
+
+                {data.upcomingSession.teams.length > 0 ? (
+                  <div className="mt-4 grid gap-2 md:grid-cols-3">
+                    {data.upcomingSession.teams.map((team) => (
+                      <div key={`next-${team.name}`} className="rounded-lg border border-white/10 bg-black/20 p-3">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
+                          <p className="truncate text-sm font-black">{team.name}</p>
+                        </div>
+                        <p className="text-xs font-bold text-white/45">{formatPlayerCount(team.players.length)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </>
-            ) : (
-              <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold leading-6 text-black/55">
-                Create a scheduled game in the admin portal and the calendar option will appear here.
-              </p>
-            )}
-          </article>
+            ) : null}
 
-          <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-            <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
-              <div>
-                <p className="text-sm font-bold text-black/50">Latest Session</p>
-                <h2 className="mt-1 text-2xl font-black">{latestSession.label}</h2>
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-black uppercase tracking-wide text-white/45">Latest Results</p>
+                <a href="#matches" className="text-sm font-black text-[#64d69a] hover:text-white">View all</a>
               </div>
-              <Trophy className="text-[#b7791f]" size={30} />
-            </div>
-            <div className="grid gap-3">
-              <div className="rounded-lg bg-[#fbfaf7] px-3 py-4">
-                <p className="text-xs font-black uppercase text-black/45">Winner</p>
-                <p className="mt-1 break-words text-xl font-black">
-                  {latestSession.winner}
-                </p>
-              </div>
-              <div className="rounded-lg bg-[#fbfaf7] px-3 py-4">
-                <p className="text-xs font-black uppercase text-black/45">MVP</p>
-                <p className="mt-1 break-words text-xl font-black">
-                  {latestSession.mvp}
-                </p>
-              </div>
-            </div>
-          </article>
-
-          <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-            <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
-              <div>
-                <p className="text-sm font-bold text-black/50">Top Players</p>
-                <h2 className="mt-1 text-2xl font-black">G+A Leaders</h2>
-              </div>
-              <Users className="text-[#1f7a4d]" size={30} />
-            </div>
-            {topPlayers.length > 0 ? (
-              <div className="grid gap-2">
-                {topPlayers.map((player, index) => (
-                  <a
-                    key={player.name}
-                    href={`/players/${slugify(player.name)}`}
-                    className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg bg-[#fbfaf7] px-3 py-3 transition hover:bg-[#f1ece3]"
-                  >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
-                      {getMedal(index)}
-                    </span>
-                    <span className="min-w-0 break-words font-black">{player.name}</span>
-                    <span className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
-                      {player.points} G+A
-                    </span>
-                  </a>
+              <div className="grid gap-2 md:grid-cols-2">
+                {data.recentMatches.slice(0, 2).map((match) => (
+                  <article key={`latest-${match.week}-${match.date}-${match.game}`} className="rounded-lg bg-black/25 p-3">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase text-[#64d69a]">{match.game}</p>
+                        <p className="mt-1 text-xs font-bold text-white/45">{match.date}</p>
+                      </div>
+                      <p className="rounded-lg bg-[#f4f7f1] px-3 py-2 text-sm font-black text-[#071009]">{match.score}</p>
+                    </div>
+                    <p className="break-words text-sm font-black">{match.teamA} vs {match.teamB}</p>
+                  </article>
                 ))}
               </div>
-            ) : (
-              <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold leading-6 text-black/55">
-                Top players will appear after stats are entered.
-              </p>
-            )}
+            </div>
           </article>
-        </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-          <a
-            href="/players"
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#171717] px-4 text-center text-sm font-bold text-white transition hover:bg-black"
-          >
-            View Players
-          </a>
-          <a
-            href="#progress"
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-bold text-black transition hover:border-black/30"
-          >
-            Full Table
-          </a>
+          <div className="grid gap-4">
+            <article className="rounded-lg border border-white/10 bg-[#111811] p-4 shadow-xl shadow-black/20 sm:p-5">
+              <div>
+                <p className="text-sm font-bold text-white/45">Latest Session</p>
+                <h2 className="mt-1 text-2xl font-black">{latestSession.label}</h2>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                <CompactResult label="Winner" value={latestSession.winner} />
+                <CompactResult label="MVP" value={latestSession.mvp} />
+              </div>
+            </article>
+
+            <article className="rounded-lg border border-white/10 bg-[#111811] p-4 shadow-xl shadow-black/20 sm:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-white/45">Top Players</p>
+                  <h2 className="mt-1 text-2xl font-black">Top 3</h2>
+                </div>
+                <Trophy className="text-[#c7922b]" size={28} />
+              </div>
+              {topPlayers.length > 0 ? (
+                <div className="grid gap-2">
+                  {topPlayers.map((player, index) => (
+                    <TopPlayerCard key={player.name} player={player} rank={index + 1} />
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg bg-black/20 px-3 py-4 text-sm font-semibold leading-6 text-white/55">
+                  Top players will appear after stats are entered.
+                </p>
+              )}
+            </article>
+          </div>
         </div>
       </section>
 
-      <section id="progress" className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+      <section id="progress" className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
         <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -394,31 +405,31 @@ export default async function Home() {
             )}
           </div>
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[920px] border-collapse text-left">
+            <table className="w-full min-w-[840px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-black/10 bg-[#fbfaf7] text-xs font-black uppercase text-black/45">
-                  <th className="w-16 rounded-l-lg px-4 py-4 text-center">Pos</th>
-                  <th className="px-4 py-4">Club</th>
-                  <th className="py-4 text-center">MP</th>
-                  <th className="py-4 text-center">W</th>
-                  <th className="py-4 text-center">D</th>
-                  <th className="py-4 text-center">L</th>
-                  <th className="py-4 text-center">GF</th>
-                  <th className="py-4 text-center">GA</th>
-                  <th className="py-4 text-center">GD</th>
-                  <th className="py-4 text-center">Form</th>
-                  <th className="rounded-r-lg py-4 text-center">Pts</th>
+                  <th className="w-14 rounded-l-lg px-3 py-3 text-center">Pos</th>
+                  <th className="px-3 py-3">Club</th>
+                  <th className="py-3 text-center">MP</th>
+                  <th className="py-3 text-center">W</th>
+                  <th className="py-3 text-center">D</th>
+                  <th className="py-3 text-center">L</th>
+                  <th className="py-3 text-center">GF</th>
+                  <th className="py-3 text-center">GA</th>
+                  <th className="py-3 text-center">GD</th>
+                  <th className="py-3 text-center">Form</th>
+                  <th className="rounded-r-lg py-3 text-center">Pts</th>
                 </tr>
               </thead>
               <tbody>
                 {data.teamStandings.map((team, index) => (
                   <tr key={team.name} className="border-b border-black/10 last:border-0 hover:bg-[#fbfaf7]">
-                    <td className="px-4 py-5 text-center">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                    <td className="px-3 py-3 text-center">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
                         {index + 1}
                       </span>
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="px-3 py-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <span className="h-4 w-4 shrink-0 rounded-full ring-2 ring-black/5" style={{ backgroundColor: team.color }} />
                         <div className="min-w-0">
@@ -436,13 +447,13 @@ export default async function Home() {
                     <LeagueNumber value={team.goalsFor} />
                     <LeagueNumber value={team.goalsAgainst} />
                     <LeagueNumber value={team.goalDiff} strong={team.goalDiff !== 0} />
-                    <td className="py-5">
+                    <td className="py-3">
                       <div className="flex justify-center">
                         <TeamForm form={team.form} />
                       </div>
                     </td>
-                    <td className="py-5 text-center">
-                      <span className="inline-flex min-w-12 justify-center rounded-lg bg-[#171717] px-3 py-2 text-base font-black text-white">
+                    <td className="py-3 text-center">
+                      <span className="inline-flex min-w-11 justify-center rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
                         {team.points}
                       </span>
                     </td>
@@ -460,7 +471,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="teams" className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+      <section id="teams" className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-bold text-black/50">Rosters</p>
@@ -485,7 +496,9 @@ export default async function Home() {
                       <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
                         {index + 1}
                       </span>
-                      <span className="min-w-0 break-words text-sm font-bold">{player}</span>
+                      <a href={`/players/${slugify(player)}`} className="min-w-0 break-words text-sm font-bold hover:underline">
+                        {player}
+                      </a>
                     </div>
                   ))}
                 </div>
@@ -506,7 +519,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl items-start gap-5 px-4 pb-10 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
+      <section className="mx-auto grid max-w-7xl items-start gap-5 px-4 pb-8 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
         <div id="matches" className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
@@ -558,7 +571,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
         <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
@@ -646,7 +659,9 @@ export default async function Home() {
                                   {index + 1}
                                 </span>
                                 <div className="min-w-0">
-                                  <p className="break-words font-black">{player.name}</p>
+                                  <a href={`/players/${slugify(player.name)}`} className="break-words font-black hover:underline">
+                                    {player.name}
+                                  </a>
                                   <p className="break-words text-xs font-bold text-black/45">{player.team}</p>
                                 </div>
                                 <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
@@ -1592,14 +1607,6 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "") || "player";
 }
 
-function getMedal(index: number) {
-  if (index === 0) return "1";
-  if (index === 1) return "2";
-  if (index === 2) return "3";
-
-  return String(index + 1);
-}
-
 function formatDate(value: string) {
   const date = new Date(`${value}T12:00:00`);
   return new Intl.DateTimeFormat("en-US", {
@@ -1636,9 +1643,35 @@ function getOrdinalSuffix(value: number) {
 
 function LeagueNumber({ value, strong = false }: { value: number; strong?: boolean }) {
   return (
-    <td className={`py-5 text-center ${strong ? "font-black" : "font-bold text-black/70"}`}>
+    <td className={`py-3 text-center ${strong ? "font-black" : "font-bold text-black/70"}`}>
       {value > 0 && strong ? `+${value}` : value}
     </td>
+  );
+}
+
+function CompactResult({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-black/25 px-3 py-4">
+      <p className="text-xs font-black uppercase text-white/45">{label}</p>
+      <p className="mt-1 break-words text-lg font-black">{value}</p>
+    </div>
+  );
+}
+
+function TopPlayerCard({ player, rank }: { player: LeaderboardPlayer; rank: number }) {
+  return (
+    <a
+      href={`/players/${slugify(player.name)}`}
+      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg bg-black/25 px-3 py-3 transition hover:bg-white/10"
+    >
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1f7a4d]/25 text-sm font-black text-[#64d69a]">
+        {rank}
+      </span>
+      <span className="min-w-0 break-words font-black">{player.name}</span>
+      <span className="rounded-lg bg-[#f4f7f1] px-3 py-2 text-sm font-black text-[#071009]">
+        {player.points} G+A
+      </span>
+    </a>
   );
 }
 
