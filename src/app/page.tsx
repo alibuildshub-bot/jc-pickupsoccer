@@ -195,7 +195,7 @@ export default async function Home() {
           </div>
           <div className="hidden items-center gap-6 text-sm font-semibold text-black/65 md:flex">
             <a href="#progress" className="hover:text-black">Progress</a>
-            <a href="#leaderboard" className="hover:text-black">Players</a>
+            <a href="/players" className="hover:text-black">Players</a>
             <a href="#teams" className="hover:text-black">Teams</a>
             <a href="#matches" className="hover:text-black">Matches</a>
           </div>
@@ -325,7 +325,7 @@ export default async function Home() {
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
           <a
-            href="#leaderboard"
+            href="/players"
             className="inline-flex h-11 items-center justify-center rounded-lg bg-[#171717] px-4 text-center text-sm font-bold text-white transition hover:bg-black"
           >
             View Players

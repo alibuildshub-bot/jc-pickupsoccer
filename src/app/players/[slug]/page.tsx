@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Trophy, Users } from "lucide-react";
+import { ArrowLeft, Trophy } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -27,18 +27,6 @@ type MatchPlayerRow = {
   goals: number;
   assists: number;
   result: string;
-};
-
-type RosterRow = {
-  team_id: string;
-  player_id: string;
-};
-
-type TeamRow = {
-  id: string;
-  name: string;
-  color: string | null;
-  is_active: boolean;
 };
 
 export const revalidate = 0;
@@ -80,11 +68,9 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
                 <h1 className="mt-1 break-words text-4xl font-black leading-none">{profile.name}</h1>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-bold text-black/60">
-                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: profile.teamColor }} />
-                    {profile.team}
+                    All-time stats
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-bold text-black/60">
-                    <Users size={16} />
                     {profile.position || "Player"}
                   </span>
                 </div>
@@ -115,11 +101,11 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
           {profile.sessions.length > 0 ? (
             <div className="grid gap-3">
               {profile.sessions.map((session) => (
-                <article key={`${session.date}-${session.team}`} className="rounded-lg bg-[#fbfaf7] p-4">
+                <article key={session.date} className="rounded-lg bg-[#fbfaf7] p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-bold text-black/50">{session.date}</p>
-                      <h3 className="mt-1 break-words text-lg font-black">{session.team}</h3>
+                      <h3 className="mt-1 break-words text-lg font-black">Session totals</h3>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-center sm:min-w-72">
                       <ProfileMiniStat label="G" value={session.goals} />
@@ -148,10 +134,10 @@ function SiteHeader() {
         <LogoMark />
         <div>
           <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
-          <p className="text-xs font-medium text-black/55">Player profile</p>
+          <p className="text-xs font-medium text-black/55">All-time player stats</p>
         </div>
       </Link>
-      <Link href="/#leaderboard" className="inline-flex h-10 items-center gap-2 rounded-lg border border-black/15 bg-white px-3 text-sm font-black">
+      <Link href="/players" className="inline-flex h-10 items-center gap-2 rounded-lg border border-black/15 bg-white px-3 text-sm font-black">
         <ArrowLeft size={16} />
         Back
       </Link>
@@ -164,16 +150,14 @@ async function getPlayerProfile(slug: string) {
 
   if (!supabase) return null;
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: teamRows }, { data: rosterRows }] = await Promise.all([
-    supabase.from("players").select("id,name,position").eq("is_active", true).order("name"),
+  const [{ data: playerRows }, { data: matchRows }, { data: statRows }] = await Promise.all([
+    supabase.from("players").select("id,name,position").order("name"),
     supabase
       .from("matches")
       .select("id,match_date,week_label,team_a_name,team_b_name,team_a_score,team_b_score,status")
       .order("match_date", { ascending: false })
       .limit(100),
     supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result"),
-    supabase.from("tournament_teams").select("id,name,color,is_active"),
-    supabase.from("tournament_team_players").select("team_id,player_id"),
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
@@ -183,23 +167,18 @@ async function getPlayerProfile(slug: string) {
 
   const matches = ((matchRows || []) as MatchRow[]).filter((match) => match.status === "completed");
   const stats = ((statRows || []) as MatchPlayerRow[]).filter((stat) => stat.player_id === player.id);
-  const teams = (teamRows || []) as TeamRow[];
-  const rosterRowsTyped = (rosterRows || []) as RosterRow[];
-  const teamDisplayNames = buildTeamDisplayNames(teams);
-  const teamNameById = new Map(teams.map((team) => [team.id, getTeamDisplayName(team.name, teamDisplayNames)]));
-  const latestRosterTeam = rosterRowsTyped
-    .map((row) => row.player_id === player.id ? teamNameById.get(row.team_id) : "")
-    .filter(Boolean)[0] || "";
-  const statsByMatchId = new Map(stats.map((stat) => [stat.match_id, stat]));
-  const sessionsByDate = new Map<string, { date: string; team: string; goals: number; assists: number; points: number }>();
+  const completedMatchIds = new Set(matches.map((match) => match.id));
+  const matchDates = new Map(matches.map((match) => [match.id, match.match_date]));
+  const sessionsByDate = new Map<string, { date: string; goals: number; assists: number; points: number }>();
 
-  for (const match of matches) {
-    const stat = statsByMatchId.get(match.id);
-    if (!stat) continue;
+  for (const stat of stats) {
+    if (!completedMatchIds.has(stat.match_id)) continue;
 
-    const existing = sessionsByDate.get(match.match_date) || {
-      date: formatDate(match.match_date),
-      team: getTeamDisplayName(stat.team_name, teamDisplayNames),
+    const rawDate = matchDates.get(stat.match_id);
+    if (!rawDate) continue;
+
+    const existing = sessionsByDate.get(rawDate) || {
+      date: formatDate(rawDate),
       goals: 0,
       assists: 0,
       points: 0,
@@ -208,7 +187,7 @@ async function getPlayerProfile(slug: string) {
     existing.goals += stat.goals || 0;
     existing.assists += stat.assists || 0;
     existing.points = existing.goals + existing.assists;
-    sessionsByDate.set(match.match_date, existing);
+    sessionsByDate.set(rawDate, existing);
   }
 
   const sessions = Array.from(sessionsByDate.entries())
@@ -216,13 +195,10 @@ async function getPlayerProfile(slug: string) {
     .map(([, session]) => session);
   const goals = sessions.reduce((total, session) => total + session.goals, 0);
   const assists = sessions.reduce((total, session) => total + session.assists, 0);
-  const team = sessions[0]?.team || latestRosterTeam || "Unassigned";
 
   return {
     name: player.name,
     position: player.position,
-    team,
-    teamColor: getTeamColor(team, teams, teamDisplayNames),
     goals,
     assists,
     points: goals + assists,
@@ -247,49 +223,6 @@ function ProfileMiniStat({ label, value, dark = false }: { label: string; value:
       <p className="mt-1 text-lg font-black">{value}</p>
     </div>
   );
-}
-
-function buildTeamDisplayNames(teams: TeamRow[]) {
-  const displayNames = new Map<string, string>();
-
-  for (const team of teams) {
-    const key = normalizeTeamName(team.name);
-    const nextName = cleanTeamName(team.name);
-    const existingName = displayNames.get(key);
-
-    if (!existingName || !prefersExistingTeamName(existingName, nextName)) {
-      displayNames.set(key, nextName);
-    }
-  }
-
-  return displayNames;
-}
-
-function getTeamDisplayName(name: string, displayNames: Map<string, string>) {
-  return displayNames.get(normalizeTeamName(name)) || cleanTeamName(name);
-}
-
-function getTeamColor(name: string, teams: TeamRow[], displayNames: Map<string, string>) {
-  const team = teams.find((row) => normalizeTeamName(getTeamDisplayName(row.name, displayNames)) === normalizeTeamName(name));
-
-  return team?.color || "#1f7a4d";
-}
-
-function prefersExistingTeamName(existingName: string, nextName: string) {
-  return existingName.toLowerCase().startsWith("team ") || !nextName.toLowerCase().startsWith("team ");
-}
-
-function normalizeTeamName(name: string) {
-  return cleanTeamName(name)
-    .replace(/^team\s+/i, "")
-    .replace(/[^\p{L}\p{N}\s]/gu, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-function cleanTeamName(name: string) {
-  return name.trim().replace(/\s+/g, " ");
 }
 
 function slugify(value: string) {
