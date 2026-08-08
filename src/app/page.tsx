@@ -239,7 +239,7 @@ export default async function Home() {
                 <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-black/55">
                   {data.upcomingSession
                     ? "Add it to your calendar and check back after games for updated stats."
-                    : "Create a scheduled game in the admin portal and the calendar option will appear here."}
+                    : "Stay tuned for the next matchup. The upcoming pickup will be posted here soon."}
                 </p>
               </div>
               <CalendarDays className="shrink-0 text-[#b7791f]" size={38} />
