@@ -540,7 +540,7 @@ export default async function Home() {
         <div id="leaderboard" className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-black/50">Season Table</p>
+              <p className="text-sm font-bold text-black/50">{data.playerLeaderboardLabel}</p>
               <h2 className="text-2xl font-black">Player Leaderboard</h2>
             </div>
             <Trophy className="text-[#b7791f]" size={28} />
@@ -692,6 +692,7 @@ async function getDashboardData() {
       goalsTracked: 0,
       topPlayer: "Setup",
       players: [],
+      playerLeaderboardLabel: "Latest Session Stats",
       recentMatches: fallbackMatches,
       resultsArchive: [],
       teamStandings: fallbackStandings(),
@@ -743,8 +744,12 @@ async function getDashboardData() {
   const archivedTeamNames = buildArchivedTeamNames(matches, tournamentDate);
   const currentTeams = getCurrentSessionTeams(teams, tournamentMatches, archivedTeamNames);
   const teamRosters = buildTeamRosters(currentTeams, rawTeams, (rosterRows || []) as unknown as RosterRow[]);
-  const tournamentMatchIds = new Set(tournamentMatches.map((match) => match.id));
-  const currentMatchStats = matchStats.filter((stat) => tournamentMatchIds.has(stat.match_id));
+  const playerLeaderboardDate = getLatestCompletedSessionDate(matches) || tournamentDate;
+  const playerLeaderboardMatches = playerLeaderboardDate
+    ? matches.filter((match) => match.match_date === playerLeaderboardDate && match.status === "completed")
+    : [];
+  const playerLeaderboardMatchIds = new Set(playerLeaderboardMatches.map((match) => match.id));
+  const currentMatchStats = matchStats.filter((stat) => playerLeaderboardMatchIds.has(stat.match_id));
   const teamStandings = buildTeamStandings(currentTeams, tournamentMatches);
   const teamOfTheWeek = buildTeamOfTheWeek(teamStandings);
   const mvpWinner = await getClosedMvpWinner(supabase, tournamentDate);
@@ -802,6 +807,7 @@ async function getDashboardData() {
     goalsTracked,
     topPlayer: activeLeaderboard[0]?.name || "Coming soon",
     players: activeLeaderboard,
+    playerLeaderboardLabel: playerLeaderboardDate ? `${formatMonthDayOrdinal(playerLeaderboardDate)} Stats` : "Latest Session Stats",
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
     resultsArchive,
     teamStandings: teamStandings.length > 0 ? teamStandings : [],
@@ -1601,6 +1607,31 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
   }).format(date);
+}
+
+function formatMonthDayOrdinal(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  const month = new Intl.DateTimeFormat("en-US", { month: "long" }).format(date);
+  const day = date.getDate();
+
+  return `${month} ${day}${getOrdinalSuffix(day)}`;
+}
+
+function getOrdinalSuffix(value: number) {
+  const remainder = value % 100;
+
+  if (remainder >= 11 && remainder <= 13) return "th";
+
+  switch (value % 10) {
+    case 1:
+      return "st";
+    case 2:
+      return "nd";
+    case 3:
+      return "rd";
+    default:
+      return "th";
+  }
 }
 
 function LeagueNumber({ value, strong = false }: { value: number; strong?: boolean }) {
