@@ -48,17 +48,6 @@ type LeaderboardPlayer = {
   points: number;
 };
 
-type PlayerProfile = {
-  name: string;
-  team: string;
-  teamColor: string;
-  goals: number;
-  assists: number;
-  points: number;
-  rank: number;
-  slug: string;
-};
-
 type TeamRow = {
   id: string;
   name: string;
@@ -206,10 +195,9 @@ export default async function Home() {
           </div>
           <div className="hidden items-center gap-6 text-sm font-semibold text-black/65 md:flex">
             <a href="#progress" className="hover:text-black">Progress</a>
-            <a href="#profiles" className="hover:text-black">Players</a>
+            <a href="#leaderboard" className="hover:text-black">Players</a>
             <a href="#teams" className="hover:text-black">Teams</a>
             <a href="#matches" className="hover:text-black">Matches</a>
-            <a href="#leaderboard" className="hover:text-black">Leaderboard</a>
           </div>
         </div>
       </nav>
@@ -314,7 +302,7 @@ export default async function Home() {
                 {topPlayers.map((player, index) => (
                   <a
                     key={player.name}
-                    href={`#player-${slugify(player.name)}`}
+                    href={`/players/${slugify(player.name)}`}
                     className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg bg-[#fbfaf7] px-3 py-3 transition hover:bg-[#f1ece3]"
                   >
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
@@ -337,7 +325,7 @@ export default async function Home() {
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
           <a
-            href="#profiles"
+            href="#leaderboard"
             className="inline-flex h-11 items-center justify-center rounded-lg bg-[#171717] px-4 text-center text-sm font-bold text-white transition hover:bg-black"
           >
             View Players
@@ -349,60 +337,6 @@ export default async function Home() {
             Full Table
           </a>
         </div>
-      </section>
-
-      <section id="profiles" className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold text-black/50">Players</p>
-            <h2 className="text-2xl font-black">Player Profiles</h2>
-          </div>
-          <Users className="hidden text-[#1f7a4d] sm:block" size={26} />
-        </div>
-        {data.playerProfiles.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {data.playerProfiles.map((player) => (
-              <article
-                id={`player-${player.slug}`}
-                key={player.slug}
-                className="scroll-mt-24 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5"
-              >
-                <div className="mb-4 flex items-start justify-between gap-3 border-b border-black/10 pb-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-lg font-black text-[#17613d]">
-                      {getInitials(player.name)}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="break-words text-lg font-black leading-tight">{player.name}</h3>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: player.teamColor }} />
-                        <p className="break-words text-sm font-bold text-black/50">{player.team}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <span className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
-                    #{player.rank}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <MiniStat label="Goals" value={String(player.goals)} />
-                  <MiniStat label="Assists" value={String(player.assists)} />
-                  <MiniStat label="G+A" value={String(player.points)} icon={Trophy} />
-                </div>
-                <p className="mt-4 rounded-lg bg-[#fbfaf7] px-3 py-3 text-sm font-semibold leading-6 text-black/55">
-                  Current session production based on the stats entered in the admin portal.
-                </p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-black/10 bg-white p-6 shadow-sm">
-            <p className="font-black">Player profiles will appear after stats are entered.</p>
-            <p className="mt-2 text-sm font-semibold leading-6 text-black/55">
-              Once goals and assists are added, each player will get a profile card here.
-            </p>
-          </div>
-        )}
       </section>
 
       <section id="progress" className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
@@ -758,7 +692,6 @@ async function getDashboardData() {
       goalsTracked: 0,
       topPlayer: "Setup",
       players: [],
-      playerProfiles: [],
       recentMatches: fallbackMatches,
       resultsArchive: [],
       teamStandings: fallbackStandings(),
@@ -846,7 +779,6 @@ async function getDashboardData() {
     }))
     .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
   const activeLeaderboard = leaderboard.filter((player) => player.games > 0);
-  const playerProfiles = buildPlayerProfiles(activeLeaderboard, currentTeams, teamDisplayNames);
 
   const recentMatches = tournamentMatches.map((match) => ({
     game: gameLabels.get(match.id) || "Game",
@@ -870,7 +802,6 @@ async function getDashboardData() {
     goalsTracked,
     topPlayer: activeLeaderboard[0]?.name || "Coming soon",
     players: activeLeaderboard,
-    playerProfiles,
     recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
     resultsArchive,
     teamStandings: teamStandings.length > 0 ? teamStandings : [],
@@ -1141,37 +1072,6 @@ function buildCurrentPlayerTeamNames(
   }
 
   return playerTeams;
-}
-
-function buildPlayerProfiles(
-  players: LeaderboardPlayer[],
-  teams: TeamRow[],
-  teamDisplayNames: Map<string, string>,
-): PlayerProfile[] {
-  const teamColors = new Map(
-    teams.map((team) => [
-      normalizeTeamName(getTeamDisplayName(team.name, teamDisplayNames)),
-      team.color || "#1f7a4d",
-    ]),
-  );
-  const usedSlugs = new Map<string, number>();
-
-  return players.map((player, index) => {
-    const baseSlug = slugify(player.name);
-    const slugCount = usedSlugs.get(baseSlug) || 0;
-    usedSlugs.set(baseSlug, slugCount + 1);
-
-    return {
-      name: player.name,
-      team: player.team,
-      teamColor: teamColors.get(normalizeTeamName(player.team)) || "#1f7a4d",
-      goals: player.goals,
-      assists: player.assists,
-      points: player.points,
-      rank: index + 1,
-      slug: slugCount === 0 ? baseSlug : `${baseSlug}-${slugCount + 1}`,
-    };
-  });
 }
 
 function buildResultsArchive(
@@ -1684,17 +1584,6 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "player";
-}
-
-function getInitials(value: string) {
-  const initials = value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-
-  return initials || "P";
 }
 
 function getMedal(index: number) {
