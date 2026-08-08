@@ -22,6 +22,17 @@ type MatchPlayerRow = {
   assists: number;
 };
 
+type PollRow = {
+  id: string;
+  match_date: string | null;
+};
+
+type PollOptionRow = {
+  poll_id: string;
+  player_id: string | null;
+  label: string;
+};
+
 type PlayerTotal = {
   id: string;
   name: string;
@@ -146,16 +157,23 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
 
   if (!supabase) return [];
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }] = await Promise.all([
+  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: pollRows }, { data: pollOptionRows }] = await Promise.all([
     supabase.from("players").select("id,name,position").order("name"),
     supabase.from("matches").select("id,match_date,status").eq("status", "completed").limit(200),
     supabase.from("match_players").select("match_id,player_id,goals,assists"),
+    supabase.from("mvp_polls").select("id,match_date"),
+    supabase.from("mvp_poll_options").select("poll_id,player_id,label"),
   ]);
   const players = (playerRows || []) as PlayerRow[];
   const matches = (matchRows || []) as MatchRow[];
   const stats = (statRows || []) as MatchPlayerRow[];
+  const polls = (pollRows || []) as PollRow[];
+  const pollOptions = (pollOptionRows || []) as PollOptionRow[];
   const completedMatchIds = new Set(matches.map((match) => match.id));
+  const completedDates = new Set(matches.map((match) => match.match_date));
   const matchDates = new Map(matches.map((match) => [match.id, match.match_date]));
+  const playerIdsByName = new Map(players.map((player) => [player.name.trim().toLowerCase(), player.id]));
+  const pollDates = new Map(polls.map((poll) => [poll.id, poll.match_date]));
   const totals = new Map<string, PlayerTotal & { sessionDates: Set<string> }>();
 
   for (const player of players) {
@@ -183,6 +201,19 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
 
     const matchDate = matchDates.get(stat.match_id);
     if (matchDate) player.sessionDates.add(matchDate);
+  }
+
+  for (const option of pollOptions) {
+    const pollDate = pollDates.get(option.poll_id);
+    if (!pollDate || !completedDates.has(pollDate)) continue;
+
+    const playerId = option.player_id || playerIdsByName.get(option.label.trim().toLowerCase());
+    if (!playerId) continue;
+
+    const player = totals.get(playerId);
+    if (!player) continue;
+
+    player.sessionDates.add(pollDate);
   }
 
   return Array.from(totals.values())

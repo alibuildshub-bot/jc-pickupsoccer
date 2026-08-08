@@ -29,6 +29,17 @@ type MatchPlayerRow = {
   result: string;
 };
 
+type PollRow = {
+  id: string;
+  match_date: string | null;
+};
+
+type PollOptionRow = {
+  poll_id: string;
+  player_id: string | null;
+  label: string;
+};
+
 export const revalidate = 0;
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -150,7 +161,7 @@ async function getPlayerProfile(slug: string) {
 
   if (!supabase) return null;
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }] = await Promise.all([
+  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: pollRows }, { data: pollOptionRows }] = await Promise.all([
     supabase.from("players").select("id,name,position").order("name"),
     supabase
       .from("matches")
@@ -158,6 +169,8 @@ async function getPlayerProfile(slug: string) {
       .order("match_date", { ascending: false })
       .limit(100),
     supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result"),
+    supabase.from("mvp_polls").select("id,match_date"),
+    supabase.from("mvp_poll_options").select("poll_id,player_id,label"),
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
@@ -167,8 +180,12 @@ async function getPlayerProfile(slug: string) {
 
   const matches = ((matchRows || []) as MatchRow[]).filter((match) => match.status === "completed");
   const stats = ((statRows || []) as MatchPlayerRow[]).filter((stat) => stat.player_id === player.id);
+  const polls = (pollRows || []) as PollRow[];
+  const pollOptions = (pollOptionRows || []) as PollOptionRow[];
   const completedMatchIds = new Set(matches.map((match) => match.id));
+  const completedDates = new Set(matches.map((match) => match.match_date));
   const matchDates = new Map(matches.map((match) => [match.id, match.match_date]));
+  const pollDates = new Map(polls.map((poll) => [poll.id, poll.match_date]));
   const sessionsByDate = new Map<string, { date: string; goals: number; assists: number; points: number }>();
 
   for (const stat of stats) {
@@ -188,6 +205,21 @@ async function getPlayerProfile(slug: string) {
     existing.assists += stat.assists || 0;
     existing.points = existing.goals + existing.assists;
     sessionsByDate.set(rawDate, existing);
+  }
+
+  for (const option of pollOptions) {
+    const pollDate = pollDates.get(option.poll_id);
+    if (!pollDate || !completedDates.has(pollDate)) continue;
+
+    const isPlayerOption = option.player_id === player.id || option.label.trim().toLowerCase() === player.name.trim().toLowerCase();
+    if (!isPlayerOption || sessionsByDate.has(pollDate)) continue;
+
+    sessionsByDate.set(pollDate, {
+      date: formatDate(pollDate),
+      goals: 0,
+      assists: 0,
+      points: 0,
+    });
   }
 
   const sessions = Array.from(sessionsByDate.entries())
