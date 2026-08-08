@@ -29,6 +29,16 @@ type MatchPlayerRow = {
   result: string;
 };
 
+type TeamRow = {
+  id: string;
+  name: string;
+};
+
+type RosterRow = {
+  team_id: string;
+  player_id: string;
+};
+
 type PollRow = {
   id: string;
   match_date: string | null;
@@ -161,7 +171,7 @@ async function getPlayerProfile(slug: string) {
 
   if (!supabase) return null;
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: pollRows }, { data: pollOptionRows }] = await Promise.all([
+  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: teamRows }, { data: rosterRows }, { data: pollRows }, { data: pollOptionRows }] = await Promise.all([
     supabase.from("players").select("id,name,position").order("name"),
     supabase
       .from("matches")
@@ -169,6 +179,8 @@ async function getPlayerProfile(slug: string) {
       .order("match_date", { ascending: false })
       .limit(100),
     supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result"),
+    supabase.from("tournament_teams").select("id,name"),
+    supabase.from("tournament_team_players").select("team_id,player_id"),
     supabase.from("mvp_polls").select("id,match_date"),
     supabase.from("mvp_poll_options").select("poll_id,player_id,label"),
   ]);
@@ -180,6 +192,8 @@ async function getPlayerProfile(slug: string) {
 
   const matches = ((matchRows || []) as MatchRow[]).filter((match) => match.status === "completed");
   const stats = ((statRows || []) as MatchPlayerRow[]).filter((stat) => stat.player_id === player.id);
+  const teams = (teamRows || []) as TeamRow[];
+  const roster = (rosterRows || []) as RosterRow[];
   const polls = (pollRows || []) as PollRow[];
   const pollOptions = (pollOptionRows || []) as PollOptionRow[];
   const completedMatchIds = new Set(matches.map((match) => match.id));
@@ -205,6 +219,26 @@ async function getPlayerProfile(slug: string) {
     existing.assists += stat.assists || 0;
     existing.points = existing.goals + existing.assists;
     sessionsByDate.set(rawDate, existing);
+  }
+
+  const playerTeamIds = new Set(roster.filter((row) => row.player_id === player.id).map((row) => row.team_id));
+  const teamIdsByName = buildTeamIdsByName(teams);
+
+  for (const match of matches) {
+    const matchTeamIds = [
+      ...(teamIdsByName.get(normalizeLabel(match.team_a_name)) || []),
+      ...(teamIdsByName.get(normalizeLabel(match.team_b_name)) || []),
+    ];
+    const playerWasRostered = matchTeamIds.some((teamId) => playerTeamIds.has(teamId));
+
+    if (!playerWasRostered || sessionsByDate.has(match.match_date)) continue;
+
+    sessionsByDate.set(match.match_date, {
+      date: formatDate(match.match_date),
+      goals: 0,
+      assists: 0,
+      points: 0,
+    });
   }
 
   for (const option of pollOptions) {
@@ -282,4 +316,26 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
   }).format(date);
+}
+
+function buildTeamIdsByName(teams: TeamRow[]) {
+  const teamIdsByName = new Map<string, string[]>();
+
+  for (const team of teams) {
+    const key = normalizeLabel(team.name);
+    const teamIds = teamIdsByName.get(key) || [];
+    teamIds.push(team.id);
+    teamIdsByName.set(key, teamIds);
+  }
+
+  return teamIdsByName;
+}
+
+function normalizeLabel(value: string) {
+  return value
+    .trim()
+    .replace(/^team\s+/i, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
 }
