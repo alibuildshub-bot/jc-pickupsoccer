@@ -52,7 +52,9 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
                   {index + 1}
                 </span>
                 <div className="min-w-0">
-                  <h3 className="break-words font-black leading-tight">{player.name}</h3>
+                  <a href={`#player-${slugify(player.name)}`} className="break-words font-black leading-tight hover:underline">
+                    {player.name}
+                  </a>
                   <p className="mt-1 break-words text-xs font-bold text-black/45">{player.team}</p>
                 </div>
               </div>
@@ -87,7 +89,9 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
                       {index + 1}
                     </span>
-                    <span className="font-black">{player.name}</span>
+                    <a href={`#player-${slugify(player.name)}`} className="font-black hover:underline">
+                      {player.name}
+                    </a>
                   </div>
                 </td>
                 <td className="px-3 py-3 font-bold text-black/55">{player.team}</td>
@@ -135,6 +139,13 @@ function getModeLabel(mode: LeaderboardMode) {
   if (mode === "assists") return "Assists";
 
   return "G+A";
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "player";
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
