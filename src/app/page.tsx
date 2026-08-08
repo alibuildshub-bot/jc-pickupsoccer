@@ -180,6 +180,7 @@ export default async function Home() {
     mvp: "Voting pending",
   };
   const topPlayers = data.players.slice(0, 3);
+  const topPlayersLabel = data.playerLeaderboardLabel.replace(" Stats", "");
 
   return (
     <main className="min-h-screen bg-[#f7f3ec] text-[#171717]">
@@ -330,7 +331,7 @@ export default async function Home() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-bold text-black/50">Top Players</p>
-                  <h2 className="mt-1 text-2xl font-black">Top 3</h2>
+                  <h2 className="mt-1 text-2xl font-black">{topPlayersLabel} Top 3</h2>
                 </div>
                 <Trophy className="text-[#c7922b]" size={28} />
               </div>
