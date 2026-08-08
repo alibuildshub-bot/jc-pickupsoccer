@@ -72,7 +72,7 @@ export default async function PlayersPage() {
               <p className="text-sm font-bold text-black/50">Players</p>
               <h1 className="mt-1 text-4xl font-black leading-none sm:text-5xl">All-Time Player Hub</h1>
               <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-black/55 sm:text-base">
-                Historical goals and assists across every completed JC Footy session. Team names are left out here because the player numbers matter most.
+                Historical goals and assists across every completed JC Footy session.
               </p>
             </div>
             <div className="rounded-lg bg-[#171717] px-4 py-3 text-white">
