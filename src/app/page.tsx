@@ -141,19 +141,6 @@ type ArchiveDay = {
   topScorer: string;
 };
 
-const fallbackMatches = [
-  {
-    game: "Game 1",
-    week: "Week 1",
-    date: "Schedule a match",
-    teamA: "Team A",
-    teamB: "Team B",
-    score: "0 - 0",
-    winner: "Coming soon",
-    status: "Coming soon",
-  },
-];
-
 const fallbackTeamOfTheWeek = {
   name: "Coming soon",
   goalsFor: 0,
@@ -300,18 +287,24 @@ export default async function Home() {
                 <a href="#matches" className="text-sm font-black text-[#17613d] hover:text-black">View all</a>
               </div>
               <div className="grid gap-2 md:grid-cols-2">
-                {data.recentMatches.slice(0, 2).map((match) => (
-                  <article key={`latest-${match.week}-${match.date}-${match.game}`} className="rounded-lg bg-[#fbfaf7] p-3">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-black uppercase text-[#17613d]">{match.game}</p>
-                        <p className="mt-1 text-xs font-bold text-black/45">{match.date}</p>
+                {data.recentMatches.length > 0 ? (
+                  data.recentMatches.slice(0, 2).map((match) => (
+                    <article key={`latest-${match.week}-${match.date}-${match.game}`} className="rounded-lg bg-[#fbfaf7] p-3">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-black uppercase text-[#17613d]">{match.game}</p>
+                          <p className="mt-1 text-xs font-bold text-black/45">{match.date}</p>
+                        </div>
+                        <p className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">{match.score}</p>
                       </div>
-                      <p className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">{match.score}</p>
-                    </div>
-                    <p className="break-words text-sm font-black">{match.teamA} vs {match.teamB}</p>
-                  </article>
-                ))}
+                      <p className="break-words text-sm font-black">{match.teamA} vs {match.teamB}</p>
+                    </article>
+                  ))
+                ) : (
+                  <div className="rounded-lg bg-[#fbfaf7] p-3 text-sm font-bold text-black/50 md:col-span-2">
+                    Latest results will appear after the next completed pickup.
+                  </div>
+                )}
               </div>
             </div>
           </article>
@@ -531,24 +524,30 @@ export default async function Home() {
             <CalendarDays className="text-[#1f7a4d]" size={26} />
           </div>
           <div className="space-y-3">
-                  {data.recentMatches.map((match) => (
-              <article key={`${match.week}-${match.date}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-bold text-black/50">{match.date}</p>
-                    <p className="mt-1 text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
-                    <h3 className="mt-1 text-lg font-black">{match.week}</h3>
+            {data.recentMatches.length > 0 ? (
+              data.recentMatches.map((match) => (
+                <article key={`${match.week}-${match.date}-${match.game}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-black/50">{match.date}</p>
+                      <p className="mt-1 text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
+                      <h3 className="mt-1 text-lg font-black">{match.week}</h3>
+                    </div>
+                    <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white sm:text-lg">{match.score}</p>
                   </div>
-                  <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white sm:text-lg">{match.score}</p>
-                </div>
-                <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-sm font-bold">
-                  <span className="min-w-0 break-words">{match.teamA}</span>
-                  <span className="text-black/35">vs</span>
-                  <span className="min-w-0 break-words text-right">{match.teamB}</span>
-                </div>
-                <p className="mt-3 text-sm font-semibold text-black/55">Winner: {match.winner}</p>
-              </article>
-            ))}
+                  <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-sm font-bold">
+                    <span className="min-w-0 break-words">{match.teamA}</span>
+                    <span className="text-black/35">vs</span>
+                    <span className="min-w-0 break-words text-right">{match.teamB}</span>
+                  </div>
+                  <p className="mt-3 text-sm font-semibold text-black/55">Winner: {match.winner}</p>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4 text-sm font-bold text-black/50">
+                Match results will appear here after games are completed.
+              </div>
+            )}
           </div>
         </div>
 
@@ -710,7 +709,7 @@ async function getDashboardData() {
       topPlayer: "Setup",
       players: [],
       playerLeaderboardLabel: "Latest Session Stats",
-      recentMatches: fallbackMatches,
+      recentMatches: [],
       resultsArchive: [],
       teamStandings: fallbackStandings(),
       teamRosters: fallbackRosters(),
@@ -819,7 +818,7 @@ async function getDashboardData() {
     topPlayer: activeLeaderboard[0]?.name || "Coming soon",
     players: activeLeaderboard,
     playerLeaderboardLabel: playerLeaderboardDate ? `${formatMonthDayOrdinal(playerLeaderboardDate)} Stats` : "Latest Session Stats",
-    recentMatches: recentMatches.length > 0 ? recentMatches : fallbackMatches,
+    recentMatches,
     resultsArchive,
     teamStandings: teamStandings.length > 0 ? teamStandings : [],
     teamRosters,
