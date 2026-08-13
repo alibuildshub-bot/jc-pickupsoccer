@@ -229,6 +229,7 @@ export default function AdminPage() {
     () => getCurrentSetupTeams(teams, gameDayMatches, gameDayForm.date),
     [gameDayForm.date, gameDayMatches, teams],
   );
+  const teamSessionOptions = useMemo(() => buildTeamSessionOptions(teams), [teams]);
   const savedSessionDetails = useMemo(
     () => getSavedSessionDetails(activeTeams, gameDayMatches),
     [activeTeams, gameDayMatches],
@@ -261,7 +262,13 @@ export default function AdminPage() {
   );
 
   function selectGameDayDate(date: string) {
-    setGameDayForm((current) => ({ ...current, date }));
+    setGameDayForm((current) => ({
+      ...current,
+      date,
+      start_time: "",
+      end_time: "",
+      location: "",
+    }));
   }
 
   function startNewPickup() {
@@ -1854,6 +1861,34 @@ export default function AdminPage() {
             </div>
           )}
 
+          {teamSessionOptions.length > 0 && (
+            <div className="mb-5 rounded-lg border border-black/10 bg-[#fbfaf7] p-3">
+              <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-black uppercase tracking-wide text-black/45">Team dates</p>
+                <p className="text-xs font-bold text-black/45">Pick a date to view or edit its teams.</p>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {teamSessionOptions.map((option) => (
+                  <button
+                    key={option.date}
+                    type="button"
+                    onClick={() => selectGameDayDate(option.date)}
+                    className={`shrink-0 rounded-lg border px-3 py-2 text-left text-xs font-black transition ${
+                      option.date === gameDayForm.date
+                        ? "border-[#1f7a4d] bg-[#1f7a4d] text-white"
+                        : "border-black/10 bg-white text-black/65 hover:border-black/25"
+                    }`}
+                  >
+                    <span className="block">{option.label}</span>
+                    <span className={`mt-1 block ${option.date === gameDayForm.date ? "text-white/75" : "text-black/40"}`}>
+                      {option.teamCount} {option.teamCount === 1 ? "team" : "teams"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <form onSubmit={saveTeam} className="mb-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
@@ -2734,6 +2769,26 @@ function getCurrentSetupTeams(
   }
 
   return [];
+}
+
+function buildTeamSessionOptions(teams: TournamentTeam[]) {
+  const sessions = new Map<string, { date: string; teamCount: number }>();
+
+  for (const team of teams) {
+    const date = team.session_date || "";
+    if (!date || !team.is_active) continue;
+
+    const current = sessions.get(date) || { date, teamCount: 0 };
+    current.teamCount += 1;
+    sessions.set(date, current);
+  }
+
+  return Array.from(sessions.values())
+    .sort((first, second) => second.date.localeCompare(first.date))
+    .map((session) => ({
+      ...session,
+      label: formatDateLabel(session.date),
+    }));
 }
 
 function getSavedSessionDetails(teams: TournamentTeam[], matches: Match[]) {
