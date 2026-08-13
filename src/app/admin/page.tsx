@@ -1989,55 +1989,30 @@ export default function AdminPage() {
                   Assign Player
                 </button>
               </form>
+
+              <div className="mt-4 lg:hidden">
+                <TeamCards
+                  teams={activeTeams}
+                  date={gameDayForm.date}
+                  getTeamRoster={getTeamRoster}
+                  getPlayerName={getPlayerName}
+                  editTeam={editTeam}
+                  deleteTeam={deleteTeam}
+                  removePlayerFromTeam={removePlayerFromTeam}
+                />
+              </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
-              {activeTeams.length === 0 ? (
-                <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4 text-sm font-bold text-black/50 md:col-span-3">
-                  Add the teams for {formatDateLabel(gameDayForm.date)} or schedule their games to show them here.
-                </div>
-              ) : activeTeams.map((team) => {
-                const teamRoster = getTeamRoster(team.id);
-
-                return (
-                  <article key={team.id} className="rounded-lg border border-black/10 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="mb-3 h-2 w-14 rounded-full" style={{ backgroundColor: team.color || "#1f7a4d" }} />
-                        <div className="flex items-center gap-2">
-                          <TeamLogo logo={team.logo_url} color={team.color} name={team.name} size="md" />
-                          <h2 className="font-black">{team.name}</h2>
-                        </div>
-                        <p className="text-sm font-semibold text-black/50">
-                          {formatPlayerCount(teamRoster.length)} {team.is_active ? "" : "| inactive"}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <IconButton label="Edit team" onClick={() => editTeam(team)} icon={Edit3} />
-                        <IconButton label="Delete team" onClick={() => deleteTeam(team.id)} icon={Trash2} danger />
-                      </div>
-                    </div>
-                    <div className="mt-4 space-y-2">
-                      {teamRoster.length === 0 ? (
-                        <p className="text-sm font-semibold text-black/45">No players assigned yet.</p>
-                      ) : (
-                        teamRoster.map((row) => (
-                          <div key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2">
-                            <span className="text-sm font-bold">{row.players?.name || getPlayerName(row.player_id)}</span>
-                            <button
-                              type="button"
-                              onClick={() => removePlayerFromTeam(row.team_id, row.player_id)}
-                              className="text-xs font-black text-red-700"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
+            <div className="hidden lg:block">
+              <TeamCards
+                teams={activeTeams}
+                date={gameDayForm.date}
+                getTeamRoster={getTeamRoster}
+                getPlayerName={getPlayerName}
+                editTeam={editTeam}
+                deleteTeam={deleteTeam}
+                removePlayerFromTeam={removePlayerFromTeam}
+              />
             </div>
           </div>
         </section>
@@ -2912,6 +2887,88 @@ function TeamLogo({
     <span className={`${className} bg-white font-black`}>
       {logoValue}
     </span>
+  );
+}
+
+function TeamCards({
+  teams,
+  date,
+  getTeamRoster,
+  getPlayerName,
+  editTeam,
+  deleteTeam,
+  removePlayerFromTeam,
+}: {
+  teams: TournamentTeam[];
+  date: string;
+  getTeamRoster: (teamId: string) => RosterRow[];
+  getPlayerName: (playerId: string) => string;
+  editTeam: (team: TournamentTeam) => void;
+  deleteTeam: (teamId: string) => void;
+  removePlayerFromTeam: (teamId: string, playerId: string) => void;
+}) {
+  if (teams.length === 0) {
+    return (
+      <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4 text-sm font-bold leading-6 text-black/50">
+        No teams for {formatDateLabel(date)} yet. Add a team above and it will show here.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {teams.map((team) => {
+        const teamRoster = getTeamRoster(team.id);
+
+        return (
+          <article key={team.id} className="rounded-lg border border-black/10 bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="mb-3 h-2 w-14 rounded-full" style={{ backgroundColor: team.color || "#1f7a4d" }} />
+                <div className="flex min-w-0 items-center gap-2">
+                  <TeamLogo logo={team.logo_url} color={team.color} name={team.name} size="md" />
+                  <h2 className="min-w-0 break-words font-black">{team.name}</h2>
+                </div>
+                <p className="mt-1 text-sm font-semibold text-black/50">
+                  {formatPlayerCount(teamRoster.length)} {team.is_active ? "" : "| inactive"}
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  onClick={() => editTeam(team)}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-black/10 bg-white px-3 text-sm font-black text-black/70 hover:bg-black/5"
+                >
+                  <Edit3 size={16} />
+                  <span className="hidden sm:inline">Edit</span>
+                </button>
+                <IconButton label="Delete team" onClick={() => deleteTeam(team.id)} icon={Trash2} danger />
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {teamRoster.length === 0 ? (
+                <p className="rounded-lg bg-[#fbfaf7] px-3 py-3 text-sm font-semibold text-black/45">
+                  No players assigned yet.
+                </p>
+              ) : (
+                teamRoster.map((row) => (
+                  <div key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2">
+                    <span className="min-w-0 break-words text-sm font-bold">{row.players?.name || getPlayerName(row.player_id)}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePlayerFromTeam(row.team_id, row.player_id)}
+                      className="shrink-0 text-xs font-black text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 
