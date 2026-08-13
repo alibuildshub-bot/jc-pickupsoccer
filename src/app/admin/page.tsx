@@ -236,8 +236,22 @@ export default function AdminPage() {
   );
   const gameDayMatchIds = useMemo(() => new Set(gameDayMatches.map((match) => match.id)), [gameDayMatches]);
   const gameDayStats = useMemo(
-    () => stats.filter((stat) => gameDayMatchIds.has(stat.match_id)),
-    [gameDayMatchIds, stats],
+    () => {
+      const matchOrder = new Map(gameDayMatches.map((match, index) => [match.id, index]));
+
+      return stats
+        .filter((stat) => gameDayMatchIds.has(stat.match_id))
+        .sort((first, second) => {
+          const firstOrder = matchOrder.get(first.match_id) ?? 999;
+          const secondOrder = matchOrder.get(second.match_id) ?? 999;
+
+          return (
+            firstOrder - secondOrder ||
+            (first.players?.name || getPlayerName(first.player_id)).localeCompare(second.players?.name || getPlayerName(second.player_id))
+          );
+        });
+    },
+    [gameDayMatchIds, gameDayMatches, stats],
   );
   const selectedDateIsCompletedSession = useMemo(
     () => gameDayMatches.length > 0 && gameDayMatches.every((match) => match.status === "completed"),
@@ -1167,13 +1181,15 @@ export default function AdminPage() {
   }
 
   function editStat(stat: PlayerStat) {
-    setQuickSingleStat({
-      player_id: stat.player_id,
-      team_name: stat.team_name,
-      goals: String(stat.goals),
-      assists: String(stat.assists),
+    setQuickStatMatchId(stat.match_id);
+    setQuickStatDrafts({
+      ...quickStatDrafts,
+      [getQuickStatKey(stat.match_id, stat.player_id, stat.team_name)]: {
+        goals: String(stat.goals),
+        assists: String(stat.assists),
+      },
     });
-    setMessage("Loaded player into Tournament Day Totals. Save totals to update.");
+    setMessage(`Loaded ${stat.players?.name || getPlayerName(stat.player_id)} into match-by-match stats. Update goals or assists, then press Save.`);
   }
 
   if (!isUnlocked) {
@@ -1599,66 +1615,12 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <h2 className="mb-3 font-black">Quick Stats</h2>
+              <h2 className="mb-3 font-black">Match-by-match Stats</h2>
               <div className="grid gap-3 rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                <form onSubmit={saveQuickSinglePlayerStat} className="grid gap-3 rounded-lg border border-black/10 bg-white p-3">
-                  <div>
-                    <p className="text-sm font-black">Tournament Day Totals</p>
-                    <p className="mt-1 text-xs font-bold text-black/45">
-                      Pick a player and team once, then save their total goals and assists for {formatDateLabel(gameDayForm.date)}.
-                    </p>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <AdminSelect
-                      label="Player"
-                      value={quickSingleStat.player_id}
-                      onChange={(value) => setQuickSingleStat({ ...quickSingleStat, player_id: value })}
-                      required
-                    >
-                      <option value="">Select player</option>
-                      {activePlayers.map((player) => (
-                        <option key={player.id} value={player.id}>
-                          {player.name}
-                        </option>
-                      ))}
-                    </AdminSelect>
-                    <AdminSelect
-                      label="Team"
-                      value={quickSingleStat.team_name}
-                      onChange={(value) => setQuickSingleStat({ ...quickSingleStat, team_name: value })}
-                      required
-                    >
-                      <option value="">Select team</option>
-                      {activeTeams.map((team) => (
-                        <option key={team.id} value={team.name}>
-                          {team.name}
-                        </option>
-                      ))}
-                    </AdminSelect>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                    <AdminInput
-                      type="number"
-                      label="Total goals"
-                      value={quickSingleStat.goals}
-                      onChange={(value) => setQuickSingleStat({ ...quickSingleStat, goals: value })}
-                    />
-                    <AdminInput
-                      type="number"
-                      label="Total assists"
-                      value={quickSingleStat.assists}
-                      onChange={(value) => setQuickSingleStat({ ...quickSingleStat, assists: value })}
-                    />
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Plus size={16} />
-                      Save Totals
-                    </button>
-                  </div>
-                </form>
+                <p className="rounded-lg bg-white p-3 text-xs font-bold leading-5 text-black/50">
+                  Select one game, save that game&apos;s score as Live or Completed, then enter each player&apos;s goals and assists.
+                  Win/loss/draw is calculated automatically from the saved score.
+                </p>
                 <AdminSelect
                   label="Game"
                   value={quickStatSelectedMatchId}
@@ -1678,9 +1640,15 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <div className="grid gap-3">
-                    <p className="text-xs font-bold text-black/45">
-                      Optional per-game entry: use this only if you want to track stats game by game.
-                    </p>
+                    <div className="rounded-lg bg-white p-3">
+                      <p className="text-xs font-black uppercase text-[#17613d]">{quickStatMatch.week_label}</p>
+                      <p className="mt-1 text-sm font-black">
+                        {quickStatMatch.team_a_name} {quickStatMatch.team_a_score} - {quickStatMatch.team_b_score} {quickStatMatch.team_b_name}
+                      </p>
+                      <p className="mt-1 text-xs font-bold capitalize text-black/45">
+                        Status: {quickStatMatch.status}. Result is added to each player when their stat is saved.
+                      </p>
+                    </div>
                     <QuickStatTeamSheet
                       match={quickStatMatch}
                       teamName={quickStatMatch.team_a_name}
@@ -2287,70 +2255,75 @@ export default function AdminPage() {
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Player Performance</p>
-              <h1 className="text-2xl font-black">Stats</h1>
+              <h1 className="text-2xl font-black">Saved Game Stats</h1>
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
+                These rows are saved per match. Player profiles, leaderboards, and all-time totals roll up from this table automatically.
+              </p>
             </div>
             <Target className="text-[#1f7a4d]" size={26} />
           </div>
 
-          <form onSubmit={saveQuickSinglePlayerStat} className="mb-6 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
-            <div>
-              <p className="text-sm font-black">Tournament Day Totals</p>
-              <p className="mt-1 text-xs font-bold text-black/45">
-                Add or update a player&apos;s total goals and assists for {formatDateLabel(gameDayForm.date)}. No match selection needed.
+          <details className="mb-6 rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+            <summary className="cursor-pointer text-sm font-black text-black/70">
+              Optional: add a player&apos;s day totals without choosing every match
+            </summary>
+            <form onSubmit={saveQuickSinglePlayerStat} className="mt-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
+              <p className="text-xs font-bold leading-5 text-black/45">
+                This shortcut saves totals to one eligible Live or Completed match. Use match-by-match entry above for accurate per-game history.
               </p>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-2">
-              <AdminSelect
-                label="Player"
-                value={quickSingleStat.player_id}
-                onChange={(value) => setQuickSingleStat({ ...quickSingleStat, player_id: value })}
-                required
-              >
-                <option value="">Select player</option>
-                {activePlayers.map((player) => (
-                  <option key={player.id} value={player.id}>
-                    {player.name}
-                  </option>
-                ))}
-              </AdminSelect>
-              <AdminSelect
-                label="Team"
-                value={quickSingleStat.team_name}
-                onChange={(value) => setQuickSingleStat({ ...quickSingleStat, team_name: value })}
-                required
-              >
-                <option value="">Select team</option>
-                {activeTeams.map((team) => (
-                  <option key={team.id} value={team.name}>
-                    {team.name}
-                  </option>
-                ))}
-              </AdminSelect>
-            </div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <AdminSelect
+                  label="Player"
+                  value={quickSingleStat.player_id}
+                  onChange={(value) => setQuickSingleStat({ ...quickSingleStat, player_id: value })}
+                  required
+                >
+                  <option value="">Select player</option>
+                  {activePlayers.map((player) => (
+                    <option key={player.id} value={player.id}>
+                      {player.name}
+                    </option>
+                  ))}
+                </AdminSelect>
+                <AdminSelect
+                  label="Team"
+                  value={quickSingleStat.team_name}
+                  onChange={(value) => setQuickSingleStat({ ...quickSingleStat, team_name: value })}
+                  required
+                >
+                  <option value="">Select team</option>
+                  {activeTeams.map((team) => (
+                    <option key={team.id} value={team.name}>
+                      {team.name}
+                    </option>
+                  ))}
+                </AdminSelect>
+              </div>
 
-            <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
-              <AdminInput
-                type="number"
-                label="Total goals"
-                value={quickSingleStat.goals}
-                onChange={(value) => setQuickSingleStat({ ...quickSingleStat, goals: value })}
-              />
-              <AdminInput
-                type="number"
-                label="Total assists"
-                value={quickSingleStat.assists}
-                onChange={(value) => setQuickSingleStat({ ...quickSingleStat, assists: value })}
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Plus size={16} />
-                Save Totals
-              </button>
-            </div>
-          </form>
+              <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+                <AdminInput
+                  type="number"
+                  label="Total goals"
+                  value={quickSingleStat.goals}
+                  onChange={(value) => setQuickSingleStat({ ...quickSingleStat, goals: value })}
+                />
+                <AdminInput
+                  type="number"
+                  label="Total assists"
+                  value={quickSingleStat.assists}
+                  onChange={(value) => setQuickSingleStat({ ...quickSingleStat, assists: value })}
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Plus size={16} />
+                  Save Totals
+                </button>
+              </div>
+            </form>
+          </details>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] border-collapse text-left">
@@ -2361,6 +2334,7 @@ export default function AdminPage() {
                   <th className="py-3">Team</th>
                   <th className="py-3 text-center">G</th>
                   <th className="py-3 text-center">A</th>
+                  <th className="py-3 text-center">G+A</th>
                   <th className="py-3 text-center">Result</th>
                   <th className="py-3 text-right">Actions</th>
                 </tr>
@@ -2368,7 +2342,7 @@ export default function AdminPage() {
               <tbody>
                 {gameDayStats.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-6 text-center text-sm font-bold text-black/45">
+                    <td colSpan={8} className="py-6 text-center text-sm font-bold text-black/45">
                       No player stats for {formatDateLabel(gameDayForm.date)} yet.
                     </td>
                   </tr>
@@ -2381,6 +2355,7 @@ export default function AdminPage() {
                     <td className="py-4 font-bold">{stat.team_name}</td>
                     <td className="py-4 text-center font-bold">{stat.goals}</td>
                     <td className="py-4 text-center font-bold">{stat.assists}</td>
+                    <td className="py-4 text-center font-black">{stat.goals + stat.assists}</td>
                     <td className="py-4 text-center font-bold capitalize">{stat.result}</td>
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
