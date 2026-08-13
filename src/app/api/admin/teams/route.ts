@@ -12,16 +12,23 @@ type TeamPayload = {
   sort_order?: number;
   is_active?: boolean;
   session_date?: string | null;
+  session_start_time?: string | null;
+  session_location?: string | null;
 };
 
 type RosterPayload = {
-  action?: "add_player" | "remove_player";
+  action?: "add_player" | "remove_player" | "save_session_details";
   team_id?: string;
   player_id?: string;
+  session_date?: string;
+  session_start_time?: string | null;
+  session_location?: string | null;
 };
 
 const TEAM_SESSION_DATE_SETUP_MESSAGE =
   "Team pickup dates are not set up in Supabase yet. Run supabase-team-session-dates.sql in Supabase, then refresh this page.";
+const TEAM_SESSION_DETAILS_SETUP_MESSAGE =
+  "Pickup time and place are not set up in Supabase yet. Run supabase-team-session-details.sql in Supabase, then refresh this page.";
 
 export async function GET(request: Request) {
   if (!(await isAdminRequest(request))) return unauthorizedError();
@@ -49,6 +56,7 @@ export async function GET(request: Request) {
     teams: teamsResult.data,
     roster: rosterResult.data,
     teamSessionDateSetupNeeded: Boolean(teamsResult.setupNeeded),
+    teamSessionDetailsSetupNeeded: Boolean(teamsResult.detailsSetupNeeded),
   });
 }
 
@@ -59,6 +67,10 @@ export async function POST(request: Request) {
   if (!supabase) return adminConfigError();
 
   const payload = (await request.json()) as TeamPayload & RosterPayload;
+
+  if (payload.action === "save_session_details") {
+    return saveSessionDetails(payload, supabase);
+  }
 
   if (payload.action) {
     return updateRoster(payload, supabase);
@@ -187,9 +199,49 @@ async function updateRoster(
   return Response.json({ roster: data }, { status: 201 });
 }
 
+async function saveSessionDetails(
+  payload: RosterPayload,
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  const sessionDate = normalizeSessionDate(payload.session_date);
+
+  if (!sessionDate) {
+    return Response.json({ error: "Pickup date is required." }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from("tournament_teams")
+    .update({
+      session_start_time: normalizeStartTime(payload.session_start_time),
+      session_location: normalizeOptionalText(payload.session_location),
+    })
+    .eq("session_date", sessionDate);
+
+  if (error) {
+    if (isMissingDetailsColumnError(error)) {
+      return Response.json({ error: TEAM_SESSION_DETAILS_SETUP_MESSAGE }, { status: 500 });
+    }
+
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  return Response.json({ ok: true });
+}
+
 async function selectTeams(
   supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
 ) {
+  const withSessionDetails = await supabase
+    .from("tournament_teams")
+    .select("id,name,color,sort_order,is_active,created_at,session_date,session_start_time,session_location")
+    .order("session_date", { ascending: false, nullsFirst: false })
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (!isMissingColumnError(withSessionDetails.error) && !isMissingDetailsColumnError(withSessionDetails.error)) {
+    return { ...withSessionDetails, setupNeeded: false, detailsSetupNeeded: false };
+  }
+
   const withSessionDate = await supabase
     .from("tournament_teams")
     .select("id,name,color,sort_order,is_active,created_at,session_date")
@@ -198,7 +250,16 @@ async function selectTeams(
     .order("name", { ascending: true });
 
   if (!isMissingColumnError(withSessionDate.error)) {
-    return { ...withSessionDate, setupNeeded: false };
+    return {
+      ...withSessionDate,
+      data: withSessionDate.data?.map((team) => ({
+        ...team,
+        session_start_time: null,
+        session_location: null,
+      })),
+      setupNeeded: false,
+      detailsSetupNeeded: true,
+    };
   }
 
   const withoutSessionDate = await supabase
@@ -209,8 +270,14 @@ async function selectTeams(
 
   return {
     ...withoutSessionDate,
-    data: withoutSessionDate.data?.map((team) => ({ ...team, session_date: null })),
+    data: withoutSessionDate.data?.map((team) => ({
+      ...team,
+      session_date: null,
+      session_start_time: null,
+      session_location: null,
+    })),
     setupNeeded: true,
+    detailsSetupNeeded: true,
   };
 }
 
@@ -224,8 +291,21 @@ async function saveTeamRow(
     ? supabase.from("tournament_teams").insert(row)
     : supabase.from("tournament_teams").update(row).eq("id", payload.id);
   const result = await query
-    .select("id,name,color,sort_order,is_active,created_at,session_date")
+    .select("id,name,color,sort_order,is_active,created_at,session_date,session_start_time,session_location")
     .single();
+
+  if (!result.error) {
+    return result;
+  }
+
+  if (isMissingDetailsColumnError(result.error)) {
+    return {
+      data: null,
+      error: {
+        message: TEAM_SESSION_DETAILS_SETUP_MESSAGE,
+      },
+    };
+  }
 
   if (!isMissingColumnError(result.error)) {
     return result;
@@ -282,6 +362,8 @@ function teamPayloadToRow(payload: TeamPayload, includeSessionDate = true) {
   return {
     ...row,
     session_date: normalizeSessionDate(payload.session_date) || null,
+    session_start_time: normalizeStartTime(payload.session_start_time),
+    session_location: normalizeOptionalText(payload.session_location),
   };
 }
 
@@ -289,12 +371,40 @@ function normalizeSessionDate(value?: string | null) {
   return value?.trim() || "";
 }
 
+function normalizeStartTime(value?: string | null) {
+  const trimmed = value?.trim();
+
+  return trimmed || null;
+}
+
+function normalizeOptionalText(value?: string | null) {
+  const trimmed = value?.trim();
+
+  return trimmed || null;
+}
+
 function isMissingColumnError(error: unknown) {
   if (!error || typeof error !== "object") return false;
 
   const { code, message } = error as { code?: string; message?: string };
 
-  return code === "42703" || code === "PGRST204" || Boolean(message?.includes("session_date"));
+  return (
+    Boolean(message?.includes("session_date")) ||
+    (code === "PGRST204" && Boolean(message?.includes("session_date")))
+  );
+}
+
+function isMissingDetailsColumnError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const { code, message } = error as { code?: string; message?: string };
+
+  return (
+    Boolean(message?.includes("session_start_time")) ||
+    Boolean(message?.includes("session_location")) ||
+    (code === "PGRST204" &&
+      (Boolean(message?.includes("session_start_time")) || Boolean(message?.includes("session_location"))))
+  );
 }
 
 async function syncScheduledMatchTeamNames(

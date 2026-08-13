@@ -56,6 +56,8 @@ type TeamRow = {
   sort_order: number;
   is_active: boolean;
   session_date: string | null;
+  session_start_time: string | null;
+  session_location: string | null;
 };
 
 type TeamStanding = {
@@ -840,13 +842,32 @@ async function selectPublicTeams(
 ) {
   const withSessionDate = await supabase
     .from("tournament_teams")
-    .select("id,name,color,sort_order,is_active,session_date")
+    .select("id,name,color,sort_order,is_active,session_date,session_start_time,session_location")
     .eq("is_active", true)
     .order("session_date", { ascending: false, nullsFirst: false })
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
   if (!isMissingSessionDateColumn(withSessionDate.error)) {
+    if (isMissingTeamSessionDetailsColumn(withSessionDate.error)) {
+      const sessionDateOnly = await supabase
+        .from("tournament_teams")
+        .select("id,name,color,sort_order,is_active,session_date")
+        .eq("is_active", true)
+        .order("session_date", { ascending: false, nullsFirst: false })
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+
+      return {
+        ...sessionDateOnly,
+        data: sessionDateOnly.data?.map((team) => ({
+          ...team,
+          session_start_time: null,
+          session_location: null,
+        })),
+      };
+    }
+
     return withSessionDate;
   }
 
@@ -859,7 +880,12 @@ async function selectPublicTeams(
 
   return {
     ...withoutSessionDate,
-    data: withoutSessionDate.data?.map((team) => ({ ...team, session_date: null })),
+    data: withoutSessionDate.data?.map((team) => ({
+      ...team,
+      session_date: null,
+      session_start_time: null,
+      session_location: null,
+    })),
   };
 }
 
@@ -1046,16 +1072,17 @@ function buildUpcomingSession(
 
     const sessionTeams = teams.filter((team) => team.session_date === teamSessionDate);
     const rosters = buildTeamRosters(sessionTeams, rawTeams, rosterRows);
+    const sessionDetails = getTeamSessionDetails(sessionTeams);
     const details = buildCalendarDetails(rosters);
 
     return {
       date: formatDate(teamSessionDate),
       rawDate: teamSessionDate,
-      time: "Time TBD",
-      startTime: null,
-      location: "Field TBD",
-      calendarUrl: buildIcsCalendarUrl(teamSessionDate, null, "Field TBD", details),
-      googleCalendarUrl: buildGoogleCalendarUrl(teamSessionDate, null, "Field TBD", details),
+      time: sessionDetails.startTime ? formatTimeLabel(sessionDetails.startTime) : "Time TBD",
+      startTime: sessionDetails.startTime,
+      location: sessionDetails.location || "Field TBD",
+      calendarUrl: buildIcsCalendarUrl(teamSessionDate, sessionDetails.startTime, sessionDetails.location || "Field TBD", details),
+      googleCalendarUrl: buildGoogleCalendarUrl(teamSessionDate, sessionDetails.startTime, sessionDetails.location || "Field TBD", details),
       teams: rosters,
     };
   }
@@ -1106,6 +1133,16 @@ function getCurrentSessionTeams(
   }
 
   return [];
+}
+
+function getTeamSessionDetails(teams: TeamRow[]) {
+  const startTime = teams.find((team) => team.session_start_time)?.session_start_time || null;
+  const location = teams.find((team) => team.session_location?.trim())?.session_location?.trim() || "";
+
+  return {
+    startTime,
+    location,
+  };
 }
 
 function buildTeamOfTheWeek(standings: TeamStanding[]) {
@@ -1365,6 +1402,8 @@ function dedupeTeams(teams: TeamRow[]) {
       color: existing.color || team.color,
       sort_order: Math.min(existing.sort_order, team.sort_order),
       session_date: existing.session_date || team.session_date,
+      session_start_time: existing.session_start_time || team.session_start_time,
+      session_location: existing.session_location || team.session_location,
     });
   }
 
@@ -1383,6 +1422,18 @@ function isMissingSessionDateColumn(error: unknown) {
   const { code, message } = error as { code?: string; message?: string };
 
   return code === "42703" || Boolean(message?.includes("session_date"));
+}
+
+function isMissingTeamSessionDetailsColumn(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const { code, message } = error as { code?: string; message?: string };
+
+  return (
+    code === "PGRST204" ||
+    Boolean(message?.includes("session_start_time")) ||
+    Boolean(message?.includes("session_location"))
+  );
 }
 
 async function selectPublicMatches(

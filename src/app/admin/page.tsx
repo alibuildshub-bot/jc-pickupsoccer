@@ -61,6 +61,8 @@ type TournamentTeam = {
   sort_order: number;
   is_active: boolean;
   session_date: string | null;
+  session_start_time: string | null;
+  session_location: string | null;
 };
 
 type RosterRow = {
@@ -174,6 +176,7 @@ export default function AdminPage() {
   const [teams, setTeams] = useState<TournamentTeam[]>([]);
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [teamSessionDateSetupNeeded, setTeamSessionDateSetupNeeded] = useState(false);
+  const [teamSessionDetailsSetupNeeded, setTeamSessionDetailsSetupNeeded] = useState(false);
   const [polls, setPolls] = useState<MvpPoll[]>([]);
   const [pollSetupNeeded, setPollSetupNeeded] = useState(false);
   const [analytics, setAnalytics] = useState<SiteAnalytics>(emptyAnalytics);
@@ -218,6 +221,10 @@ export default function AdminPage() {
   const activeTeams = useMemo(
     () => getCurrentSetupTeams(teams, gameDayMatches, gameDayForm.date),
     [gameDayForm.date, gameDayMatches, teams],
+  );
+  const savedSessionDetails = useMemo(
+    () => getSavedSessionDetails(activeTeams, gameDayMatches),
+    [activeTeams, gameDayMatches],
   );
   const gameDayMatchIds = useMemo(() => new Set(gameDayMatches.map((match) => match.id)), [gameDayMatches]);
   const gameDayStats = useMemo(
@@ -317,6 +324,7 @@ export default function AdminPage() {
         setTeams(teamsResponse.teams || []);
         setRoster(teamsResponse.roster || []);
         setTeamSessionDateSetupNeeded(Boolean(teamsResponse.teamSessionDateSetupNeeded));
+        setTeamSessionDetailsSetupNeeded(Boolean(teamsResponse.teamSessionDetailsSetupNeeded));
       }
       if (pollsResponse) {
         setPolls(pollsResponse.polls || []);
@@ -381,6 +389,21 @@ export default function AdminPage() {
     }
   }, [editingTeamId, gameDayForm.date]);
 
+  useEffect(() => {
+    setGameDayForm((current) => {
+      const nextStartTime = current.start_time || savedSessionDetails.start_time || "";
+      const nextLocation = current.location || savedSessionDetails.location || "";
+
+      if (nextStartTime === current.start_time && nextLocation === current.location) return current;
+
+      return {
+        ...current,
+        start_time: nextStartTime,
+        location: nextLocation,
+      };
+    });
+  }, [savedSessionDetails.location, savedSessionDetails.start_time]);
+
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = password.trim();
@@ -436,6 +459,7 @@ export default function AdminPage() {
     setTeams([]);
     setRoster([]);
     setTeamSessionDateSetupNeeded(false);
+    setTeamSessionDetailsSetupNeeded(false);
     setPolls([]);
     setPollSetupNeeded(false);
     setAnalytics(emptyAnalytics);
@@ -839,6 +863,8 @@ export default function AdminPage() {
     try {
       const payload = {
         ...teamForm,
+        session_start_time: gameDayForm.start_time,
+        session_location: gameDayForm.location,
         id: editingTeamId || undefined,
       };
 
@@ -854,6 +880,39 @@ export default function AdminPage() {
       setTeamForm(getEmptyTeamForSelectedDate());
       setEditingTeamId(null);
       setMessage(editingTeamId ? "Team updated." : "Team added.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function savePickupDetails() {
+    if (activeTeams.length === 0) {
+      setMessage("Add at least one team for this pickup before saving time and place.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await adminFetch(
+        "/api/admin/teams",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "save_session_details",
+            session_date: gameDayForm.date,
+            session_start_time: gameDayForm.start_time,
+            session_location: gameDayForm.location,
+          }),
+        },
+        adminCredential,
+      );
+
+      setMessage("Pickup time and place saved.");
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -888,6 +947,11 @@ export default function AdminPage() {
       is_active: team.is_active,
       session_date: team.session_date || gameDayForm.date,
     });
+    setGameDayForm((current) => ({
+      ...current,
+      start_time: team.session_start_time || current.start_time,
+      location: team.session_location || current.location,
+    }));
   }
 
   async function addPlayerToTeam(event: FormEvent<HTMLFormElement>) {
@@ -1757,6 +1821,12 @@ export default function AdminPage() {
             </div>
           )}
 
+          {teamSessionDetailsSetupNeeded && (
+            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900">
+              Pickup time and place are not set up in Supabase yet. Run supabase-team-session-details.sql, then refresh this page.
+            </div>
+          )}
+
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <form onSubmit={saveTeam} className="mb-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
@@ -1822,6 +1892,14 @@ export default function AdminPage() {
                   <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white">
                     <Plus size={16} />
                     {editingTeamId ? "Update Team" : "Add Team"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={savePickupDetails}
+                    disabled={loading || activeTeams.length === 0}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-black/15 bg-white px-4 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Save Pickup Info
                   </button>
                   {editingTeamId && (
                     <button
@@ -2627,6 +2705,22 @@ function getCurrentSetupTeams(
   }
 
   return [];
+}
+
+function getSavedSessionDetails(teams: TournamentTeam[], matches: Match[]) {
+  const startTime =
+    teams.find((team) => team.session_start_time)?.session_start_time ||
+    matches.find((match) => match.start_time)?.start_time ||
+    "";
+  const location =
+    teams.find((team) => team.session_location?.trim())?.session_location?.trim() ||
+    matches.find((match) => match.location?.trim())?.location?.trim() ||
+    "";
+
+  return {
+    start_time: startTime,
+    location,
+  };
 }
 
 function getPollUrl(token: string) {
