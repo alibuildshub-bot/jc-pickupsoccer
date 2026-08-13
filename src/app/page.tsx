@@ -1949,7 +1949,7 @@ function UpcomingTeams({ teams }: { teams: TeamRoster[] }) {
           </div>
           {team.players.length > 0 ? (
             <div className="grid gap-2">
-              {team.players.slice(0, 5).map((player) => (
+              {team.players.map((player) => (
                 <a
                   key={`${team.name}-${player}`}
                   href={`/players/${slugify(player)}`}
@@ -1958,11 +1958,6 @@ function UpcomingTeams({ teams }: { teams: TeamRoster[] }) {
                   {player}
                 </a>
               ))}
-              {team.players.length > 5 && (
-                <p className="px-3 text-xs font-bold text-black/45">
-                  +{team.players.length - 5} more
-                </p>
-              )}
             </div>
           ) : (
             <p className="rounded-lg bg-white px-3 py-3 text-sm font-semibold text-black/50">
