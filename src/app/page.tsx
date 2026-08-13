@@ -181,6 +181,7 @@ export default async function Home() {
   };
   const topPlayers = data.players.slice(0, 3);
   const topPlayersLabel = data.playerLeaderboardLabel.replace(" Stats", "");
+  const showUpcomingTeams = data.completedTournamentGames === 0 && data.teamRosters.length > 0;
 
   return (
     <main className="min-h-screen bg-[#f7f3ec] text-[#171717]">
@@ -386,120 +387,130 @@ export default async function Home() {
         <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-bold text-black/50">Tournament Progress</p>
+              <p className="text-sm font-bold text-black/50">
+                {showUpcomingTeams ? "Upcoming Teams" : "Tournament Progress"}
+              </p>
               <h2 className="text-2xl font-black">{data.tournamentLabel}</h2>
             </div>
             <p className="text-sm font-bold text-black/50">
-              {data.completedTournamentGames} completed / {data.tournamentGames} games
+              {showUpcomingTeams
+                ? "Standings will appear after Game 1"
+                : `${data.completedTournamentGames} completed / ${data.tournamentGames} games`}
             </p>
           </div>
-          <div className="grid gap-3 md:hidden">
-            {data.teamStandings.length > 0 ? data.teamStandings.map((team, index) => (
-              <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
-                      {index + 1}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <TeamLogo logo={team.logo} color={team.color} name={team.name} />
-                        <h3 className="break-words font-black leading-tight">{team.name}</h3>
-                      </div>
-                      <p className="mt-1 text-xs font-bold text-black/45">
-                        {team.wins}W {team.draws}D {team.losses}L
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-black">{team.points}</p>
-                    <p className="text-xs font-black uppercase text-black/40">PTS</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  <MiniStat label="P" value={String(team.played)} />
-                  <MiniStat label="GF" value={String(team.goalsFor)} />
-                  <MiniStat label="GA" value={String(team.goalsAgainst)} />
-                  <MiniStat label="GD" value={String(team.goalDiff)} />
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-[#f7f3ec] px-3 py-2">
-                  <span className="text-xs font-black uppercase text-black/40">Form</span>
-                  <TeamForm form={team.form} />
-                </div>
-              </article>
-            )) : (
-              <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                <p className="font-black">No standings yet.</p>
-                <p className="mt-1 text-sm font-semibold text-black/50">
-                  Teams will appear here once tomorrow&apos;s games are scheduled.
-                </p>
-              </div>
-            )}
-          </div>
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[840px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-black/10 bg-[#fbfaf7] text-xs font-black uppercase text-black/45">
-                  <th className="w-14 rounded-l-lg px-3 py-3 text-center">Pos</th>
-                  <th className="px-3 py-3">Club</th>
-                  <th className="py-3 text-center">MP</th>
-                  <th className="py-3 text-center">W</th>
-                  <th className="py-3 text-center">D</th>
-                  <th className="py-3 text-center">L</th>
-                  <th className="py-3 text-center">GF</th>
-                  <th className="py-3 text-center">GA</th>
-                  <th className="py-3 text-center">GD</th>
-                  <th className="py-3 text-center">Form</th>
-                  <th className="rounded-r-lg py-3 text-center">Pts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.teamStandings.map((team, index) => (
-                  <tr key={team.name} className="border-b border-black/10 last:border-0 hover:bg-[#fbfaf7]">
-                    <td className="px-3 py-3 text-center">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
-                        {index + 1}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
+          {showUpcomingTeams ? (
+            <UpcomingTeams teams={data.teamRosters} />
+          ) : (
+            <>
+              <div className="grid gap-3 md:hidden">
+                {data.teamStandings.length > 0 ? data.teamStandings.map((team, index) => (
+                  <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                    <div className="mb-4 flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <TeamLogo logo={team.logo} color={team.color} name={team.name} size="md" />
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                          {index + 1}
+                        </span>
                         <div className="min-w-0">
-                          <span className="block truncate text-base font-black">{team.name}</span>
-                          <span className="text-xs font-bold uppercase text-black/35">
-                            {team.played === 0 ? "Awaiting first match" : `${team.wins}W ${team.draws}D ${team.losses}L`}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <TeamLogo logo={team.logo} color={team.color} name={team.name} />
+                            <h3 className="break-words font-black leading-tight">{team.name}</h3>
+                          </div>
+                          <p className="mt-1 text-xs font-bold text-black/45">
+                            {team.wins}W {team.draws}D {team.losses}L
+                          </p>
                         </div>
                       </div>
-                    </td>
-                    <LeagueNumber value={team.played} />
-                    <LeagueNumber value={team.wins} />
-                    <LeagueNumber value={team.draws} />
-                    <LeagueNumber value={team.losses} />
-                    <LeagueNumber value={team.goalsFor} />
-                    <LeagueNumber value={team.goalsAgainst} />
-                    <LeagueNumber value={team.goalDiff} strong={team.goalDiff !== 0} />
-                    <td className="py-3">
-                      <div className="flex justify-center">
-                        <TeamForm form={team.form} />
+                      <div className="text-right">
+                        <p className="text-2xl font-black">{team.points}</p>
+                        <p className="text-xs font-black uppercase text-black/40">PTS</p>
                       </div>
-                    </td>
-                    <td className="py-3 text-center">
-                      <span className="inline-flex min-w-11 justify-center rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
-                        {team.points}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="mt-3 flex flex-wrap gap-3 text-xs font-bold text-black/45">
-              <span>MP: Matches Played</span>
-              <span>GF: Goals For</span>
-              <span>GA: Goals Against</span>
-              <span>GD: Goal Difference</span>
-            </div>
-          </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      <MiniStat label="P" value={String(team.played)} />
+                      <MiniStat label="GF" value={String(team.goalsFor)} />
+                      <MiniStat label="GA" value={String(team.goalsAgainst)} />
+                      <MiniStat label="GD" value={String(team.goalDiff)} />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-[#f7f3ec] px-3 py-2">
+                      <span className="text-xs font-black uppercase text-black/40">Form</span>
+                      <TeamForm form={team.form} />
+                    </div>
+                  </article>
+                )) : (
+                  <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                    <p className="font-black">No standings yet.</p>
+                    <p className="mt-1 text-sm font-semibold text-black/50">
+                      Teams will appear here once tomorrow&apos;s games are scheduled.
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[840px] border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-black/10 bg-[#fbfaf7] text-xs font-black uppercase text-black/45">
+                      <th className="w-14 rounded-l-lg px-3 py-3 text-center">Pos</th>
+                      <th className="px-3 py-3">Club</th>
+                      <th className="py-3 text-center">MP</th>
+                      <th className="py-3 text-center">W</th>
+                      <th className="py-3 text-center">D</th>
+                      <th className="py-3 text-center">L</th>
+                      <th className="py-3 text-center">GF</th>
+                      <th className="py-3 text-center">GA</th>
+                      <th className="py-3 text-center">GD</th>
+                      <th className="py-3 text-center">Form</th>
+                      <th className="rounded-r-lg py-3 text-center">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.teamStandings.map((team, index) => (
+                      <tr key={team.name} className="border-b border-black/10 last:border-0 hover:bg-[#fbfaf7]">
+                        <td className="px-3 py-3 text-center">
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                            {index + 1}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <TeamLogo logo={team.logo} color={team.color} name={team.name} size="md" />
+                            <div className="min-w-0">
+                              <span className="block truncate text-base font-black">{team.name}</span>
+                              <span className="text-xs font-bold uppercase text-black/35">
+                                {team.played === 0 ? "Awaiting first match" : `${team.wins}W ${team.draws}D ${team.losses}L`}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <LeagueNumber value={team.played} />
+                        <LeagueNumber value={team.wins} />
+                        <LeagueNumber value={team.draws} />
+                        <LeagueNumber value={team.losses} />
+                        <LeagueNumber value={team.goalsFor} />
+                        <LeagueNumber value={team.goalsAgainst} />
+                        <LeagueNumber value={team.goalDiff} strong={team.goalDiff !== 0} />
+                        <td className="py-3">
+                          <div className="flex justify-center">
+                            <TeamForm form={team.form} />
+                          </div>
+                        </td>
+                        <td className="py-3 text-center">
+                          <span className="inline-flex min-w-11 justify-center rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
+                            {team.points}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="mt-3 flex flex-wrap gap-3 text-xs font-bold text-black/45">
+                  <span>MP: Matches Played</span>
+                  <span>GF: Goals For</span>
+                  <span>GA: Goals Against</span>
+                  <span>GD: Goal Difference</span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -1916,6 +1927,51 @@ function LeagueNumber({ value, strong = false }: { value: number; strong?: boole
     <td className={`py-3 text-center ${strong ? "font-black" : "font-bold text-black/70"}`}>
       {value > 0 && strong ? `+${value}` : value}
     </td>
+  );
+}
+
+function UpcomingTeams({ teams }: { teams: TeamRoster[] }) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {teams.map((team) => (
+        <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <TeamLogo logo={team.logo} color={team.color} name={team.name} size="md" />
+              <div className="min-w-0">
+                <h3 className="break-words font-black leading-tight">{team.name}</h3>
+                <p className="mt-1 text-xs font-bold text-black/45">{formatPlayerCount(team.players.length)}</p>
+              </div>
+            </div>
+            <span className="shrink-0 rounded-lg bg-[#edf4f0] px-2 py-1 text-xs font-black text-[#17613d]">
+              Ready
+            </span>
+          </div>
+          {team.players.length > 0 ? (
+            <div className="grid gap-2">
+              {team.players.slice(0, 5).map((player) => (
+                <a
+                  key={`${team.name}-${player}`}
+                  href={`/players/${slugify(player)}`}
+                  className="rounded-lg bg-white px-3 py-2 text-sm font-bold hover:underline"
+                >
+                  {player}
+                </a>
+              ))}
+              {team.players.length > 5 && (
+                <p className="px-3 text-xs font-bold text-black/45">
+                  +{team.players.length - 5} more
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="rounded-lg bg-white px-3 py-3 text-sm font-semibold text-black/50">
+              Roster coming soon.
+            </p>
+          )}
+        </article>
+      ))}
+    </div>
   );
 }
 
