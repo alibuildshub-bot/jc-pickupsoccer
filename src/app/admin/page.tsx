@@ -1830,7 +1830,7 @@ export default function AdminPage() {
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <form onSubmit={saveTeam} className="mb-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
-                <div className="grid gap-3 sm:grid-cols-[0.8fr_0.7fr_1fr]">
+                <div className="grid gap-3 sm:grid-cols-[0.8fr_0.7fr_1fr_auto] sm:items-end">
                   <AdminInput
                     type="date"
                     label="Pickup date"
@@ -1853,6 +1853,14 @@ export default function AdminPage() {
                     onChange={(value) => setGameDayForm({ ...gameDayForm, location: value })}
                     placeholder="Field name"
                   />
+                  <button
+                    type="button"
+                    onClick={savePickupDetails}
+                    disabled={loading || activeTeams.length === 0}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#171717] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Save Info
+                  </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-[1fr_0.55fr_0.45fr]">
                   <div className="rounded-lg bg-white px-3 py-3 text-sm font-bold leading-6 text-black/50 sm:col-span-3">
@@ -1892,14 +1900,6 @@ export default function AdminPage() {
                   <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white">
                     <Plus size={16} />
                     {editingTeamId ? "Update Team" : "Add Team"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={savePickupDetails}
-                    disabled={loading || activeTeams.length === 0}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-black/15 bg-white px-4 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Save Pickup Info
                   </button>
                   {editingTeamId && (
                     <button
