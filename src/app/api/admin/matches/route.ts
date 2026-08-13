@@ -9,6 +9,7 @@ type MatchPayload = {
   id?: string;
   match_date?: string;
   start_time?: string | null;
+  end_time?: string | null;
   week_label?: string;
   location?: string;
   team_a_name?: string;
@@ -19,7 +20,7 @@ type MatchPayload = {
 };
 
 const matchSelectWithStartTime =
-  "id,match_date,start_time,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at";
+  "id,match_date,start_time,end_time,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at";
 const matchSelectWithoutStartTime =
   "id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at";
 const MATCH_START_TIME_SETUP_MESSAGE =
@@ -142,6 +143,7 @@ function matchPayloadToRow(payload: MatchPayload) {
   return {
     match_date: payload.match_date,
     start_time: normalizeStartTime(payload.start_time),
+    end_time: normalizeStartTime(payload.end_time),
     week_label: payload.week_label?.trim(),
     location: payload.location?.trim() || null,
     team_a_name: payload.team_a_name?.trim(),
@@ -171,7 +173,7 @@ async function selectMatches(
 
   return {
     ...withoutStartTime,
-    data: withoutStartTime.data?.map((match) => ({ ...match, start_time: null })),
+    data: withoutStartTime.data?.map((match) => ({ ...match, start_time: null, end_time: null })),
   };
 }
 
@@ -186,5 +188,5 @@ function isMissingStartTimeColumn(error: unknown) {
 
   const { code, message } = error as { code?: string; message?: string };
 
-  return code === "42703" || code === "PGRST204" || Boolean(message?.includes("start_time"));
+  return code === "42703" || code === "PGRST204" || Boolean(message?.includes("start_time")) || Boolean(message?.includes("end_time"));
 }

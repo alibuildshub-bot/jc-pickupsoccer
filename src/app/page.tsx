@@ -20,6 +20,7 @@ type MatchRow = {
   id: string;
   match_date: string;
   start_time: string | null;
+  end_time: string | null;
   week_label: string;
   location: string | null;
   team_a_name: string;
@@ -57,6 +58,7 @@ type TeamRow = {
   is_active: boolean;
   session_date: string | null;
   session_start_time: string | null;
+  session_end_time: string | null;
   session_location: string | null;
 };
 
@@ -92,6 +94,7 @@ type UpcomingSession = {
   rawDate: string;
   time: string;
   startTime: string | null;
+  endTime: string | null;
   location: string;
   calendarUrl: string;
   googleCalendarUrl: string;
@@ -842,7 +845,7 @@ async function selectPublicTeams(
 ) {
   const withSessionDate = await supabase
     .from("tournament_teams")
-    .select("id,name,color,sort_order,is_active,session_date,session_start_time,session_location")
+    .select("id,name,color,sort_order,is_active,session_date,session_start_time,session_end_time,session_location")
     .eq("is_active", true)
     .order("session_date", { ascending: false, nullsFirst: false })
     .order("sort_order", { ascending: true })
@@ -863,6 +866,7 @@ async function selectPublicTeams(
         data: sessionDateOnly.data?.map((team) => ({
           ...team,
           session_start_time: null,
+          session_end_time: null,
           session_location: null,
         })),
       };
@@ -884,6 +888,7 @@ async function selectPublicTeams(
       ...team,
       session_date: null,
       session_start_time: null,
+      session_end_time: null,
       session_location: null,
     })),
   };
@@ -1078,11 +1083,12 @@ function buildUpcomingSession(
     return {
       date: formatDate(teamSessionDate),
       rawDate: teamSessionDate,
-      time: sessionDetails.startTime ? formatTimeLabel(sessionDetails.startTime) : "Time TBD",
+      time: sessionDetails.startTime ? formatTimeRange(sessionDetails.startTime, sessionDetails.endTime) : "Time TBD",
       startTime: sessionDetails.startTime,
+      endTime: sessionDetails.endTime,
       location: sessionDetails.location || "Field TBD",
-      calendarUrl: buildIcsCalendarUrl(teamSessionDate, sessionDetails.startTime, sessionDetails.location || "Field TBD", details),
-      googleCalendarUrl: buildGoogleCalendarUrl(teamSessionDate, sessionDetails.startTime, sessionDetails.location || "Field TBD", details),
+      calendarUrl: buildIcsCalendarUrl(teamSessionDate, sessionDetails.startTime, sessionDetails.endTime, sessionDetails.location || "Field TBD", details),
+      googleCalendarUrl: buildGoogleCalendarUrl(teamSessionDate, sessionDetails.startTime, sessionDetails.endTime, sessionDetails.location || "Field TBD", details),
       teams: rosters,
     };
   }
@@ -1092,16 +1098,18 @@ function buildUpcomingSession(
   const rosters = buildTeamRosters(sessionTeams, rawTeams, rosterRows);
   const location = sessionMatches.find((match) => match.location?.trim())?.location?.trim() || "Field TBD";
   const startTime = sessionMatches.find((match) => match.start_time)?.start_time || null;
+  const endTime = sessionMatches.find((match) => match.end_time)?.end_time || null;
   const details = buildCalendarDetails(rosters);
 
   return {
     date: formatDate(sessionDate),
     rawDate: sessionDate,
-    time: startTime ? formatTimeLabel(startTime) : "Time TBD",
+    time: startTime ? formatTimeRange(startTime, endTime) : "Time TBD",
     startTime,
+    endTime,
     location,
-    calendarUrl: buildIcsCalendarUrl(sessionDate, startTime, location, details),
-    googleCalendarUrl: buildGoogleCalendarUrl(sessionDate, startTime, location, details),
+    calendarUrl: buildIcsCalendarUrl(sessionDate, startTime, endTime, location, details),
+    googleCalendarUrl: buildGoogleCalendarUrl(sessionDate, startTime, endTime, location, details),
     teams: rosters,
   };
 }
@@ -1137,10 +1145,12 @@ function getCurrentSessionTeams(
 
 function getTeamSessionDetails(teams: TeamRow[]) {
   const startTime = teams.find((team) => team.session_start_time)?.session_start_time || null;
+  const endTime = teams.find((team) => team.session_end_time)?.session_end_time || null;
   const location = teams.find((team) => team.session_location?.trim())?.session_location?.trim() || "";
 
   return {
     startTime,
+    endTime,
     location,
   };
 }
@@ -1403,6 +1413,7 @@ function dedupeTeams(teams: TeamRow[]) {
       sort_order: Math.min(existing.sort_order, team.sort_order),
       session_date: existing.session_date || team.session_date,
       session_start_time: existing.session_start_time || team.session_start_time,
+      session_end_time: existing.session_end_time || team.session_end_time,
       session_location: existing.session_location || team.session_location,
     });
   }
@@ -1432,6 +1443,7 @@ function isMissingTeamSessionDetailsColumn(error: unknown) {
   return (
     code === "PGRST204" ||
     Boolean(message?.includes("session_start_time")) ||
+    Boolean(message?.includes("session_end_time")) ||
     Boolean(message?.includes("session_location"))
   );
 }
@@ -1441,7 +1453,7 @@ async function selectPublicMatches(
 ) {
   const withStartTime = await supabase
     .from("matches")
-    .select("id,match_date,start_time,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
+    .select("id,match_date,start_time,end_time,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
     .order("match_date", { ascending: false })
     .limit(50);
 
@@ -1457,7 +1469,7 @@ async function selectPublicMatches(
 
   return {
     ...withoutStartTime,
-    data: withoutStartTime.data?.map((match) => ({ ...match, start_time: null })),
+    data: withoutStartTime.data?.map((match) => ({ ...match, start_time: null, end_time: null })),
   };
 }
 
@@ -1466,7 +1478,7 @@ function isMissingStartTimeColumn(error: unknown) {
 
   const { code, message } = error as { code?: string; message?: string };
 
-  return code === "42703" || code === "PGRST204" || Boolean(message?.includes("start_time"));
+  return code === "42703" || code === "PGRST204" || Boolean(message?.includes("start_time")) || Boolean(message?.includes("end_time"));
 }
 
 function dedupeMatches(matches: MatchRow[]) {
@@ -1706,9 +1718,9 @@ function buildCalendarDetails(teams: TeamRoster[]) {
     .join("\n\n");
 }
 
-function buildGoogleCalendarUrl(rawDate: string, startTime: string | null, location: string, details: string) {
+function buildGoogleCalendarUrl(rawDate: string, startTime: string | null, endTime: string | null, location: string, details: string) {
   const dates = startTime
-    ? `${formatCalendarDateTime(rawDate, startTime)}/${formatCalendarDateTime(rawDate, startTime, 2)}`
+    ? `${formatCalendarDateTime(rawDate, startTime)}/${formatCalendarDateTime(rawDate, endTime || startTime, endTime ? 0 : 2)}`
     : `${formatCalendarDate(rawDate)}/${formatCalendarDate(addDaysToDateInput(rawDate, 1))}`;
   const params = new URLSearchParams({
     action: "TEMPLATE",
@@ -1723,13 +1735,13 @@ function buildGoogleCalendarUrl(rawDate: string, startTime: string | null, locat
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-function buildIcsCalendarUrl(rawDate: string, startTime: string | null, location: string, details: string) {
+function buildIcsCalendarUrl(rawDate: string, startTime: string | null, endTime: string | null, location: string, details: string) {
   const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const startLine = startTime
     ? `DTSTART;TZID=America/Chicago:${formatCalendarDateTime(rawDate, startTime)}`
     : `DTSTART;VALUE=DATE:${formatCalendarDate(rawDate)}`;
   const endLine = startTime
-    ? `DTEND;TZID=America/Chicago:${formatCalendarDateTime(rawDate, startTime, 2)}`
+    ? `DTEND;TZID=America/Chicago:${formatCalendarDateTime(rawDate, endTime || startTime, endTime ? 0 : 2)}`
     : `DTEND;VALUE=DATE:${formatCalendarDate(addDaysToDateInput(rawDate, 1))}`;
   const ics = [
     "BEGIN:VCALENDAR",
@@ -1813,6 +1825,12 @@ function formatTimeLabel(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+function formatTimeRange(startTime: string, endTime?: string | null) {
+  if (!endTime) return formatTimeLabel(startTime);
+
+  return `${formatTimeLabel(startTime)} - ${formatTimeLabel(endTime)}`;
 }
 
 function formatMonthDayOrdinal(value: string) {

@@ -13,6 +13,7 @@ type TeamPayload = {
   is_active?: boolean;
   session_date?: string | null;
   session_start_time?: string | null;
+  session_end_time?: string | null;
   session_location?: string | null;
 };
 
@@ -22,6 +23,7 @@ type RosterPayload = {
   player_id?: string;
   session_date?: string;
   session_start_time?: string | null;
+  session_end_time?: string | null;
   session_location?: string | null;
 };
 
@@ -213,6 +215,7 @@ async function saveSessionDetails(
     .from("tournament_teams")
     .update({
       session_start_time: normalizeStartTime(payload.session_start_time),
+      session_end_time: normalizeStartTime(payload.session_end_time),
       session_location: normalizeOptionalText(payload.session_location),
     })
     .eq("session_date", sessionDate);
@@ -233,7 +236,7 @@ async function selectTeams(
 ) {
   const withSessionDetails = await supabase
     .from("tournament_teams")
-    .select("id,name,color,sort_order,is_active,created_at,session_date,session_start_time,session_location")
+    .select("id,name,color,sort_order,is_active,created_at,session_date,session_start_time,session_end_time,session_location")
     .order("session_date", { ascending: false, nullsFirst: false })
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
@@ -255,6 +258,7 @@ async function selectTeams(
       data: withSessionDate.data?.map((team) => ({
         ...team,
         session_start_time: null,
+        session_end_time: null,
         session_location: null,
       })),
       setupNeeded: false,
@@ -274,6 +278,7 @@ async function selectTeams(
       ...team,
       session_date: null,
       session_start_time: null,
+      session_end_time: null,
       session_location: null,
     })),
     setupNeeded: true,
@@ -291,7 +296,7 @@ async function saveTeamRow(
     ? supabase.from("tournament_teams").insert(row)
     : supabase.from("tournament_teams").update(row).eq("id", payload.id);
   const result = await query
-    .select("id,name,color,sort_order,is_active,created_at,session_date,session_start_time,session_location")
+    .select("id,name,color,sort_order,is_active,created_at,session_date,session_start_time,session_end_time,session_location")
     .single();
 
   if (!result.error) {
@@ -363,6 +368,7 @@ function teamPayloadToRow(payload: TeamPayload, includeSessionDate = true) {
     ...row,
     session_date: normalizeSessionDate(payload.session_date) || null,
     session_start_time: normalizeStartTime(payload.session_start_time),
+    session_end_time: normalizeStartTime(payload.session_end_time),
     session_location: normalizeOptionalText(payload.session_location),
   };
 }
@@ -401,9 +407,12 @@ function isMissingDetailsColumnError(error: unknown) {
 
   return (
     Boolean(message?.includes("session_start_time")) ||
+    Boolean(message?.includes("session_end_time")) ||
     Boolean(message?.includes("session_location")) ||
     (code === "PGRST204" &&
-      (Boolean(message?.includes("session_start_time")) || Boolean(message?.includes("session_location"))))
+      (Boolean(message?.includes("session_start_time")) ||
+        Boolean(message?.includes("session_end_time")) ||
+        Boolean(message?.includes("session_location"))))
   );
 }
 

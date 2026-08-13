@@ -32,6 +32,7 @@ type Match = {
   id: string;
   match_date: string;
   start_time: string | null;
+  end_time: string | null;
   week_label: string;
   location: string | null;
   team_a_name: string;
@@ -62,6 +63,7 @@ type TournamentTeam = {
   is_active: boolean;
   session_date: string | null;
   session_start_time: string | null;
+  session_end_time: string | null;
   session_location: string | null;
 };
 
@@ -148,6 +150,7 @@ const emptyPlayer = {
 const emptyMatch = {
   match_date: defaultPickupDate,
   start_time: "",
+  end_time: "",
   week_label: "",
   location: "",
   team_a_name: "Black",
@@ -188,6 +191,7 @@ export default function AdminPage() {
   const [gameDayForm, setGameDayForm] = useState({
     date: defaultPickupDate,
     start_time: "",
+    end_time: "",
     label: "Game",
     location: "",
   });
@@ -392,17 +396,23 @@ export default function AdminPage() {
   useEffect(() => {
     setGameDayForm((current) => {
       const nextStartTime = current.start_time || savedSessionDetails.start_time || "";
+      const nextEndTime = current.end_time || savedSessionDetails.end_time || "";
       const nextLocation = current.location || savedSessionDetails.location || "";
 
-      if (nextStartTime === current.start_time && nextLocation === current.location) return current;
+      if (
+        nextStartTime === current.start_time &&
+        nextEndTime === current.end_time &&
+        nextLocation === current.location
+      ) return current;
 
       return {
         ...current,
         start_time: nextStartTime,
+        end_time: nextEndTime,
         location: nextLocation,
       };
     });
-  }, [savedSessionDetails.location, savedSessionDetails.start_time]);
+  }, [savedSessionDetails.end_time, savedSessionDetails.location, savedSessionDetails.start_time]);
 
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -677,6 +687,7 @@ export default function AdminPage() {
               body: JSON.stringify({
                 match_date: gameDayForm.date,
                 start_time: gameDayForm.start_time,
+                end_time: gameDayForm.end_time,
                 week_label: `${gameDayForm.label || "Game"} ${gameDayMatches.length + index + 1}`,
                 location: gameDayForm.location,
                 team_a_name: teamA.name,
@@ -845,6 +856,7 @@ export default function AdminPage() {
     setMatchForm({
       match_date: match.match_date,
       start_time: match.start_time || "",
+      end_time: match.end_time || "",
       week_label: match.week_label,
       location: match.location || "",
       team_a_name: match.team_a_name,
@@ -864,6 +876,7 @@ export default function AdminPage() {
       const payload = {
         ...teamForm,
         session_start_time: gameDayForm.start_time,
+        session_end_time: gameDayForm.end_time,
         session_location: gameDayForm.location,
         id: editingTeamId || undefined,
       };
@@ -906,6 +919,7 @@ export default function AdminPage() {
             action: "save_session_details",
             session_date: gameDayForm.date,
             session_start_time: gameDayForm.start_time,
+            session_end_time: gameDayForm.end_time,
             session_location: gameDayForm.location,
           }),
         },
@@ -950,6 +964,7 @@ export default function AdminPage() {
     setGameDayForm((current) => ({
       ...current,
       start_time: team.session_start_time || current.start_time,
+      end_time: team.session_end_time || current.end_time,
       location: team.session_location || current.location,
     }));
   }
@@ -1830,7 +1845,7 @@ export default function AdminPage() {
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <form onSubmit={saveTeam} className="mb-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
-                <div className="grid gap-3 sm:grid-cols-[0.8fr_0.7fr_1fr_auto] sm:items-end">
+                <div className="grid gap-3 sm:grid-cols-[0.8fr_0.65fr_0.65fr_1fr_auto] sm:items-end">
                   <AdminInput
                     type="date"
                     label="Pickup date"
@@ -1846,6 +1861,12 @@ export default function AdminPage() {
                     label="Start time"
                     value={gameDayForm.start_time}
                     onChange={(value) => setGameDayForm({ ...gameDayForm, start_time: value })}
+                  />
+                  <AdminInput
+                    type="time"
+                    label="End time"
+                    value={gameDayForm.end_time}
+                    onChange={(value) => setGameDayForm({ ...gameDayForm, end_time: value })}
                   />
                   <AdminInput
                     label="Place"
@@ -1864,7 +1885,7 @@ export default function AdminPage() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-[1fr_0.55fr_0.45fr]">
                   <div className="rounded-lg bg-white px-3 py-3 text-sm font-bold leading-6 text-black/50 sm:col-span-3">
-                    Teams saved to this date will show on the public site. Time and place will be used when you create scheduled matchups and calendar links.
+                    Teams saved to this date will show on the public site. Time, end time, and place will be used for calendar links.
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-[1fr_0.55fr_0.45fr]">
@@ -2103,6 +2124,12 @@ export default function AdminPage() {
                   onChange={(value) => setMatchForm({ ...matchForm, start_time: value })}
                 />
                 <AdminInput
+                  type="time"
+                  label="End time"
+                  value={matchForm.end_time}
+                  onChange={(value) => setMatchForm({ ...matchForm, end_time: value })}
+                />
+                <AdminInput
                   label="Game label"
                   value={matchForm.week_label}
                   onChange={(value) => setMatchForm({ ...matchForm, week_label: value })}
@@ -2200,7 +2227,7 @@ export default function AdminPage() {
                     <p className="font-black">{match.team_b_name}</p>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-sm font-semibold text-black/50">
-                    {match.start_time && <p>{formatTimeLabel(match.start_time)}</p>}
+                    {match.start_time && <p>{formatTimeRange(match.start_time, match.end_time)}</p>}
                     {match.location && <p>{match.location}</p>}
                   </div>
                 </div>
@@ -2524,6 +2551,12 @@ function formatTimeLabel(value: string) {
   }).format(date);
 }
 
+function formatTimeRange(startTime: string, endTime?: string | null) {
+  if (!endTime) return formatTimeLabel(startTime);
+
+  return `${formatTimeLabel(startTime)} - ${formatTimeLabel(endTime)}`;
+}
+
 function buildSessionOptions(matches: Match[], stats: PlayerStat[]) {
   const statsByMatchId = new Map<string, number>();
 
@@ -2712,6 +2745,10 @@ function getSavedSessionDetails(teams: TournamentTeam[], matches: Match[]) {
     teams.find((team) => team.session_start_time)?.session_start_time ||
     matches.find((match) => match.start_time)?.start_time ||
     "";
+  const endTime =
+    teams.find((team) => team.session_end_time)?.session_end_time ||
+    matches.find((match) => match.end_time)?.end_time ||
+    "";
   const location =
     teams.find((team) => team.session_location?.trim())?.session_location?.trim() ||
     matches.find((match) => match.location?.trim())?.location?.trim() ||
@@ -2719,6 +2756,7 @@ function getSavedSessionDetails(teams: TournamentTeam[], matches: Match[]) {
 
   return {
     start_time: startTime,
+    end_time: endTime,
     location,
   };
 }
