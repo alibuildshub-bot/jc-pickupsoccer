@@ -229,7 +229,7 @@ export default function AdminPage() {
     () => getCurrentSetupTeams(teams, gameDayMatches, gameDayForm.date),
     [gameDayForm.date, gameDayMatches, teams],
   );
-  const teamSessionOptions = useMemo(() => buildTeamSessionOptions(teams), [teams]);
+  const teamSessionOptions = useMemo(() => buildTeamSessionOptions(teams, matches), [matches, teams]);
   const savedSessionDetails = useMemo(
     () => getSavedSessionDetails(activeTeams, gameDayMatches),
     [activeTeams, gameDayMatches],
@@ -1867,6 +1867,22 @@ export default function AdminPage() {
                 <p className="text-sm font-black uppercase tracking-wide text-black/45">Team dates</p>
                 <p className="text-xs font-bold text-black/45">Pick a date to view or edit its teams.</p>
               </div>
+              <div className="mb-3 sm:max-w-xs">
+                <AdminSelect
+                  label="Filter teams by date"
+                  value={teamSessionOptions.some((option) => option.date === gameDayForm.date) ? gameDayForm.date : ""}
+                  onChange={(value) => {
+                    if (value) selectGameDayDate(value);
+                  }}
+                >
+                  <option value="">Select pickup date</option>
+                  {teamSessionOptions.map((option) => (
+                    <option key={`select-${option.date}`} value={option.date}>
+                      {option.label} - {option.teamCount} {option.teamCount === 1 ? "team" : "teams"}
+                    </option>
+                  ))}
+                </AdminSelect>
+              </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {teamSessionOptions.map((option) => (
                   <button
@@ -2746,8 +2762,7 @@ function getCurrentSetupTeams(
   currentMatches: Match[],
   currentDate: string,
 ) {
-  const activeTeams = teams.filter((team) => team.is_active);
-  const teamsForDate = activeTeams.filter((team) => team.session_date === currentDate);
+  const teamsForDate = teams.filter((team) => team.session_date === currentDate);
 
   if (teamsForDate.length > 0) {
     return teamsForDate;
@@ -2761,34 +2776,56 @@ function getCurrentSetupTeams(
       currentTeamNames.add(normalizeAdminLabel(match.team_b_name));
     }
 
-    return activeTeams.filter((team) => {
+    return dedupeTeamsForAdmin(teams.filter((team) => {
       const teamName = normalizeAdminLabel(team.name);
 
       return currentTeamNames.has(teamName);
-    });
+    }));
   }
 
   return [];
 }
 
-function buildTeamSessionOptions(teams: TournamentTeam[]) {
-  const sessions = new Map<string, { date: string; teamCount: number }>();
+function buildTeamSessionOptions(teams: TournamentTeam[], matches: Match[]) {
+  const sessions = new Map<string, { date: string; teamNames: Set<string> }>();
 
   for (const team of teams) {
     const date = team.session_date || "";
-    if (!date || !team.is_active) continue;
+    if (!date) continue;
 
-    const current = sessions.get(date) || { date, teamCount: 0 };
-    current.teamCount += 1;
+    const current = sessions.get(date) || { date, teamNames: new Set<string>() };
+    current.teamNames.add(normalizeAdminLabel(team.name));
+    sessions.set(date, current);
+  }
+
+  for (const match of matches) {
+    const date = match.match_date || "";
+    if (!date) continue;
+
+    const current = sessions.get(date) || { date, teamNames: new Set<string>() };
+    current.teamNames.add(normalizeAdminLabel(match.team_a_name));
+    current.teamNames.add(normalizeAdminLabel(match.team_b_name));
     sessions.set(date, current);
   }
 
   return Array.from(sessions.values())
     .sort((first, second) => second.date.localeCompare(first.date))
     .map((session) => ({
-      ...session,
+      date: session.date,
       label: formatDateLabel(session.date),
+      teamCount: session.teamNames.size,
     }));
+}
+
+function dedupeTeamsForAdmin(teams: TournamentTeam[]) {
+  const teamsByName = new Map<string, TournamentTeam>();
+
+  for (const team of teams) {
+    const key = normalizeAdminLabel(team.name);
+    if (!teamsByName.has(key)) teamsByName.set(key, team);
+  }
+
+  return Array.from(teamsByName.values());
 }
 
 function getSavedSessionDetails(teams: TournamentTeam[], matches: Match[]) {
