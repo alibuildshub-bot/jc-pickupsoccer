@@ -59,6 +59,7 @@ type TournamentTeam = {
   color: string | null;
   sort_order: number;
   is_active: boolean;
+  session_date: string | null;
 };
 
 type RosterRow = {
@@ -157,6 +158,7 @@ const emptyTeam = {
   color: "#1f7a4d",
   sort_order: 0,
   is_active: true,
+  session_date: nextSessionDate,
 };
 
 export default function AdminPage() {
@@ -340,6 +342,12 @@ export default function AdminPage() {
       setMatchForm((current) => ({ ...current, match_date: gameDayForm.date }));
     }
   }, [editingMatchId, gameDayForm.date]);
+
+  useEffect(() => {
+    if (!editingTeamId) {
+      setTeamForm((current) => ({ ...current, session_date: gameDayForm.date }));
+    }
+  }, [editingTeamId, gameDayForm.date]);
 
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -808,7 +816,7 @@ export default function AdminPage() {
         adminCredential,
       );
 
-      setTeamForm(emptyTeam);
+      setTeamForm({ ...emptyTeam, session_date: gameDayForm.date });
       setEditingTeamId(null);
       setMessage(editingTeamId ? "Team updated." : "Team added.");
       await loadData();
@@ -843,6 +851,7 @@ export default function AdminPage() {
       color: team.color || "#1f7a4d",
       sort_order: team.sort_order,
       is_active: team.is_active,
+      session_date: team.session_date || gameDayForm.date,
     });
   }
 
@@ -1698,6 +1707,18 @@ export default function AdminPage() {
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <form onSubmit={saveTeam} className="mb-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
+                <div className="grid gap-3 sm:grid-cols-[0.7fr_1fr]">
+                  <AdminInput
+                    type="date"
+                    label="Pickup date"
+                    value={teamForm.session_date}
+                    onChange={(value) => setTeamForm({ ...teamForm, session_date: value })}
+                    required
+                  />
+                  <div className="rounded-lg bg-white px-3 py-3 text-sm font-bold leading-6 text-black/50">
+                    Teams saved to this date will show on the public site for that pickup.
+                  </div>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-[1fr_0.55fr_0.45fr]">
                   <AdminInput
                     label="Team name"
@@ -1737,7 +1758,7 @@ export default function AdminPage() {
                       type="button"
                       onClick={() => {
                         setEditingTeamId(null);
-                        setTeamForm(emptyTeam);
+                        setTeamForm({ ...emptyTeam, session_date: gameDayForm.date });
                       }}
                       className="h-11 rounded-lg border border-black/15 bg-white px-4 text-sm font-bold"
                     >
@@ -2474,6 +2495,12 @@ function getCurrentSetupTeams(
   currentDate: string,
 ) {
   const activeTeams = teams.filter((team) => team.is_active);
+  const teamsForDate = activeTeams.filter((team) => team.session_date === currentDate);
+
+  if (teamsForDate.length > 0) {
+    return teamsForDate;
+  }
+
   const archivedTeamNames = buildArchivedTeamNames(matches, currentDate);
 
   if (currentMatches.length > 0) {

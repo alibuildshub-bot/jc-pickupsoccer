@@ -54,6 +54,7 @@ type TeamRow = {
   color: string | null;
   sort_order: number;
   is_active: boolean;
+  session_date: string | null;
 };
 
 type TeamStanding = {
@@ -727,7 +728,7 @@ async function getDashboardData() {
     };
   }
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: teamRows }, { data: rosterRows }] = await Promise.all([
+  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, teamRowsResult, { data: rosterRows }] = await Promise.all([
     supabase.from("players").select("id,name,position").eq("is_active", true).order("name"),
     supabase
       .from("matches")
@@ -735,12 +736,7 @@ async function getDashboardData() {
       .order("match_date", { ascending: false })
       .limit(50),
     supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result"),
-    supabase
-      .from("tournament_teams")
-      .select("id,name,color,sort_order,is_active")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true }),
+    selectPublicTeams(supabase),
     supabase
       .from("tournament_team_players")
       .select("id,team_id,player_id,players(name)")
@@ -750,15 +746,15 @@ async function getDashboardData() {
   const players = (playerRows || []) as PlayerRow[];
   const matches = sortMatchesForDisplay(dedupeMatches((matchRows || []) as MatchRow[]));
   const matchStats = (statRows || []) as MatchPlayerRow[];
-  const rawTeams = (teamRows || []) as TeamRow[];
+  const rawTeams = (teamRowsResult.data || []) as TeamRow[];
   const teams = dedupeTeams(rawTeams);
   const gameLabels = buildGameLabels(matches);
-  const tournamentDate = getCurrentSessionDate(matches);
+  const tournamentDate = getCurrentSessionDate(matches, teams);
   const tournamentMatches = tournamentDate
     ? matches.filter((match) => match.match_date === tournamentDate)
     : [];
   const archivedTeamNames = buildArchivedTeamNames(matches, tournamentDate);
-  const currentTeams = getCurrentSessionTeams(teams, tournamentMatches, archivedTeamNames);
+  const currentTeams = getCurrentSessionTeams(teams, tournamentMatches, archivedTeamNames, tournamentDate);
   const teamRosters = buildTeamRosters(currentTeams, rawTeams, (rosterRows || []) as unknown as RosterRow[]);
   const playerLeaderboardDate = getLatestCompletedSessionDate(matches) || tournamentDate;
   const playerLeaderboardMatches = playerLeaderboardDate
@@ -835,6 +831,34 @@ async function getDashboardData() {
     tournamentLabel: tournamentDate ? formatDate(tournamentDate) : "Tournament Day",
     tournamentGames: tournamentMatches.length,
     completedTournamentGames: tournamentMatches.filter((match) => match.status === "completed").length,
+  };
+}
+
+async function selectPublicTeams(
+  supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
+) {
+  const withSessionDate = await supabase
+    .from("tournament_teams")
+    .select("id,name,color,sort_order,is_active,session_date")
+    .eq("is_active", true)
+    .order("session_date", { ascending: false, nullsFirst: false })
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (!isMissingSessionDateColumn(withSessionDate.error)) {
+    return withSessionDate;
+  }
+
+  const withoutSessionDate = await supabase
+    .from("tournament_teams")
+    .select("id,name,color,sort_order,is_active")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  return {
+    ...withoutSessionDate,
+    data: withoutSessionDate.data?.map((team) => ({ ...team, session_date: null })),
   };
 }
 
@@ -929,7 +953,11 @@ async function getMvpWinnerForPoll(
   };
 }
 
-function getCurrentSessionDate(matches: MatchRow[]) {
+function getCurrentSessionDate(matches: MatchRow[], teams: TeamRow[] = []) {
+  const nextTeamSession = getNextTeamSessionDate(teams);
+
+  if (nextTeamSession) return nextTeamSession;
+
   const currentMatch = [...matches].sort(
     (first, second) =>
       second.match_date.localeCompare(first.match_date) ||
@@ -937,7 +965,27 @@ function getCurrentSessionDate(matches: MatchRow[]) {
   )[0];
 
   if (currentMatch) return currentMatch.match_date;
+  const datedTeamSession = getLatestTeamSessionDate(teams);
+
+  if (datedTeamSession) return datedTeamSession;
+
   return "";
+}
+
+function getNextTeamSessionDate(teams: TeamRow[]) {
+  const today = getTodayDateInput();
+
+  return teams
+    .map((team) => team.session_date)
+    .filter((date): date is string => Boolean(date && date >= today))
+    .sort((first, second) => first.localeCompare(second))[0] || "";
+}
+
+function getLatestTeamSessionDate(teams: TeamRow[]) {
+  return teams
+    .map((team) => team.session_date)
+    .filter((date): date is string => Boolean(date))
+    .sort((first, second) => second.localeCompare(first))[0] || "";
 }
 
 async function buildLatestSessionSummary(
@@ -990,7 +1038,24 @@ function buildUpcomingSession(
 
   const sessionDate = upcomingMatches[0]?.match_date;
 
-  if (!sessionDate) return null;
+  if (!sessionDate) {
+    const teamSessionDate = getNextTeamSessionDate(teams);
+
+    if (!teamSessionDate) return null;
+
+    const sessionTeams = teams.filter((team) => team.session_date === teamSessionDate);
+    const rosters = buildTeamRosters(sessionTeams, rawTeams, rosterRows);
+    const details = buildCalendarDetails(rosters);
+
+    return {
+      date: formatDate(teamSessionDate),
+      rawDate: teamSessionDate,
+      location: "Field TBD",
+      calendarUrl: buildIcsCalendarUrl(teamSessionDate, "Field TBD", details),
+      googleCalendarUrl: buildGoogleCalendarUrl(teamSessionDate, "Field TBD", details),
+      teams: rosters,
+    };
+  }
 
   const sessionMatches = upcomingMatches.filter((match) => match.match_date === sessionDate);
   const sessionTeams = getTeamsForMatches(teams, sessionMatches);
@@ -1012,7 +1077,14 @@ function getCurrentSessionTeams(
   teams: TeamRow[],
   currentMatches: MatchRow[],
   archivedTeamNames: Set<string>,
+  currentDate = "",
 ) {
+  const datedTeams = currentDate
+    ? teams.filter((team) => team.session_date === currentDate)
+    : [];
+
+  if (datedTeams.length > 0) return datedTeams;
+
   if (currentMatches.length > 0) {
     const currentTeamNames = new Set<string>();
 
@@ -1281,7 +1353,7 @@ function dedupeTeams(teams: TeamRow[]) {
   const teamsByName = new Map<string, TeamRow>();
 
   for (const team of teams) {
-    const key = normalizeTeamName(team.name);
+    const key = getTeamSessionKey(team);
     const existing = teamsByName.get(key);
 
     if (!existing) {
@@ -1300,12 +1372,25 @@ function dedupeTeams(teams: TeamRow[]) {
       name: keepExistingName ? existing.name : nextName,
       color: existing.color || team.color,
       sort_order: Math.min(existing.sort_order, team.sort_order),
+      session_date: existing.session_date || team.session_date,
     });
   }
 
   return Array.from(teamsByName.values()).sort(
     (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name),
   );
+}
+
+function getTeamSessionKey(team: TeamRow) {
+  return `${normalizeTeamName(team.name)}|${team.session_date || "undated"}`;
+}
+
+function isMissingSessionDateColumn(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const { code, message } = error as { code?: string; message?: string };
+
+  return code === "42703" || Boolean(message?.includes("session_date"));
 }
 
 function dedupeMatches(matches: MatchRow[]) {

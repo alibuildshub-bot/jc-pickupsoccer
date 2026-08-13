@@ -11,6 +11,7 @@ type TeamPayload = {
   color?: string;
   sort_order?: number;
   is_active?: boolean;
+  session_date?: string | null;
 };
 
 type RosterPayload = {
@@ -26,11 +27,7 @@ export async function GET(request: Request) {
   if (!supabase) return adminConfigError();
 
   const [teamsResult, rosterResult] = await Promise.all([
-    supabase
-      .from("tournament_teams")
-      .select("id,name,color,sort_order,is_active,created_at")
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true }),
+    selectTeams(supabase),
     supabase
       .from("tournament_team_players")
       .select("id,team_id,player_id,players(name)")
@@ -74,11 +71,7 @@ export async function POST(request: Request) {
     return Response.json({ error: duplicateError }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from("tournament_teams")
-    .insert(teamPayloadToRow(teamPayload))
-    .select("id,name,color,sort_order,is_active,created_at")
-    .single();
+  const { data, error } = await saveTeamRow(supabase, "insert", teamPayload);
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
@@ -119,12 +112,7 @@ export async function PATCH(request: Request) {
     return Response.json({ error: existingTeamError.message }, { status: 500 });
   }
 
-  const { data, error } = await supabase
-    .from("tournament_teams")
-    .update(teamPayloadToRow(payload))
-    .eq("id", payload.id)
-    .select("id,name,color,sort_order,is_active,created_at")
-    .single();
+  const { data, error } = await saveTeamRow(supabase, "update", payload);
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
@@ -195,6 +183,59 @@ async function updateRoster(
   return Response.json({ roster: data }, { status: 201 });
 }
 
+async function selectTeams(
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  const withSessionDate = await supabase
+    .from("tournament_teams")
+    .select("id,name,color,sort_order,is_active,created_at,session_date")
+    .order("session_date", { ascending: false, nullsFirst: false })
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (!isMissingColumnError(withSessionDate.error)) {
+    return withSessionDate;
+  }
+
+  const withoutSessionDate = await supabase
+    .from("tournament_teams")
+    .select("id,name,color,sort_order,is_active,created_at")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  return {
+    ...withoutSessionDate,
+    data: withoutSessionDate.data?.map((team) => ({ ...team, session_date: null })),
+  };
+}
+
+async function saveTeamRow(
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  action: "insert" | "update",
+  payload: TeamPayload,
+) {
+  const row = teamPayloadToRow(payload);
+  const query = action === "insert"
+    ? supabase.from("tournament_teams").insert(row)
+    : supabase.from("tournament_teams").update(row).eq("id", payload.id);
+  const result = await query
+    .select("id,name,color,sort_order,is_active,created_at,session_date")
+    .single();
+
+  if (!isMissingColumnError(result.error)) {
+    return result;
+  }
+
+  const fallbackRow = teamPayloadToRow(payload, false);
+  const fallbackQuery = action === "insert"
+    ? supabase.from("tournament_teams").insert(fallbackRow)
+    : supabase.from("tournament_teams").update(fallbackRow).eq("id", payload.id);
+
+  return fallbackQuery
+    .select("id,name,color,sort_order,is_active,created_at")
+    .single();
+}
+
 function validateTeamPayload(payload: TeamPayload) {
   if (!payload.name?.trim()) return "Team name is required.";
 
@@ -207,14 +248,17 @@ async function validateUniqueTeamName(
 ) {
   const nextKey = normalizeTeamName(payload.name || "");
 
-  const { data, error } = await supabase.from("tournament_teams").select("id,name");
+  const { data, error } = await selectTeams(supabase);
 
   if (error) return error.message;
 
   const duplicate = (data || []).find((team) => {
     if (payload.id && team.id === payload.id) return false;
 
-    return normalizeTeamName(team.name || "") === nextKey;
+    const sameSessionDate =
+      normalizeSessionDate(team.session_date) === normalizeSessionDate(payload.session_date);
+
+    return sameSessionDate && normalizeTeamName(team.name || "") === nextKey;
   });
 
   if (!duplicate) return null;
@@ -222,13 +266,32 @@ async function validateUniqueTeamName(
   return `A team named "${duplicate.name}" already exists. Edit that team instead of creating another one.`;
 }
 
-function teamPayloadToRow(payload: TeamPayload) {
-  return {
+function teamPayloadToRow(payload: TeamPayload, includeSessionDate = true) {
+  const row = {
     name: payload.name?.trim(),
     color: payload.color?.trim() || "#1f7a4d",
     sort_order: Number(payload.sort_order || 0),
     is_active: payload.is_active ?? true,
   };
+
+  if (!includeSessionDate) return row;
+
+  return {
+    ...row,
+    session_date: normalizeSessionDate(payload.session_date) || null,
+  };
+}
+
+function normalizeSessionDate(value?: string | null) {
+  return value?.trim() || "";
+}
+
+function isMissingColumnError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const { code, message } = error as { code?: string; message?: string };
+
+  return code === "42703" || code === "PGRST204" || Boolean(message?.includes("session_date"));
 }
 
 async function syncScheduledMatchTeamNames(
