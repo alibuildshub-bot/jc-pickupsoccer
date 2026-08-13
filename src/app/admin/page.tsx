@@ -247,7 +247,7 @@ export default function AdminPage() {
   );
 
   function selectGameDayDate(date: string) {
-    setGameDayForm((current) => ({ ...current, date, start_time: "" }));
+    setGameDayForm((current) => ({ ...current, date }));
   }
 
   function startNewPickup() {
@@ -1400,7 +1400,7 @@ export default function AdminPage() {
             </button>
           </div>
 
-          <div className="mb-5 grid gap-3 md:grid-cols-5">
+          <div className="mb-5 grid gap-3 md:grid-cols-3">
             <AdminSelect
               label="Previous sessions"
               value={sessionOptions.some((sessionOption) => sessionOption.date === gameDayForm.date) ? gameDayForm.date : ""}
@@ -1422,22 +1422,10 @@ export default function AdminPage() {
               onChange={selectGameDayDate}
             />
             <AdminInput
-              type="time"
-              label="Start time"
-              value={gameDayForm.start_time}
-              onChange={(value) => setGameDayForm({ ...gameDayForm, start_time: value })}
-            />
-            <AdminInput
               label="Game label"
               value={gameDayForm.label}
               onChange={(value) => setGameDayForm({ ...gameDayForm, label: value })}
               placeholder="Game"
-            />
-            <AdminInput
-              label="Location"
-              value={gameDayForm.location}
-              onChange={(value) => setGameDayForm({ ...gameDayForm, location: value })}
-              placeholder="Field name"
             />
           </div>
 
@@ -1772,7 +1760,7 @@ export default function AdminPage() {
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <form onSubmit={saveTeam} className="mb-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
-                <div className="grid gap-3 sm:grid-cols-[0.7fr_1fr]">
+                <div className="grid gap-3 sm:grid-cols-[0.8fr_0.7fr_1fr]">
                   <AdminInput
                     type="date"
                     label="Pickup date"
@@ -1783,8 +1771,22 @@ export default function AdminPage() {
                     }}
                     required
                   />
-                  <div className="rounded-lg bg-white px-3 py-3 text-sm font-bold leading-6 text-black/50">
-                    Teams saved to this date will show on the public site for that pickup.
+                  <AdminInput
+                    type="time"
+                    label="Start time"
+                    value={gameDayForm.start_time}
+                    onChange={(value) => setGameDayForm({ ...gameDayForm, start_time: value })}
+                  />
+                  <AdminInput
+                    label="Place"
+                    value={gameDayForm.location}
+                    onChange={(value) => setGameDayForm({ ...gameDayForm, location: value })}
+                    placeholder="Field name"
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[1fr_0.55fr_0.45fr]">
+                  <div className="rounded-lg bg-white px-3 py-3 text-sm font-bold leading-6 text-black/50 sm:col-span-3">
+                    Teams saved to this date will show on the public site. Time and place will be used when you create scheduled matchups and calendar links.
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-[1fr_0.55fr_0.45fr]">
