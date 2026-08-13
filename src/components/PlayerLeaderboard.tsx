@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowUpRight } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export type LeaderboardPlayer = {
@@ -45,36 +46,41 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
       </div>
       <div className="grid gap-3 md:hidden">
         {sortedPlayers.map((player, index) => (
-          <article key={player.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+          <a
+            key={player.name}
+            href={`/players/${slugify(player.name)}`}
+            className="block rounded-lg border border-black/10 bg-[#fbfaf7] p-4 transition hover:border-[#1f7a4d]/40 hover:bg-[#f1ece3]"
+          >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
                   {index + 1}
                 </span>
                 <div className="min-w-0">
-                  <a href={`/players/${slugify(player.name)}`} className="group break-words font-black leading-tight hover:underline">
-                    {player.name}
-                    <span className="mt-1 block w-fit rounded-md bg-white px-2 py-1 text-[11px] font-black uppercase text-[#17613d] group-hover:bg-[#edf4f0]">
-                      View profile
-                    </span>
-                  </a>
+                  <p className="break-words font-black leading-tight">{player.name}</p>
                   <p className="mt-1 break-words text-xs font-bold text-black/45">{player.team}</p>
                 </div>
               </div>
-              <span className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
-                {getModeValue(player, mode)}
-              </span>
+              <div className="grid justify-items-end gap-2">
+                <span className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
+                  {getModeValue(player, mode)}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1 text-[11px] font-black uppercase text-[#17613d]">
+                  Profile
+                  <ArrowUpRight size={13} />
+                </span>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
               <MiniStat label="G" value={String(player.goals)} />
               <MiniStat label="A" value={String(player.assists)} />
               <MiniStat label="G+A" value={String(player.points)} />
             </div>
-          </article>
+          </a>
         ))}
       </div>
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left">
+        <table className="w-full min-w-[860px] border-separate border-spacing-y-2 text-left">
           <thead>
             <tr className="text-xs font-black uppercase text-black/45">
               <th className="pb-2">Player</th>
@@ -82,6 +88,7 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
               <th className="pb-2 text-center">Goals</th>
               <th className="pb-2 text-center">Assists</th>
               <th className="pb-2 text-center">G+A</th>
+              <th className="pb-2 text-center">Profile</th>
             </tr>
           </thead>
           <tbody>
@@ -92,23 +99,29 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
                       {index + 1}
                     </span>
-                    <a href={`/players/${slugify(player.name)}`} className="group font-black hover:underline">
+                    <a href={`/players/${slugify(player.name)}`} className="font-black hover:underline">
                       {player.name}
-                      <span className="ml-2 inline-flex rounded-md bg-white px-2 py-1 text-[11px] font-black uppercase text-[#17613d] group-hover:bg-[#edf4f0]">
-                        View profile
-                      </span>
                     </a>
                   </div>
                 </td>
                 <td className="px-3 py-3 font-bold text-black/55">{player.team}</td>
                 <StatCell value={player.goals} active={mode === "goals"} />
                 <StatCell value={player.assists} active={mode === "assists"} />
-                <td className="rounded-r-lg px-3 py-3 text-center">
+                <td className="px-3 py-3 text-center">
                   <span className={`inline-flex min-w-14 justify-center rounded-lg px-3 py-2 text-base font-black ${
                     mode === "ga" ? "bg-[#171717] text-white" : "bg-white text-black"
                   }`}>
                     {player.points}
                   </span>
+                </td>
+                <td className="rounded-r-lg px-3 py-3 text-center">
+                  <a
+                    href={`/players/${slugify(player.name)}`}
+                    className="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-[#1f7a4d]/20 bg-white px-3 text-xs font-black uppercase text-[#17613d] transition hover:border-[#1f7a4d]/50 hover:bg-[#edf4f0]"
+                  >
+                    Profile
+                    <ArrowUpRight size={14} />
+                  </a>
                 </td>
               </tr>
             ))}
