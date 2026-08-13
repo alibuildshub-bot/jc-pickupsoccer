@@ -31,6 +31,7 @@ type Player = {
 type Match = {
   id: string;
   match_date: string;
+  start_time: string | null;
   week_label: string;
   location: string | null;
   team_a_name: string;
@@ -144,6 +145,7 @@ const emptyPlayer = {
 
 const emptyMatch = {
   match_date: defaultPickupDate,
+  start_time: "",
   week_label: "",
   location: "",
   team_a_name: "Black",
@@ -182,6 +184,7 @@ export default function AdminPage() {
   const [rosterForm, setRosterForm] = useState({ team_id: "", player_id: "" });
   const [gameDayForm, setGameDayForm] = useState({
     date: defaultPickupDate,
+    start_time: "",
     label: "Game",
     location: "",
   });
@@ -244,7 +247,7 @@ export default function AdminPage() {
   );
 
   function selectGameDayDate(date: string) {
-    setGameDayForm((current) => ({ ...current, date }));
+    setGameDayForm((current) => ({ ...current, date, start_time: "" }));
   }
 
   function startNewPickup() {
@@ -649,6 +652,7 @@ export default function AdminPage() {
               method: "POST",
               body: JSON.stringify({
                 match_date: gameDayForm.date,
+                start_time: gameDayForm.start_time,
                 week_label: `${gameDayForm.label || "Game"} ${gameDayMatches.length + index + 1}`,
                 location: gameDayForm.location,
                 team_a_name: teamA.name,
@@ -816,6 +820,7 @@ export default function AdminPage() {
     setEditingMatchId(match.id);
     setMatchForm({
       match_date: match.match_date,
+      start_time: match.start_time || "",
       week_label: match.week_label,
       location: match.location || "",
       team_a_name: match.team_a_name,
@@ -1395,7 +1400,7 @@ export default function AdminPage() {
             </button>
           </div>
 
-          <div className="mb-5 grid gap-3 md:grid-cols-4">
+          <div className="mb-5 grid gap-3 md:grid-cols-5">
             <AdminSelect
               label="Previous sessions"
               value={sessionOptions.some((sessionOption) => sessionOption.date === gameDayForm.date) ? gameDayForm.date : ""}
@@ -1415,6 +1420,12 @@ export default function AdminPage() {
               label="Tournament date"
               value={gameDayForm.date}
               onChange={selectGameDayDate}
+            />
+            <AdminInput
+              type="time"
+              label="Start time"
+              value={gameDayForm.start_time}
+              onChange={(value) => setGameDayForm({ ...gameDayForm, start_time: value })}
             />
             <AdminInput
               label="Game label"
@@ -2006,6 +2017,12 @@ export default function AdminPage() {
                   required
                 />
                 <AdminInput
+                  type="time"
+                  label="Start time"
+                  value={matchForm.start_time}
+                  onChange={(value) => setMatchForm({ ...matchForm, start_time: value })}
+                />
+                <AdminInput
                   label="Game label"
                   value={matchForm.week_label}
                   onChange={(value) => setMatchForm({ ...matchForm, week_label: value })}
@@ -2102,7 +2119,10 @@ export default function AdminPage() {
                     </p>
                     <p className="font-black">{match.team_b_name}</p>
                   </div>
-                  {match.location && <p className="mt-3 text-sm font-semibold text-black/50">{match.location}</p>}
+                  <div className="mt-3 flex flex-wrap gap-2 text-sm font-semibold text-black/50">
+                    {match.start_time && <p>{formatTimeLabel(match.start_time)}</p>}
+                    {match.location && <p>{match.location}</p>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -2410,6 +2430,18 @@ function formatDateLabel(value: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function formatTimeLabel(value: string) {
+  if (!value) return "Time TBD";
+
+  const [hours, minutes] = value.split(":").map(Number);
+  const date = new Date(2000, 0, 1, hours, minutes || 0);
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function buildSessionOptions(matches: Match[], stats: PlayerStat[]) {

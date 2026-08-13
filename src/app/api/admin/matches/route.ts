@@ -8,6 +8,7 @@ import {
 type MatchPayload = {
   id?: string;
   match_date?: string;
+  start_time?: string | null;
   week_label?: string;
   location?: string;
   team_a_name?: string;
@@ -17,16 +18,20 @@ type MatchPayload = {
   status?: string;
 };
 
+const matchSelectWithStartTime =
+  "id,match_date,start_time,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at";
+const matchSelectWithoutStartTime =
+  "id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at";
+const MATCH_START_TIME_SETUP_MESSAGE =
+  "Match start times are not set up in Supabase yet. Run supabase-match-start-times.sql in Supabase, then refresh this page.";
+
 export async function GET(request: Request) {
   if (!(await isAdminRequest(request))) return unauthorizedError();
 
   const supabase = createSupabaseAdminClient();
   if (!supabase) return adminConfigError();
 
-  const { data, error } = await supabase
-    .from("matches")
-    .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
-    .order("match_date", { ascending: false });
+  const { data, error } = await selectMatches(supabase);
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
@@ -50,10 +55,14 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("matches")
     .insert(matchPayloadToRow(payload))
-    .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
+    .select(matchSelectWithStartTime)
     .single();
 
   if (error) {
+    if (isMissingStartTimeColumn(error)) {
+      return Response.json({ error: MATCH_START_TIME_SETUP_MESSAGE }, { status: 500 });
+    }
+
     return Response.json({ error: error.message }, { status: 500 });
   }
 
@@ -81,10 +90,14 @@ export async function PATCH(request: Request) {
     .from("matches")
     .update(matchPayloadToRow(payload))
     .eq("id", payload.id)
-    .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
+    .select(matchSelectWithStartTime)
     .single();
 
   if (error) {
+    if (isMissingStartTimeColumn(error)) {
+      return Response.json({ error: MATCH_START_TIME_SETUP_MESSAGE }, { status: 500 });
+    }
+
     return Response.json({ error: error.message }, { status: 500 });
   }
 
@@ -128,6 +141,7 @@ function validateMatchPayload(payload: MatchPayload) {
 function matchPayloadToRow(payload: MatchPayload) {
   return {
     match_date: payload.match_date,
+    start_time: normalizeStartTime(payload.start_time),
     week_label: payload.week_label?.trim(),
     location: payload.location?.trim() || null,
     team_a_name: payload.team_a_name?.trim(),
@@ -136,4 +150,41 @@ function matchPayloadToRow(payload: MatchPayload) {
     team_b_score: Number(payload.team_b_score || 0),
     status: payload.status || "completed",
   };
+}
+
+async function selectMatches(
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  const withStartTime = await supabase
+    .from("matches")
+    .select(matchSelectWithStartTime)
+    .order("match_date", { ascending: false });
+
+  if (!isMissingStartTimeColumn(withStartTime.error)) {
+    return withStartTime;
+  }
+
+  const withoutStartTime = await supabase
+    .from("matches")
+    .select(matchSelectWithoutStartTime)
+    .order("match_date", { ascending: false });
+
+  return {
+    ...withoutStartTime,
+    data: withoutStartTime.data?.map((match) => ({ ...match, start_time: null })),
+  };
+}
+
+function normalizeStartTime(value?: string | null) {
+  const trimmed = value?.trim();
+
+  return trimmed || null;
+}
+
+function isMissingStartTimeColumn(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const { code, message } = error as { code?: string; message?: string };
+
+  return code === "42703" || code === "PGRST204" || Boolean(message?.includes("start_time"));
 }

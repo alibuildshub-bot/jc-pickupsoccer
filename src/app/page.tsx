@@ -19,6 +19,7 @@ type PlayerRow = {
 type MatchRow = {
   id: string;
   match_date: string;
+  start_time: string | null;
   week_label: string;
   location: string | null;
   team_a_name: string;
@@ -87,6 +88,8 @@ type TeamRoster = {
 type UpcomingSession = {
   date: string;
   rawDate: string;
+  time: string;
+  startTime: string | null;
   location: string;
   calendarUrl: string;
   googleCalendarUrl: string;
@@ -239,6 +242,10 @@ export default async function Home() {
                   <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-sm font-bold text-black/60">
                     <MapPin size={16} />
                     {data.upcomingSession.location}
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-sm font-bold text-black/60">
+                    <Clock size={16} />
+                    {data.upcomingSession.time}
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-sm font-bold text-black/60">
                     <Users size={16} />
@@ -727,13 +734,9 @@ async function getDashboardData() {
     };
   }
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, teamRowsResult, { data: rosterRows }] = await Promise.all([
+  const [{ data: playerRows }, matchRowsResult, { data: statRows }, teamRowsResult, { data: rosterRows }] = await Promise.all([
     supabase.from("players").select("id,name,position").eq("is_active", true).order("name"),
-    supabase
-      .from("matches")
-      .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
-      .order("match_date", { ascending: false })
-      .limit(50),
+    selectPublicMatches(supabase),
     supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result"),
     selectPublicTeams(supabase),
     supabase
@@ -743,7 +746,7 @@ async function getDashboardData() {
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
-  const matches = sortMatchesForDisplay(dedupeMatches((matchRows || []) as MatchRow[]));
+  const matches = sortMatchesForDisplay(dedupeMatches((matchRowsResult.data || []) as MatchRow[]));
   const matchStats = (statRows || []) as MatchPlayerRow[];
   const rawTeams = (teamRowsResult.data || []) as TeamRow[];
   const teams = dedupeTeams(rawTeams);
@@ -1048,9 +1051,11 @@ function buildUpcomingSession(
     return {
       date: formatDate(teamSessionDate),
       rawDate: teamSessionDate,
+      time: "Time TBD",
+      startTime: null,
       location: "Field TBD",
-      calendarUrl: buildIcsCalendarUrl(teamSessionDate, "Field TBD", details),
-      googleCalendarUrl: buildGoogleCalendarUrl(teamSessionDate, "Field TBD", details),
+      calendarUrl: buildIcsCalendarUrl(teamSessionDate, null, "Field TBD", details),
+      googleCalendarUrl: buildGoogleCalendarUrl(teamSessionDate, null, "Field TBD", details),
       teams: rosters,
     };
   }
@@ -1059,14 +1064,17 @@ function buildUpcomingSession(
   const sessionTeams = getTeamsForMatches(teams, sessionMatches);
   const rosters = buildTeamRosters(sessionTeams, rawTeams, rosterRows);
   const location = sessionMatches.find((match) => match.location?.trim())?.location?.trim() || "Field TBD";
+  const startTime = sessionMatches.find((match) => match.start_time)?.start_time || null;
   const details = buildCalendarDetails(rosters);
 
   return {
     date: formatDate(sessionDate),
     rawDate: sessionDate,
+    time: startTime ? formatTimeLabel(startTime) : "Time TBD",
+    startTime,
     location,
-    calendarUrl: buildIcsCalendarUrl(sessionDate, location, details),
-    googleCalendarUrl: buildGoogleCalendarUrl(sessionDate, location, details),
+    calendarUrl: buildIcsCalendarUrl(sessionDate, startTime, location, details),
+    googleCalendarUrl: buildGoogleCalendarUrl(sessionDate, startTime, location, details),
     teams: rosters,
   };
 }
@@ -1377,6 +1385,39 @@ function isMissingSessionDateColumn(error: unknown) {
   return code === "42703" || Boolean(message?.includes("session_date"));
 }
 
+async function selectPublicMatches(
+  supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
+) {
+  const withStartTime = await supabase
+    .from("matches")
+    .select("id,match_date,start_time,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
+    .order("match_date", { ascending: false })
+    .limit(50);
+
+  if (!isMissingStartTimeColumn(withStartTime.error)) {
+    return withStartTime;
+  }
+
+  const withoutStartTime = await supabase
+    .from("matches")
+    .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
+    .order("match_date", { ascending: false })
+    .limit(50);
+
+  return {
+    ...withoutStartTime,
+    data: withoutStartTime.data?.map((match) => ({ ...match, start_time: null })),
+  };
+}
+
+function isMissingStartTimeColumn(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const { code, message } = error as { code?: string; message?: string };
+
+  return code === "42703" || code === "PGRST204" || Boolean(message?.includes("start_time"));
+}
+
 function dedupeMatches(matches: MatchRow[]) {
   const matchesByKey = new Map<string, MatchRow>();
 
@@ -1614,33 +1655,41 @@ function buildCalendarDetails(teams: TeamRoster[]) {
     .join("\n\n");
 }
 
-function buildGoogleCalendarUrl(rawDate: string, location: string, details: string) {
-  const start = formatCalendarDate(rawDate);
-  const end = formatCalendarDate(addDaysToDateInput(rawDate, 1));
+function buildGoogleCalendarUrl(rawDate: string, startTime: string | null, location: string, details: string) {
+  const dates = startTime
+    ? `${formatCalendarDateTime(rawDate, startTime)}/${formatCalendarDateTime(rawDate, startTime, 2)}`
+    : `${formatCalendarDate(rawDate)}/${formatCalendarDate(addDaysToDateInput(rawDate, 1))}`;
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: "JC Footy Pickup Soccer",
-    dates: `${start}/${end}`,
+    dates,
     details,
     location,
   });
 
+  if (startTime) params.set("ctz", "America/Chicago");
+
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-function buildIcsCalendarUrl(rawDate: string, location: string, details: string) {
-  const start = formatCalendarDate(rawDate);
-  const end = formatCalendarDate(addDaysToDateInput(rawDate, 1));
+function buildIcsCalendarUrl(rawDate: string, startTime: string | null, location: string, details: string) {
   const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const startLine = startTime
+    ? `DTSTART;TZID=America/Chicago:${formatCalendarDateTime(rawDate, startTime)}`
+    : `DTSTART;VALUE=DATE:${formatCalendarDate(rawDate)}`;
+  const endLine = startTime
+    ? `DTEND;TZID=America/Chicago:${formatCalendarDateTime(rawDate, startTime, 2)}`
+    : `DTEND;VALUE=DATE:${formatCalendarDate(addDaysToDateInput(rawDate, 1))}`;
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//JC Footy//Pickup Soccer//EN",
+    "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:jc-footy-${rawDate}@jcfooty.com`,
     `DTSTAMP:${timestamp}`,
-    `DTSTART;VALUE=DATE:${start}`,
-    `DTEND;VALUE=DATE:${end}`,
+    startLine,
+    endLine,
     "SUMMARY:JC Footy Pickup Soccer",
     `LOCATION:${escapeCalendarText(location)}`,
     `DESCRIPTION:${escapeCalendarText(details)}`,
@@ -1660,6 +1709,23 @@ function addDaysToDateInput(rawDate: string, days: number) {
 
 function formatCalendarDate(rawDate: string) {
   return rawDate.replaceAll("-", "");
+}
+
+function formatCalendarDateTime(rawDate: string, startTime: string, addHours = 0) {
+  const [year, month, day] = rawDate.split("-");
+  const [hour, minute] = startTime.split(":").map(Number);
+  const date = new Date(Number(year), Number(month) - 1, Number(day), hour + addHours, minute || 0, 0);
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    "T",
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    "00",
+  ].join("");
 }
 
 function escapeCalendarText(value: string) {
@@ -1683,6 +1749,18 @@ function formatDate(value: string) {
     weekday: "short",
     month: "short",
     day: "numeric",
+  }).format(date);
+}
+
+function formatTimeLabel(value: string) {
+  if (!value) return "Time TBD";
+
+  const [hours, minutes] = value.split(":").map(Number);
+  const date = new Date(2000, 0, 1, hours, minutes || 0);
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
   }).format(date);
 }
 
