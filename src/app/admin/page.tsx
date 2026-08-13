@@ -59,6 +59,7 @@ type TournamentTeam = {
   id: string;
   name: string;
   color: string | null;
+  logo_url: string | null;
   sort_order: number;
   is_active: boolean;
   session_date: string | null;
@@ -163,6 +164,7 @@ const emptyMatch = {
 const emptyTeam = {
   name: "",
   color: "#1f7a4d",
+  logo_url: "",
   sort_order: 0,
   is_active: true,
   session_date: defaultPickupDate,
@@ -180,6 +182,7 @@ export default function AdminPage() {
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [teamSessionDateSetupNeeded, setTeamSessionDateSetupNeeded] = useState(false);
   const [teamSessionDetailsSetupNeeded, setTeamSessionDetailsSetupNeeded] = useState(false);
+  const [teamLogoSetupNeeded, setTeamLogoSetupNeeded] = useState(false);
   const [polls, setPolls] = useState<MvpPoll[]>([]);
   const [pollSetupNeeded, setPollSetupNeeded] = useState(false);
   const [analytics, setAnalytics] = useState<SiteAnalytics>(emptyAnalytics);
@@ -329,6 +332,7 @@ export default function AdminPage() {
         setRoster(teamsResponse.roster || []);
         setTeamSessionDateSetupNeeded(Boolean(teamsResponse.teamSessionDateSetupNeeded));
         setTeamSessionDetailsSetupNeeded(Boolean(teamsResponse.teamSessionDetailsSetupNeeded));
+        setTeamLogoSetupNeeded(Boolean(teamsResponse.teamLogoSetupNeeded));
       }
       if (pollsResponse) {
         setPolls(pollsResponse.polls || []);
@@ -470,6 +474,7 @@ export default function AdminPage() {
     setRoster([]);
     setTeamSessionDateSetupNeeded(false);
     setTeamSessionDetailsSetupNeeded(false);
+    setTeamLogoSetupNeeded(false);
     setPolls([]);
     setPollSetupNeeded(false);
     setAnalytics(emptyAnalytics);
@@ -957,6 +962,7 @@ export default function AdminPage() {
     setTeamForm({
       name: team.name,
       color: team.color || "#1f7a4d",
+      logo_url: team.logo_url || "",
       sort_order: team.sort_order,
       is_active: team.is_active,
       session_date: team.session_date || gameDayForm.date,
@@ -1842,6 +1848,12 @@ export default function AdminPage() {
             </div>
           )}
 
+          {teamLogoSetupNeeded && (
+            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900">
+              Team logos are not set up in Supabase yet. Run supabase-team-logos.sql, then refresh this page.
+            </div>
+          )}
+
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <form onSubmit={saveTeam} className="mb-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
@@ -1888,13 +1900,19 @@ export default function AdminPage() {
                     Teams saved to this date will show on the public site. Time, end time, and place will be used for calendar links.
                   </div>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-[1fr_0.55fr_0.45fr]">
+                <div className="grid gap-3 sm:grid-cols-[1fr_0.75fr_0.55fr_0.45fr]">
                   <AdminInput
                     label="Team name"
                     value={teamForm.name}
                     onChange={(value) => setTeamForm({ ...teamForm, name: value })}
                     placeholder="Gold, Black, White..."
                     required
+                  />
+                  <AdminInput
+                    label="Logo"
+                    value={teamForm.logo_url}
+                    onChange={(value) => setTeamForm({ ...teamForm, logo_url: value })}
+                    placeholder="Image URL or emoji"
                   />
                   <AdminInput
                     type="color"
@@ -1986,7 +2004,10 @@ export default function AdminPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="mb-3 h-2 w-14 rounded-full" style={{ backgroundColor: team.color || "#1f7a4d" }} />
-                        <h2 className="font-black">{team.name}</h2>
+                        <div className="flex items-center gap-2">
+                          <TeamLogo logo={team.logo_url} color={team.color} name={team.name} size="md" />
+                          <h2 className="font-black">{team.name}</h2>
+                        </div>
                         <p className="text-sm font-semibold text-black/50">
                           {formatPlayerCount(teamRoster.length)} {team.is_active ? "" : "| inactive"}
                         </p>
@@ -2858,6 +2879,42 @@ function AdminSelect({
   );
 }
 
+function TeamLogo({
+  logo,
+  color,
+  name,
+  size = "sm",
+}: {
+  logo?: string | null;
+  color?: string | null;
+  name: string;
+  size?: "sm" | "md";
+}) {
+  const logoValue = logo?.trim();
+  const sizeClass = size === "md" ? "h-8 w-8 text-base" : "h-6 w-6 text-sm";
+  const className = `${sizeClass} inline-flex shrink-0 items-center justify-center rounded-full ring-2 ring-black/5`;
+
+  if (!logoValue) {
+    return <span className={className} style={{ backgroundColor: color || "#1f7a4d" }} aria-hidden="true" />;
+  }
+
+  if (isLogoImage(logoValue)) {
+    return (
+      <img
+        src={logoValue}
+        alt={`${name} logo`}
+        className={`${className} bg-white object-cover`}
+      />
+    );
+  }
+
+  return (
+    <span className={`${className} bg-white font-black`}>
+      {logoValue}
+    </span>
+  );
+}
+
 function TeamNameSelect({
   label,
   value,
@@ -2893,6 +2950,10 @@ function TeamNameSelect({
       ))}
     </AdminSelect>
   );
+}
+
+function isLogoImage(value: string) {
+  return /^https?:\/\//i.test(value) || value.startsWith("/");
 }
 
 function QuickStatTeamSheet({

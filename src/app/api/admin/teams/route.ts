@@ -9,6 +9,7 @@ type TeamPayload = {
   id?: string;
   name?: string;
   color?: string;
+  logo_url?: string | null;
   sort_order?: number;
   is_active?: boolean;
   session_date?: string | null;
@@ -31,6 +32,8 @@ const TEAM_SESSION_DATE_SETUP_MESSAGE =
   "Team pickup dates are not set up in Supabase yet. Run supabase-team-session-dates.sql in Supabase, then refresh this page.";
 const TEAM_SESSION_DETAILS_SETUP_MESSAGE =
   "Pickup time and place are not set up in Supabase yet. Run supabase-team-session-details.sql in Supabase, then refresh this page.";
+const TEAM_LOGO_SETUP_MESSAGE =
+  "Team logos are not set up in Supabase yet. Run supabase-team-logos.sql in Supabase, then refresh this page.";
 
 export async function GET(request: Request) {
   if (!(await isAdminRequest(request))) return unauthorizedError();
@@ -59,6 +62,7 @@ export async function GET(request: Request) {
     roster: rosterResult.data,
     teamSessionDateSetupNeeded: Boolean(teamsResult.setupNeeded),
     teamSessionDetailsSetupNeeded: Boolean(teamsResult.detailsSetupNeeded),
+    teamLogoSetupNeeded: Boolean(teamsResult.logoSetupNeeded),
   });
 }
 
@@ -257,13 +261,35 @@ async function selectTeams(
 ) {
   const withSessionDetails = await supabase
     .from("tournament_teams")
-    .select("id,name,color,sort_order,is_active,created_at,session_date,session_start_time,session_end_time,session_location")
+    .select("id,name,color,logo_url,sort_order,is_active,created_at,session_date,session_start_time,session_end_time,session_location")
     .order("session_date", { ascending: false, nullsFirst: false })
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
-  if (!isMissingColumnError(withSessionDetails.error) && !isMissingDetailsColumnError(withSessionDetails.error)) {
-    return { ...withSessionDetails, setupNeeded: false, detailsSetupNeeded: false };
+  if (!withSessionDetails.error) {
+    return { ...withSessionDetails, setupNeeded: false, detailsSetupNeeded: false, logoSetupNeeded: false };
+  }
+
+  if (isMissingLogoColumnError(withSessionDetails.error)) {
+    const withDetailsWithoutLogo = await supabase
+      .from("tournament_teams")
+      .select("id,name,color,sort_order,is_active,created_at,session_date,session_start_time,session_end_time,session_location")
+      .order("session_date", { ascending: false, nullsFirst: false })
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (!withDetailsWithoutLogo.error) {
+      return {
+        ...withDetailsWithoutLogo,
+        data: withDetailsWithoutLogo.data?.map((team) => ({
+          ...team,
+          logo_url: null,
+        })),
+        setupNeeded: false,
+        detailsSetupNeeded: false,
+        logoSetupNeeded: true,
+      };
+    }
   }
 
   const withSessionDate = await supabase
@@ -278,12 +304,14 @@ async function selectTeams(
       ...withSessionDate,
       data: withSessionDate.data?.map((team) => ({
         ...team,
+        logo_url: null,
         session_start_time: null,
         session_end_time: null,
         session_location: null,
       })),
       setupNeeded: false,
       detailsSetupNeeded: true,
+      logoSetupNeeded: true,
     };
   }
 
@@ -297,6 +325,7 @@ async function selectTeams(
     ...withoutSessionDate,
     data: withoutSessionDate.data?.map((team) => ({
       ...team,
+      logo_url: null,
       session_date: null,
       session_start_time: null,
       session_end_time: null,
@@ -304,6 +333,7 @@ async function selectTeams(
     })),
     setupNeeded: true,
     detailsSetupNeeded: true,
+    logoSetupNeeded: true,
   };
 }
 
@@ -317,7 +347,7 @@ async function saveTeamRow(
     ? supabase.from("tournament_teams").insert(row)
     : supabase.from("tournament_teams").update(row).eq("id", payload.id);
   const result = await query
-    .select("id,name,color,sort_order,is_active,created_at,session_date,session_start_time,session_end_time,session_location")
+    .select("id,name,color,logo_url,sort_order,is_active,created_at,session_date,session_start_time,session_end_time,session_location")
     .single();
 
   if (!result.error) {
@@ -329,6 +359,15 @@ async function saveTeamRow(
       data: null,
       error: {
         message: TEAM_SESSION_DETAILS_SETUP_MESSAGE,
+      },
+    };
+  }
+
+  if (isMissingLogoColumnError(result.error)) {
+    return {
+      data: null,
+      error: {
+        message: TEAM_LOGO_SETUP_MESSAGE,
       },
     };
   }
@@ -379,6 +418,7 @@ function teamPayloadToRow(payload: TeamPayload, includeSessionDate = true) {
   const row = {
     name: payload.name?.trim(),
     color: payload.color?.trim() || "#1f7a4d",
+    logo_url: normalizeOptionalText(payload.logo_url),
     sort_order: Number(payload.sort_order || 0),
     is_active: payload.is_active ?? true,
   };
@@ -434,6 +474,17 @@ function isMissingDetailsColumnError(error: unknown) {
       (Boolean(message?.includes("session_start_time")) ||
         Boolean(message?.includes("session_end_time")) ||
         Boolean(message?.includes("session_location"))))
+  );
+}
+
+function isMissingLogoColumnError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const { code, message } = error as { code?: string; message?: string };
+
+  return (
+    Boolean(message?.includes("logo_url")) ||
+    (code === "PGRST204" && Boolean(message?.includes("logo_url")))
   );
 }
 

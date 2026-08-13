@@ -54,6 +54,7 @@ type TeamRow = {
   id: string;
   name: string;
   color: string | null;
+  logo_url: string | null;
   sort_order: number;
   is_active: boolean;
   session_date: string | null;
@@ -65,6 +66,7 @@ type TeamRow = {
 type TeamStanding = {
   name: string;
   color: string;
+  logo: string | null;
   played: number;
   wins: number;
   draws: number;
@@ -86,6 +88,7 @@ type RosterRow = {
 type TeamRoster = {
   name: string;
   color: string;
+  logo: string | null;
   players: string[];
 };
 
@@ -282,7 +285,7 @@ export default async function Home() {
                     {data.upcomingSession.teams.map((team) => (
                       <div key={`next-${team.name}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-3">
                         <div className="mb-1 flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
+                          <TeamLogo logo={team.logo} color={team.color} name={team.name} />
                           <p className="truncate text-sm font-black">{team.name}</p>
                         </div>
                         <p className="text-xs font-bold text-black/45">{formatPlayerCount(team.players.length)}</p>
@@ -378,7 +381,7 @@ export default async function Home() {
                     </span>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
+                        <TeamLogo logo={team.logo} color={team.color} name={team.name} />
                         <h3 className="break-words font-black leading-tight">{team.name}</h3>
                       </div>
                       <p className="mt-1 text-xs font-bold text-black/45">
@@ -438,7 +441,7 @@ export default async function Home() {
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className="h-4 w-4 shrink-0 rounded-full ring-2 ring-black/5" style={{ backgroundColor: team.color }} />
+                        <TeamLogo logo={team.logo} color={team.color} name={team.name} size="md" />
                         <div className="min-w-0">
                           <span className="block truncate text-base font-black">{team.name}</span>
                           <span className="text-xs font-bold uppercase text-black/35">
@@ -491,7 +494,7 @@ export default async function Home() {
             <article key={team.name} className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: team.color }} />
+                  <TeamLogo logo={team.logo} color={team.color} name={team.name} size="md" />
                   <h3 className="break-words text-lg font-black leading-tight">{team.name}</h3>
                 </div>
                 <p className="shrink-0 text-sm font-black text-black/45">{formatPlayerCount(team.players.length)}</p>
@@ -651,6 +654,7 @@ export default async function Home() {
                                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
                                   {index + 1}
                                 </span>
+                                <TeamLogo logo={team.logo} color={team.color} name={team.name} />
                                 <span className="min-w-0 flex-1 break-words text-sm font-black">{team.name}</span>
                               </div>
                               <div className="mt-3 grid grid-cols-3 gap-2 pl-10 text-center">
@@ -843,36 +847,57 @@ async function getDashboardData() {
 async function selectPublicTeams(
   supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
 ) {
+  const withSessionDetailsAndLogo = await supabase
+    .from("tournament_teams")
+    .select("id,name,color,logo_url,sort_order,is_active,session_date,session_start_time,session_end_time,session_location")
+    .eq("is_active", true)
+    .order("session_date", { ascending: false, nullsFirst: false })
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (!withSessionDetailsAndLogo.error) {
+    return withSessionDetailsAndLogo;
+  }
+
+  if (isMissingTeamLogoColumn(withSessionDetailsAndLogo.error)) {
+    const withSessionDetails = await supabase
+      .from("tournament_teams")
+      .select("id,name,color,sort_order,is_active,session_date,session_start_time,session_end_time,session_location")
+      .eq("is_active", true)
+      .order("session_date", { ascending: false, nullsFirst: false })
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (!withSessionDetails.error) {
+      return {
+        ...withSessionDetails,
+        data: withSessionDetails.data?.map((team) => ({
+          ...team,
+          logo_url: null,
+        })),
+      };
+    }
+  }
+
   const withSessionDate = await supabase
     .from("tournament_teams")
-    .select("id,name,color,sort_order,is_active,session_date,session_start_time,session_end_time,session_location")
+    .select("id,name,color,sort_order,is_active,session_date")
     .eq("is_active", true)
     .order("session_date", { ascending: false, nullsFirst: false })
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
   if (!isMissingSessionDateColumn(withSessionDate.error)) {
-    if (isMissingTeamSessionDetailsColumn(withSessionDate.error)) {
-      const sessionDateOnly = await supabase
-        .from("tournament_teams")
-        .select("id,name,color,sort_order,is_active,session_date")
-        .eq("is_active", true)
-        .order("session_date", { ascending: false, nullsFirst: false })
-        .order("sort_order", { ascending: true })
-        .order("name", { ascending: true });
-
-      return {
-        ...sessionDateOnly,
-        data: sessionDateOnly.data?.map((team) => ({
-          ...team,
-          session_start_time: null,
-          session_end_time: null,
-          session_location: null,
-        })),
-      };
-    }
-
-    return withSessionDate;
+    return {
+      ...withSessionDate,
+      data: withSessionDate.data?.map((team) => ({
+        ...team,
+        logo_url: null,
+        session_start_time: null,
+        session_end_time: null,
+        session_location: null,
+      })),
+    };
   }
 
   const withoutSessionDate = await supabase
@@ -886,6 +911,7 @@ async function selectPublicTeams(
     ...withoutSessionDate,
     data: withoutSessionDate.data?.map((team) => ({
       ...team,
+      logo_url: null,
       session_date: null,
       session_start_time: null,
       session_end_time: null,
@@ -1334,6 +1360,7 @@ function buildTeamStandings(teams: TeamRow[], matches: MatchRow[]) {
       ...existing,
       name: nextName,
       color: team.color || "#1f7a4d",
+      logo: existing?.logo || team.logo_url || null,
       played: existing?.played || 0,
       wins: existing?.wins || 0,
       draws: existing?.draws || 0,
@@ -1414,6 +1441,7 @@ function dedupeTeams(teams: TeamRow[]) {
       ...existing,
       name: keepExistingName ? existing.name : nextName,
       color: existing.color || team.color,
+      logo_url: existing.logo_url || team.logo_url,
       sort_order: Math.min(existing.sort_order, team.sort_order),
       session_date: existing.session_date || team.session_date,
       session_start_time: existing.session_start_time || team.session_start_time,
@@ -1436,20 +1464,15 @@ function isMissingSessionDateColumn(error: unknown) {
 
   const { code, message } = error as { code?: string; message?: string };
 
-  return code === "42703" || Boolean(message?.includes("session_date"));
+  return Boolean(message?.includes("session_date")) || (code === "PGRST204" && Boolean(message?.includes("session_date")));
 }
 
-function isMissingTeamSessionDetailsColumn(error: unknown) {
+function isMissingTeamLogoColumn(error: unknown) {
   if (!error || typeof error !== "object") return false;
 
   const { code, message } = error as { code?: string; message?: string };
 
-  return (
-    code === "PGRST204" ||
-    Boolean(message?.includes("session_start_time")) ||
-    Boolean(message?.includes("session_end_time")) ||
-    Boolean(message?.includes("session_location"))
-  );
+  return Boolean(message?.includes("logo_url")) || (code === "PGRST204" && Boolean(message?.includes("logo_url")));
 }
 
 async function selectPublicMatches(
@@ -1556,6 +1579,7 @@ function buildTeamRosters(teams: TeamRow[], rawTeams: TeamRow[], rosterRows: Ros
     rostersByTeam.set(normalizeTeamName(team.name), {
       name: cleanTeamName(team.name),
       color: team.color || "#1f7a4d",
+      logo: team.logo_url || null,
       players: [],
     });
   }
@@ -1591,6 +1615,7 @@ function ensureTeam(standings: Map<string, TeamStanding>, name: string) {
     standings.set(key, {
       name: cleanTeamName(name),
       color: "#1f7a4d",
+      logo: null,
       played: 0,
       wins: 0,
       draws: 0,
@@ -1672,6 +1697,7 @@ function fallbackStandings() {
   return ["Team A", "Team B", "Team C"].map((name) => ({
     name,
     color: "#1f7a4d",
+    logo: null,
     played: 0,
     wins: 0,
     draws: 0,
@@ -1688,6 +1714,7 @@ function fallbackRosters() {
   return fallbackStandings().map((team) => ({
     name: team.name,
     color: team.color,
+    logo: team.logo,
     players: [],
   }));
 }
@@ -1870,6 +1897,42 @@ function LeagueNumber({ value, strong = false }: { value: number; strong?: boole
   );
 }
 
+function TeamLogo({
+  logo,
+  color,
+  name,
+  size = "sm",
+}: {
+  logo?: string | null;
+  color?: string;
+  name: string;
+  size?: "sm" | "md";
+}) {
+  const logoValue = logo?.trim();
+  const sizeClass = size === "md" ? "h-7 w-7 text-sm" : "h-5 w-5 text-xs";
+  const className = `${sizeClass} inline-flex shrink-0 items-center justify-center rounded-full ring-2 ring-black/5`;
+
+  if (!logoValue) {
+    return <span className={className} style={{ backgroundColor: color || "#1f7a4d" }} aria-hidden="true" />;
+  }
+
+  if (isLogoImage(logoValue)) {
+    return (
+      <img
+        src={logoValue}
+        alt={`${name} logo`}
+        className={`${className} bg-white object-cover`}
+      />
+    );
+  }
+
+  return (
+    <span className={`${className} bg-white font-black`}>
+      {logoValue}
+    </span>
+  );
+}
+
 function CompactResult({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-[#fbfaf7] px-3 py-4">
@@ -1919,6 +1982,10 @@ function TeamForm({ form }: { form: TeamStanding["form"] }) {
       ))}
     </div>
   );
+}
+
+function isLogoImage(value: string) {
+  return /^https?:\/\//i.test(value) || value.startsWith("/");
 }
 
 function MiniStat({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof Trophy }) {
