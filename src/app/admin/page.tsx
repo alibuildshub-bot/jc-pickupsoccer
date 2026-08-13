@@ -124,7 +124,7 @@ type SiteAnalytics = {
   }>;
 };
 
-const nextSessionDate = "2026-07-25";
+const defaultPickupDate = getDefaultPickupDate();
 
 const emptyAnalytics: SiteAnalytics = {
   totalVisits: 0,
@@ -143,7 +143,7 @@ const emptyPlayer = {
 };
 
 const emptyMatch = {
-  match_date: nextSessionDate,
+  match_date: defaultPickupDate,
   week_label: "",
   location: "",
   team_a_name: "Black",
@@ -158,7 +158,7 @@ const emptyTeam = {
   color: "#1f7a4d",
   sort_order: 0,
   is_active: true,
-  session_date: nextSessionDate,
+  session_date: defaultPickupDate,
 };
 
 export default function AdminPage() {
@@ -180,7 +180,7 @@ export default function AdminPage() {
   const [teamForm, setTeamForm] = useState(emptyTeam);
   const [rosterForm, setRosterForm] = useState({ team_id: "", player_id: "" });
   const [gameDayForm, setGameDayForm] = useState({
-    date: nextSessionDate,
+    date: defaultPickupDate,
     label: "Game",
     location: "",
   });
@@ -243,6 +243,20 @@ export default function AdminPage() {
 
   function selectGameDayDate(date: string) {
     setGameDayForm((current) => ({ ...current, date }));
+  }
+
+  function getEmptyMatchForSelectedDate() {
+    return {
+      ...emptyMatch,
+      match_date: gameDayForm.date,
+    };
+  }
+
+  function getEmptyTeamForSelectedDate() {
+    return {
+      ...emptyTeam,
+      session_date: gameDayForm.date,
+    };
   }
 
   const loadData = useCallback(async (credential = adminCredential) => {
@@ -754,7 +768,7 @@ export default function AdminPage() {
         adminCredential,
       );
 
-      setMatchForm(emptyMatch);
+      setMatchForm(getEmptyMatchForSelectedDate());
       setEditingMatchId(null);
       setMessage(editingMatchId ? "Match updated." : "Match added.");
       await loadData();
@@ -816,7 +830,7 @@ export default function AdminPage() {
         adminCredential,
       );
 
-      setTeamForm({ ...emptyTeam, session_date: gameDayForm.date });
+      setTeamForm(getEmptyTeamForSelectedDate());
       setEditingTeamId(null);
       setMessage(editingTeamId ? "Team updated." : "Team added.");
       await loadData();
@@ -1712,7 +1726,10 @@ export default function AdminPage() {
                     type="date"
                     label="Pickup date"
                     value={teamForm.session_date}
-                    onChange={(value) => setTeamForm({ ...teamForm, session_date: value })}
+                    onChange={(value) => {
+                      setTeamForm({ ...teamForm, session_date: value });
+                      selectGameDayDate(value);
+                    }}
                     required
                   />
                   <div className="rounded-lg bg-white px-3 py-3 text-sm font-bold leading-6 text-black/50">
@@ -1758,7 +1775,7 @@ export default function AdminPage() {
                       type="button"
                       onClick={() => {
                         setEditingTeamId(null);
-                        setTeamForm({ ...emptyTeam, session_date: gameDayForm.date });
+                        setTeamForm(getEmptyTeamForSelectedDate());
                       }}
                       className="h-11 rounded-lg border border-black/15 bg-white px-4 text-sm font-bold"
                     >
@@ -2010,7 +2027,7 @@ export default function AdminPage() {
                     type="button"
                     onClick={() => {
                       setEditingMatchId(null);
-                      setMatchForm(emptyMatch);
+                      setMatchForm(getEmptyMatchForSelectedDate());
                     }}
                     className="h-11 rounded-lg border border-black/15 bg-white px-4 text-sm font-bold"
                   >
@@ -2324,6 +2341,25 @@ function formatMatchStatus(status: string) {
 
 function formatPlayerCount(count: number) {
   return `${count} ${count === 1 ? "player" : "players"}`;
+}
+
+function getDefaultPickupDate() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = new Map(parts.map((part) => [part.type, part.value]));
+  const date = new Date(Date.UTC(
+    Number(values.get("year")),
+    Number(values.get("month")) - 1,
+    Number(values.get("day")),
+  ));
+
+  date.setUTCDate(date.getUTCDate() + 1);
+
+  return date.toISOString().slice(0, 10);
 }
 
 function formatDateLabel(value: string) {
