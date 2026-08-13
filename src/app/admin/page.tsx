@@ -233,6 +233,7 @@ export default function AdminPage() {
     [gameDayForm.date, matches, players, stats],
   );
   const sessionOptions = useMemo(() => buildSessionOptions(matches, stats), [matches, stats]);
+  const setupDateIsPast = gameDayForm.date < getTodayDateInput();
   const quickStatSelectedMatchId = gameDayMatches.some((match) => match.id === quickStatMatchId)
     ? quickStatMatchId
     : gameDayMatches[0]?.id || "";
@@ -243,6 +244,18 @@ export default function AdminPage() {
 
   function selectGameDayDate(date: string) {
     setGameDayForm((current) => ({ ...current, date }));
+  }
+
+  function startNewPickup() {
+    const date = defaultPickupDate;
+
+    setEditingMatchId(null);
+    setEditingTeamId(null);
+    setRosterForm({ team_id: "", player_id: "" });
+    setGameDayForm((current) => ({ ...current, date }));
+    setMatchForm({ ...emptyMatch, match_date: date });
+    setTeamForm({ ...emptyTeam, session_date: date });
+    setMessage(`Ready to set up ${formatDateLabel(date)}.`);
   }
 
   function getEmptyMatchForSelectedDate() {
@@ -1710,13 +1723,31 @@ export default function AdminPage() {
         </section>
 
         <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center justify-between">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Tournament Setup</p>
               <h1 className="text-2xl font-black">Teams & Rosters</h1>
             </div>
-            <Users className="text-[#1f7a4d]" size={26} />
+            <div className="flex items-center gap-3">
+              {setupDateIsPast && (
+                <button
+                  type="button"
+                  onClick={startNewPickup}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#171717] px-4 text-sm font-black text-white"
+                >
+                  <Plus size={16} />
+                  Start New Pickup
+                </button>
+              )}
+              <Users className="text-[#1f7a4d]" size={26} />
+            </div>
           </div>
+
+          {setupDateIsPast && (
+            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900">
+              You are viewing an older pickup date. Click Start New Pickup before adding teams for the next run.
+            </div>
+          )}
 
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
@@ -2344,6 +2375,14 @@ function formatPlayerCount(count: number) {
 }
 
 function getDefaultPickupDate() {
+  const date = new Date(`${getTodayDateInput()}T00:00:00Z`);
+
+  date.setUTCDate(date.getUTCDate() + 1);
+
+  return date.toISOString().slice(0, 10);
+}
+
+function getTodayDateInput() {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Chicago",
     year: "numeric",
@@ -2351,15 +2390,8 @@ function getDefaultPickupDate() {
     day: "2-digit",
   }).formatToParts(new Date());
   const values = new Map(parts.map((part) => [part.type, part.value]));
-  const date = new Date(Date.UTC(
-    Number(values.get("year")),
-    Number(values.get("month")) - 1,
-    Number(values.get("day")),
-  ));
 
-  date.setUTCDate(date.getUTCDate() + 1);
-
-  return date.toISOString().slice(0, 10);
+  return `${values.get("year")}-${values.get("month")}-${values.get("day")}`;
 }
 
 function formatDateLabel(value: string) {
