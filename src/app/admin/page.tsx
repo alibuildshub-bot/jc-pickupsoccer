@@ -212,8 +212,8 @@ export default function AdminPage() {
     [gameDayForm.date, matches],
   );
   const activeTeams = useMemo(
-    () => getCurrentSetupTeams(teams, matches, gameDayMatches, gameDayForm.date),
-    [gameDayForm.date, gameDayMatches, matches, teams],
+    () => getCurrentSetupTeams(teams, gameDayMatches, gameDayForm.date),
+    [gameDayForm.date, gameDayMatches, teams],
   );
   const gameDayMatchIds = useMemo(() => new Set(gameDayMatches.map((match) => match.id)), [gameDayMatches]);
   const gameDayStats = useMemo(
@@ -2490,7 +2490,6 @@ function buildPastGameSessions(
 
 function getCurrentSetupTeams(
   teams: TournamentTeam[],
-  matches: Match[],
   currentMatches: Match[],
   currentDate: string,
 ) {
@@ -2500,8 +2499,6 @@ function getCurrentSetupTeams(
   if (teamsForDate.length > 0) {
     return teamsForDate;
   }
-
-  const archivedTeamNames = buildArchivedTeamNames(matches, currentDate);
 
   if (currentMatches.length > 0) {
     const currentTeamNames = new Set<string>();
@@ -2514,24 +2511,11 @@ function getCurrentSetupTeams(
     return activeTeams.filter((team) => {
       const teamName = normalizeAdminLabel(team.name);
 
-      return currentTeamNames.has(teamName) || !archivedTeamNames.has(teamName);
+      return currentTeamNames.has(teamName);
     });
   }
 
-  return activeTeams.filter((team) => !archivedTeamNames.has(normalizeAdminLabel(team.name)));
-}
-
-function buildArchivedTeamNames(matches: Match[], currentDate: string) {
-  const names = new Set<string>();
-
-  for (const match of matches) {
-    if (match.status !== "completed" || match.match_date === currentDate) continue;
-
-    names.add(normalizeAdminLabel(match.team_a_name));
-    names.add(normalizeAdminLabel(match.team_b_name));
-  }
-
-  return names;
+  return [];
 }
 
 function getPollUrl(token: string) {

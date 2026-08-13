@@ -753,8 +753,7 @@ async function getDashboardData() {
   const tournamentMatches = tournamentDate
     ? matches.filter((match) => match.match_date === tournamentDate)
     : [];
-  const archivedTeamNames = buildArchivedTeamNames(matches, tournamentDate);
-  const currentTeams = getCurrentSessionTeams(teams, tournamentMatches, archivedTeamNames, tournamentDate);
+  const currentTeams = getCurrentSessionTeams(teams, tournamentMatches, tournamentDate);
   const teamRosters = buildTeamRosters(currentTeams, rawTeams, (rosterRows || []) as unknown as RosterRow[]);
   const playerLeaderboardDate = getLatestCompletedSessionDate(matches) || tournamentDate;
   const playerLeaderboardMatches = playerLeaderboardDate
@@ -1076,7 +1075,6 @@ function buildUpcomingSession(
 function getCurrentSessionTeams(
   teams: TeamRow[],
   currentMatches: MatchRow[],
-  archivedTeamNames: Set<string>,
   currentDate = "",
 ) {
   const datedTeams = currentDate
@@ -1096,24 +1094,11 @@ function getCurrentSessionTeams(
     return teams.filter((team) => {
       const teamName = normalizeTeamName(team.name);
 
-      return currentTeamNames.has(teamName) || !archivedTeamNames.has(teamName);
+      return currentTeamNames.has(teamName);
     });
   }
 
-  return teams.filter((team) => !archivedTeamNames.has(normalizeTeamName(team.name)));
-}
-
-function buildArchivedTeamNames(matches: MatchRow[], currentDate: string) {
-  const names = new Set<string>();
-
-  for (const match of matches) {
-    if (match.status !== "completed" || match.match_date === currentDate) continue;
-
-    names.add(normalizeTeamName(match.team_a_name));
-    names.add(normalizeTeamName(match.team_b_name));
-  }
-
-  return names;
+  return [];
 }
 
 function buildTeamOfTheWeek(standings: TeamStanding[]) {
