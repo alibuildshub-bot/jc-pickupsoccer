@@ -2,6 +2,7 @@ import {
   CalendarDays,
   Clock,
   MapPin,
+  ShieldCheck,
   Trophy,
   Users,
 } from "lucide-react";
@@ -238,8 +239,8 @@ export default async function Home() {
                 </h2>
                 <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-black/55">
                   {data.upcomingSession
-                    ? "Add it to your calendar and check back after games for updated stats."
-                    : "Stay tuned for the next matchup. The upcoming pickup will be posted here soon."}
+                    ? "Add it to your calendar, complete the waiver, and check back after games for updated stats."
+                    : "Stay tuned for the next matchup. Complete the waiver now so you are ready for the next pickup."}
                 </p>
               </div>
               <CalendarDays className="shrink-0 text-[#b7791f]" size={38} />
@@ -260,7 +261,7 @@ export default async function Home() {
                     {data.upcomingSession.teams.length} teams
                   </span>
                 </div>
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
                   <a
                     href={data.upcomingSession.calendarUrl}
                     download={`jc-footy-${data.upcomingSession.rawDate}.ics`}
@@ -278,6 +279,15 @@ export default async function Home() {
                     <Clock size={17} />
                     Google
                   </a>
+                  <a
+                    href="https://bondsports.co/login"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#1f7a4d]/30 bg-[#edf4f0] px-4 text-center text-sm font-black text-[#17613d] transition hover:border-[#17613d]"
+                  >
+                    <ShieldCheck size={17} />
+                    Complete Waiver
+                  </a>
                 </div>
 
                 {data.upcomingSession.teams.length > 0 ? (
@@ -294,7 +304,19 @@ export default async function Home() {
                   </div>
                 ) : null}
               </>
-            ) : null}
+            ) : (
+              <div className="mt-6">
+                <a
+                  href="https://bondsports.co/login"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-center text-sm font-black text-white transition hover:bg-[#17613d]"
+                >
+                  <ShieldCheck size={17} />
+                  Complete Waiver
+                </a>
+              </div>
+            )}
 
             <div className="mt-6 border-t border-black/10 pt-5">
               <div className="mb-3 flex items-center justify-between">
