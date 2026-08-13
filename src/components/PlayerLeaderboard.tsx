@@ -52,8 +52,11 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
                   {index + 1}
                 </span>
                 <div className="min-w-0">
-                  <a href={`/players/${slugify(player.name)}`} className="break-words font-black leading-tight hover:underline">
+                  <a href={`/players/${slugify(player.name)}`} className="group break-words font-black leading-tight hover:underline">
                     {player.name}
+                    <span className="mt-1 block w-fit rounded-md bg-white px-2 py-1 text-[11px] font-black uppercase text-[#17613d] group-hover:bg-[#edf4f0]">
+                      View profile
+                    </span>
                   </a>
                   <p className="mt-1 break-words text-xs font-bold text-black/45">{player.team}</p>
                 </div>
@@ -89,8 +92,11 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
                       {index + 1}
                     </span>
-                    <a href={`/players/${slugify(player.name)}`} className="font-black hover:underline">
+                    <a href={`/players/${slugify(player.name)}`} className="group font-black hover:underline">
                       {player.name}
+                      <span className="ml-2 inline-flex rounded-md bg-white px-2 py-1 text-[11px] font-black uppercase text-[#17613d] group-hover:bg-[#edf4f0]">
+                        View profile
+                      </span>
                     </a>
                   </div>
                 </td>

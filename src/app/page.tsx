@@ -200,6 +200,7 @@ export default async function Home() {
             <a href="/players" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Players</a>
             <a href="#matches" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Matches</a>
             <a href="#teams" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Teams</a>
+            <a href="/past-sessions" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Past Sessions</a>
           </div>
         </div>
       </nav>
@@ -322,7 +323,7 @@ export default async function Home() {
             <div className="mt-6 border-t border-black/10 pt-5">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-black uppercase tracking-wide text-black/45">Latest Results</p>
-                <a href="#matches" className="text-sm font-black text-[#17613d] hover:text-black">View all</a>
+                <a href="/past-sessions" className="text-sm font-black text-[#17613d] hover:text-black">View all</a>
               </div>
               <div className="grid gap-2 md:grid-cols-2">
                 {data.recentMatches.length > 0 ? (
@@ -625,113 +626,33 @@ export default async function Home() {
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Results</p>
-              <h2 className="text-2xl font-black">Past Games</h2>
+              <h2 className="text-2xl font-black">Past Sessions</h2>
             </div>
             <CalendarDays className="text-[#1f7a4d]" size={26} />
           </div>
           {data.resultsArchive.length > 0 ? (
-            <div className="grid gap-5">
-              {data.resultsArchive.map((day) => (
-                <details key={day.date} className="group rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                  <summary className="list-none cursor-pointer">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-black uppercase text-[#1f7a4d]">Completed games</p>
-                        <h3 className="text-xl font-black">{day.date}</h3>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-black/55">
-                          {day.matches.length} games
-                        </span>
-                        <span className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
-                          <span className="group-open:hidden">View stats</span>
-                          <span className="hidden group-open:inline">Hide stats</span>
-                        </span>
-                      </div>
-                    </div>
-                  </summary>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3">
+              {data.resultsArchive.slice(0, 3).map((day) => (
+                <a
+                  key={day.date}
+                  href="/past-sessions"
+                  className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4 transition hover:border-[#1f7a4d]/40 hover:bg-[#f1ece3]"
+                >
+                  <p className="text-xs font-black uppercase text-[#1f7a4d]">Completed session</p>
+                  <h3 className="mt-1 text-xl font-black">{day.date}</h3>
+                  <div className="mt-4 grid gap-2">
                     <MiniStat label="Team of the Week" value={day.teamOfTheWeek} icon={Trophy} />
+                    <MiniStat label="Games" value={String(day.matches.length)} />
                     <MiniStat label="Total Goals" value={String(day.totalGoals)} />
-                    <MiniStat label="Top Scorer" value={day.topScorer} />
                   </div>
-                  <div className="mt-4 border-t border-black/10 pt-4">
-                    <div>
-                      <p className="mb-2 text-xs font-black uppercase text-black/45">Games</p>
-                      <div className="grid gap-2 md:grid-cols-2">
-                        {day.matches.map((match) => (
-                          <article key={`${day.date}-${match.game}-${match.teamA}-${match.teamB}`} className="rounded-lg bg-white p-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
-                                <p className="mt-1 text-sm font-black">
-                                  {match.teamA} vs {match.teamB}
-                                </p>
-                              </div>
-                              <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
-                                {match.score}
-                              </p>
-                            </div>
-                            <p className="mt-2 text-xs font-bold text-black/50">Winner: {match.winner}</p>
-                          </article>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                      <div className="rounded-lg bg-white p-3 sm:p-4">
-                        <p className="mb-2 text-xs font-black uppercase text-black/45">Team table</p>
-                        <div className="space-y-2">
-                          {day.standings.map((team, index) => (
-                            <div key={`${day.date}-${team.name}`} className="rounded-lg bg-[#fbfaf7] p-3">
-                              <div className="flex items-center gap-3">
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
-                                  {index + 1}
-                                </span>
-                                <TeamLogo logo={team.logo} color={team.color} name={team.name} />
-                                <span className="min-w-0 flex-1 break-words text-sm font-black">{team.name}</span>
-                              </div>
-                              <div className="mt-3 grid grid-cols-3 gap-2 pl-10 text-center">
-                                <MiniStat label="PTS" value={String(team.points)} />
-                                <MiniStat label="GF" value={String(team.goalsFor)} />
-                                <MiniStat label="GD" value={String(team.goalDiff)} />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="rounded-lg bg-white p-3 sm:p-4">
-                        <p className="mb-2 text-xs font-black uppercase text-black/45">Player stats</p>
-                        {day.players.length > 0 ? (
-                          <div className="space-y-2">
-                            {day.players.map((player, index) => (
-                              <div key={`${day.date}-${player.name}-${player.team}`} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-lg bg-[#fbfaf7] p-3 text-sm sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-                                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
-                                  {index + 1}
-                                </span>
-                                <div className="min-w-0">
-                                  <a href={`/players/${slugify(player.name)}`} className="break-words font-black hover:underline">
-                                    {player.name}
-                                  </a>
-                                  <p className="break-words text-xs font-bold text-black/45">{player.team}</p>
-                                </div>
-                                <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
-                                  <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.goals} G</span>
-                                  <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.assists} A</span>
-                                  <span className="rounded-lg bg-[#171717] px-2 py-1 font-black text-white">{player.points} G+A</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold text-black/50">
-                            Player stats were not entered for this session.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </details>
+                </a>
               ))}
+              <a
+                href="/past-sessions"
+                className="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-black/20 bg-white p-4 text-center text-sm font-black text-[#17613d] transition hover:border-[#1f7a4d]/50 md:col-span-3"
+              >
+                View full Past Sessions archive
+              </a>
             </div>
           ) : (
             <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
