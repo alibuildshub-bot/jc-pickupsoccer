@@ -171,6 +171,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<PlayerStat[]>([]);
   const [teams, setTeams] = useState<TournamentTeam[]>([]);
   const [roster, setRoster] = useState<RosterRow[]>([]);
+  const [teamSessionDateSetupNeeded, setTeamSessionDateSetupNeeded] = useState(false);
   const [polls, setPolls] = useState<MvpPoll[]>([]);
   const [pollSetupNeeded, setPollSetupNeeded] = useState(false);
   const [analytics, setAnalytics] = useState<SiteAnalytics>(emptyAnalytics);
@@ -312,6 +313,7 @@ export default function AdminPage() {
       if (teamsResponse) {
         setTeams(teamsResponse.teams || []);
         setRoster(teamsResponse.roster || []);
+        setTeamSessionDateSetupNeeded(Boolean(teamsResponse.teamSessionDateSetupNeeded));
       }
       if (pollsResponse) {
         setPolls(pollsResponse.polls || []);
@@ -430,6 +432,7 @@ export default function AdminPage() {
     setStats([]);
     setTeams([]);
     setRoster([]);
+    setTeamSessionDateSetupNeeded(false);
     setPolls([]);
     setPollSetupNeeded(false);
     setAnalytics(emptyAnalytics);
@@ -1746,6 +1749,12 @@ export default function AdminPage() {
           {setupDateIsPast && (
             <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900">
               You are viewing an older pickup date. Click Start New Pickup before adding teams for the next run.
+            </div>
+          )}
+
+          {teamSessionDateSetupNeeded && (
+            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900">
+              Team pickup dates are not set up in Supabase yet. Run supabase-team-session-dates.sql, then refresh this page before adding teams.
             </div>
           )}
 

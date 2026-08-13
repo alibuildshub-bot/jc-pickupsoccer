@@ -20,6 +20,9 @@ type RosterPayload = {
   player_id?: string;
 };
 
+const TEAM_SESSION_DATE_SETUP_MESSAGE =
+  "Team pickup dates are not set up in Supabase yet. Run supabase-team-session-dates.sql in Supabase, then refresh this page.";
+
 export async function GET(request: Request) {
   if (!(await isAdminRequest(request))) return unauthorizedError();
 
@@ -45,6 +48,7 @@ export async function GET(request: Request) {
   return Response.json({
     teams: teamsResult.data,
     roster: rosterResult.data,
+    teamSessionDateSetupNeeded: Boolean(teamsResult.setupNeeded),
   });
 }
 
@@ -194,7 +198,7 @@ async function selectTeams(
     .order("name", { ascending: true });
 
   if (!isMissingColumnError(withSessionDate.error)) {
-    return withSessionDate;
+    return { ...withSessionDate, setupNeeded: false };
   }
 
   const withoutSessionDate = await supabase
@@ -206,6 +210,7 @@ async function selectTeams(
   return {
     ...withoutSessionDate,
     data: withoutSessionDate.data?.map((team) => ({ ...team, session_date: null })),
+    setupNeeded: true,
   };
 }
 
@@ -226,14 +231,12 @@ async function saveTeamRow(
     return result;
   }
 
-  const fallbackRow = teamPayloadToRow(payload, false);
-  const fallbackQuery = action === "insert"
-    ? supabase.from("tournament_teams").insert(fallbackRow)
-    : supabase.from("tournament_teams").update(fallbackRow).eq("id", payload.id);
-
-  return fallbackQuery
-    .select("id,name,color,sort_order,is_active,created_at")
-    .single();
+  return {
+    data: null,
+    error: {
+      message: TEAM_SESSION_DATE_SETUP_MESSAGE,
+    },
+  };
 }
 
 function validateTeamPayload(payload: TeamPayload) {
