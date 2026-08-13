@@ -211,13 +211,20 @@ async function saveSessionDetails(
     return Response.json({ error: "Pickup date is required." }, { status: 400 });
   }
 
+  const sessionDetails = {
+    session_start_time: normalizeStartTime(payload.session_start_time),
+    session_end_time: normalizeStartTime(payload.session_end_time),
+    session_location: normalizeOptionalText(payload.session_location),
+  };
+  const matchDetails = {
+    start_time: sessionDetails.session_start_time,
+    end_time: sessionDetails.session_end_time,
+    location: sessionDetails.session_location,
+  };
+
   const { error } = await supabase
     .from("tournament_teams")
-    .update({
-      session_start_time: normalizeStartTime(payload.session_start_time),
-      session_end_time: normalizeStartTime(payload.session_end_time),
-      session_location: normalizeOptionalText(payload.session_location),
-    })
+    .update(sessionDetails)
     .eq("session_date", sessionDate);
 
   if (error) {
@@ -226,6 +233,20 @@ async function saveSessionDetails(
     }
 
     return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  const { error: matchesError } = await supabase
+    .from("matches")
+    .update(matchDetails)
+    .eq("match_date", sessionDate)
+    .neq("status", "completed");
+
+  if (matchesError) {
+    if (isMissingMatchTimeColumnError(matchesError)) {
+      return Response.json({ error: "Match times are not set up in Supabase yet. Run supabase-match-start-times.sql in Supabase, then refresh this page." }, { status: 500 });
+    }
+
+    return Response.json({ error: matchesError.message }, { status: 500 });
   }
 
   return Response.json({ ok: true });
@@ -413,6 +434,19 @@ function isMissingDetailsColumnError(error: unknown) {
       (Boolean(message?.includes("session_start_time")) ||
         Boolean(message?.includes("session_end_time")) ||
         Boolean(message?.includes("session_location"))))
+  );
+}
+
+function isMissingMatchTimeColumnError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const { code, message } = error as { code?: string; message?: string };
+
+  return (
+    code === "42703" ||
+    code === "PGRST204" ||
+    Boolean(message?.includes("start_time")) ||
+    Boolean(message?.includes("end_time"))
   );
 }
 

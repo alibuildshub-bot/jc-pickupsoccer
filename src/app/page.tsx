@@ -1096,9 +1096,13 @@ function buildUpcomingSession(
   const sessionMatches = upcomingMatches.filter((match) => match.match_date === sessionDate);
   const sessionTeams = getTeamsForMatches(teams, sessionMatches);
   const rosters = buildTeamRosters(sessionTeams, rawTeams, rosterRows);
-  const location = sessionMatches.find((match) => match.location?.trim())?.location?.trim() || "Field TBD";
-  const startTime = sessionMatches.find((match) => match.start_time)?.start_time || null;
-  const endTime = sessionMatches.find((match) => match.end_time)?.end_time || null;
+  const sessionDetails = getTeamSessionDetails(sessionTeams);
+  const location =
+    sessionMatches.find((match) => match.location?.trim())?.location?.trim() ||
+    sessionDetails.location ||
+    "Field TBD";
+  const startTime = sessionMatches.find((match) => match.start_time)?.start_time || sessionDetails.startTime;
+  const endTime = sessionMatches.find((match) => match.end_time)?.end_time || sessionDetails.endTime;
   const details = buildCalendarDetails(rosters);
 
   return {
