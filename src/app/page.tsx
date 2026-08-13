@@ -203,6 +203,13 @@ export default async function Home() {
             <a href="/past-sessions" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Past Sessions</a>
           </div>
         </div>
+        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-3 text-sm font-black text-black/65 sm:px-6 md:hidden">
+          <a href="#progress" className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2">Standings</a>
+          <a href="/players" className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2">Players</a>
+          <a href="#matches" className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2">Matches</a>
+          <a href="#teams" className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2">Teams</a>
+          <a href="/past-sessions" className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-white">Past Sessions</a>
+        </div>
       </nav>
 
       <section className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
@@ -647,12 +654,22 @@ export default async function Home() {
                   </div>
                 </a>
               ))}
-              <a
-                href="/past-sessions"
-                className="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-black/20 bg-white p-4 text-center text-sm font-black text-[#17613d] transition hover:border-[#1f7a4d]/50 md:col-span-3"
-              >
-                View full Past Sessions archive
-              </a>
+              <div className="rounded-lg border border-dashed border-black/20 bg-white p-4 md:col-span-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-black">Full archive has its own page.</p>
+                    <p className="mt-1 text-sm font-semibold text-black/50">
+                      Open Past Sessions to view every saved date, match, table, and player stat.
+                    </p>
+                  </div>
+                  <a
+                    href="/past-sessions"
+                    className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-[#171717] px-4 text-sm font-black text-white transition hover:bg-[#2a2a2a]"
+                  >
+                    Open Past Sessions
+                  </a>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-6">
