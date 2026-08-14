@@ -726,7 +726,7 @@ async function getDashboardData() {
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
-  const matches = sortMatchesForDisplay(dedupeMatches((matchRowsResult.data || []) as MatchRow[]));
+  const matches = sortMatchesForDisplay(cleanMatches((matchRowsResult.data || []) as MatchRow[]));
   const matchStats = (statRows || []) as MatchPlayerRow[];
   const rawTeams = (teamRowsResult.data || []) as TeamRow[];
   const teams = dedupeTeams(rawTeams);
@@ -1492,32 +1492,14 @@ function isMissingStartTimeColumn(error: unknown) {
   return code === "42703" || code === "PGRST204" || Boolean(message?.includes("start_time")) || Boolean(message?.includes("end_time"));
 }
 
-function dedupeMatches(matches: MatchRow[]) {
-  const matchesByKey = new Map<string, MatchRow>();
-
-  for (const match of matches) {
-    const key = [
-      match.match_date,
-      cleanTeamName(match.week_label).toLowerCase(),
-      normalizeTeamName(match.team_a_name),
-      normalizeTeamName(match.team_b_name),
-      match.team_a_score,
-      match.team_b_score,
-      match.status,
-    ].join("|");
-
-    if (!matchesByKey.has(key)) {
-      matchesByKey.set(key, {
-        ...match,
-        team_a_name: cleanTeamName(match.team_a_name),
-        team_b_name: cleanTeamName(match.team_b_name),
-        week_label: cleanTeamName(match.week_label),
-        location: match.location ? cleanTeamName(match.location) : null,
-      });
-    }
-  }
-
-  return Array.from(matchesByKey.values());
+function cleanMatches(matches: MatchRow[]) {
+  return matches.map((match) => ({
+    ...match,
+    team_a_name: cleanTeamName(match.team_a_name),
+    team_b_name: cleanTeamName(match.team_b_name),
+    week_label: cleanTeamName(match.week_label),
+    location: match.location ? cleanTeamName(match.location) : null,
+  }));
 }
 
 function sortMatchesForDisplay(matches: MatchRow[]) {
