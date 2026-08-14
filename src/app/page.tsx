@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   CalendarDays,
   Clock,
   MapPin,
@@ -154,6 +155,13 @@ type ArchiveDay = {
   totalGoals: number;
   teamOfTheWeek: string;
   topScorer: string;
+};
+
+type SessionGoalTrend = {
+  date: string;
+  totalGoals: number;
+  games: number;
+  goalsPerGame: number;
 };
 
 const fallbackTeamOfTheWeek = {
@@ -415,6 +423,8 @@ export default async function Home() {
                 <CompactResult label="MVP" value={latestSession.mvp} />
               </div>
             </article>
+
+            <SessionGoalChart trends={data.sessionGoalTrends} />
 
             <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
@@ -747,6 +757,7 @@ async function getDashboardData() {
       playerLeaderboardLabel: "Latest Session Stats",
       recentMatches: [],
       resultsArchive: [],
+      sessionGoalTrends: [],
       teamStandings: fallbackStandings(),
       teamRosters: fallbackRosters(),
       teamOfTheWeek: fallbackTeamOfTheWeek,
@@ -825,6 +836,7 @@ async function getDashboardData() {
     status: getMatchStatusLabel(match.status),
   }));
   const resultsArchive = buildResultsArchive(matches, matchStats, players, teams, gameLabels, teamDisplayNames, tournamentDate);
+  const sessionGoalTrends = buildSessionGoalTrends(resultsArchive);
 
   const goalsTracked = currentMatchStats.reduce((total, stat) => total + (stat.goals || 0), 0);
 
@@ -839,6 +851,7 @@ async function getDashboardData() {
     playerLeaderboardLabel: playerLeaderboardDate ? `${formatMonthDayOrdinal(playerLeaderboardDate)} Stats` : "Latest Session Stats",
     recentMatches,
     resultsArchive,
+    sessionGoalTrends,
     teamStandings: teamStandings.length > 0 ? teamStandings : [],
     teamRosters,
     teamOfTheWeek,
@@ -1435,6 +1448,22 @@ function buildResultsArchive(
     });
 }
 
+function buildSessionGoalTrends(resultsArchive: ArchiveDay[]): SessionGoalTrend[] {
+  return resultsArchive
+    .slice(0, 6)
+    .reverse()
+    .map((session) => {
+      const games = session.matches.length;
+
+      return {
+        date: session.date,
+        totalGoals: session.totalGoals,
+        games,
+        goalsPerGame: games > 0 ? session.totalGoals / games : 0,
+      };
+    });
+}
+
 function getArchiveTopScorer(players: ArchivePlayer[]) {
   const topGoalCount = players[0]?.goals || 0;
 
@@ -2006,6 +2035,10 @@ function formatTimeRange(startTime: string, endTime?: string | null) {
   return `${formatTimeLabel(startTime)} - ${formatTimeLabel(endTime)}`;
 }
 
+function formatDecimal(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 function formatMonthDayOrdinal(value: string) {
   const date = new Date(`${value}T12:00:00`);
   const month = new Intl.DateTimeFormat("en-US", { month: "long" }).format(date);
@@ -2076,6 +2109,57 @@ function UpcomingTeams({ teams }: { teams: TeamRoster[] }) {
         </article>
       ))}
     </div>
+  );
+}
+
+function SessionGoalChart({ trends }: { trends: SessionGoalTrend[] }) {
+  const maxGoals = Math.max(...trends.map((trend) => trend.totalGoals), 1);
+  const latestTrend = trends[trends.length - 1];
+
+  return (
+    <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold text-black/50 sm:text-sm">Session Data</p>
+          <h2 className="mt-1 text-xl font-black sm:text-2xl">Goals by Session</h2>
+        </div>
+        <BarChart3 className="text-[#1f7a4d]" size={28} />
+      </div>
+
+      {trends.length > 0 ? (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <CompactResult label="Latest Goals" value={String(latestTrend?.totalGoals || 0)} />
+            <CompactResult label="Games" value={String(latestTrend?.games || 0)} />
+            <CompactResult label="Goals/Game" value={formatDecimal(latestTrend?.goalsPerGame || 0)} />
+          </div>
+
+          <div className="mt-5 flex h-36 items-end gap-2 rounded-lg bg-[#fbfaf7] px-3 py-3">
+            {trends.map((trend) => {
+              const barHeight = Math.max((trend.totalGoals / maxGoals) * 100, trend.totalGoals > 0 ? 12 : 4);
+
+              return (
+                <div key={trend.date} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
+                  <p className="text-xs font-black text-black/70">{trend.totalGoals}</p>
+                  <div className="flex h-24 w-full items-end rounded-full bg-white/80 px-1">
+                    <div
+                      className="w-full rounded-full bg-[#1f7a4d] transition-all"
+                      style={{ height: `${barHeight}%` }}
+                      title={`${trend.date}: ${trend.totalGoals} goals`}
+                    />
+                  </div>
+                  <p className="w-full truncate text-center text-[11px] font-bold text-black/45">{trend.date.replace(",", "")}</p>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <p className="rounded-lg bg-[#fbfaf7] px-3 py-4 text-sm font-semibold leading-6 text-black/55">
+          Goal charts will appear after completed sessions are saved.
+        </p>
+      )}
+    </article>
   );
 }
 
