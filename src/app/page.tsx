@@ -975,14 +975,19 @@ function getCurrentSessionDate(matches: MatchRow[], teams: TeamRow[] = []) {
 
   if (nextTeamSession) return nextTeamSession;
 
+  const datedTeamSession = getLatestTeamSessionDate(teams);
+
   const currentMatch = [...matches].sort(
     (first, second) =>
       second.match_date.localeCompare(first.match_date) ||
       sortMatchesByGameOrder(first, second),
   )[0];
 
+  if (datedTeamSession && (!currentMatch || datedTeamSession >= currentMatch.match_date)) {
+    return datedTeamSession;
+  }
+
   if (currentMatch) return currentMatch.match_date;
-  const datedTeamSession = getLatestTeamSessionDate(teams);
 
   if (datedTeamSession) return datedTeamSession;
 
@@ -1069,11 +1074,13 @@ function buildUpcomingSession(
   const sessionDate = upcomingMatches[0]?.match_date;
 
   if (!sessionDate) {
-    const teamSessionDate = getNextTeamSessionDate(teams);
+    const teamSessionDate = getNextTeamSessionDate(teams) || getCurrentSessionDate(matches, teams);
 
     if (!teamSessionDate) return null;
 
     const sessionTeams = teams.filter((team) => team.session_date === teamSessionDate);
+    if (sessionTeams.length === 0) return null;
+
     const rosters = buildTeamRosters(sessionTeams, rawTeams, rosterRows);
     const sessionDetails = getTeamSessionDetails(sessionTeams);
     const details = buildCalendarDetails(rosters);
@@ -1596,11 +1603,11 @@ function sortMatchesByGameOrder(first: MatchRow, second: MatchRow) {
 }
 
 function buildTeamRosters(teams: TeamRow[], rawTeams: TeamRow[], rosterRows: RosterRow[]) {
-  const rawTeamKeys = new Map(rawTeams.map((team) => [team.id, normalizeTeamName(team.name)]));
+  const rawTeamKeys = new Map(rawTeams.map((team) => [team.id, getTeamRosterKey(team)]));
   const rostersByTeam = new Map<string, TeamRoster>();
 
   for (const team of teams) {
-    rostersByTeam.set(normalizeTeamName(team.name), {
+    rostersByTeam.set(getTeamRosterKey(team), {
       name: cleanTeamName(team.name),
       color: team.color || "#1f7a4d",
       logo: team.logo_url || null,
@@ -1624,6 +1631,10 @@ function buildTeamRosters(teams: TeamRow[], rawTeams: TeamRow[], rosterRows: Ros
     ...team,
     players: team.players.sort((a, b) => a.localeCompare(b)),
   }));
+}
+
+function getTeamRosterKey(team: Pick<TeamRow, "name" | "session_date">) {
+  return `${normalizeTeamName(team.name)}|${team.session_date || "undated"}`;
 }
 
 function buildTeamRostersWithMatchTeams(
