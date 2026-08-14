@@ -3,6 +3,8 @@ import { ArrowLeft, CalendarDays, Trophy } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 type PlayerRow = {
   id: string;
   name: string;

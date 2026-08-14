@@ -11,6 +11,8 @@ import PlayerLeaderboard from "@/components/PlayerLeaderboard";
 import SiteVisitTracker from "@/components/SiteVisitTracker";
 import { createSupabaseClient } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 type PlayerRow = {
   id: string;
   name: string;
@@ -1050,7 +1052,7 @@ function getLatestStatSessionDate(matches: MatchRow[], matchStats: MatchPlayerRo
   const statMatchIds = new Set(matchStats.map((stat) => stat.match_id));
 
   return matches
-    .filter((match) => statMatchIds.has(match.id))
+    .filter((match) => match.status === "completed" && statMatchIds.has(match.id))
     .map((match) => match.match_date)
     .sort((first, second) => second.localeCompare(first))[0] || "";
 }
@@ -1062,7 +1064,9 @@ function getPlayerLeaderboardMatches(
 ) {
   const statMatchIds = new Set(matchStats.map((stat) => stat.match_id));
 
-  return matches.filter((match) => match.match_date === matchDate && statMatchIds.has(match.id));
+  return matches.filter(
+    (match) => match.match_date === matchDate && match.status === "completed" && statMatchIds.has(match.id),
+  );
 }
 
 function buildUpcomingSession(
