@@ -737,9 +737,11 @@ export default function AdminPage() {
     }
   }
 
-  async function saveQuickScore(match: Match) {
+  async function saveQuickScore(match: Match, nextStatus?: "live" | "completed") {
     const score = quickScores[match.id];
-    if (!score) return;
+    const teamAScore = score?.team_a_score ?? String(match.team_a_score);
+    const teamBScore = score?.team_b_score ?? String(match.team_b_score);
+    const status = nextStatus || (match.status === "completed" ? "completed" : "live");
 
     setLoading(true);
     setMessage("");
@@ -751,15 +753,15 @@ export default function AdminPage() {
           method: "PATCH",
           body: JSON.stringify({
             ...match,
-            team_a_score: Number(score.team_a_score || 0),
-            team_b_score: Number(score.team_b_score || 0),
-            status: "live",
+            team_a_score: Number(teamAScore || 0),
+            team_b_score: Number(teamBScore || 0),
+            status,
           }),
         },
         adminCredential,
       );
 
-      setMessage("Score saved.");
+      setMessage(status === "completed" ? "Final score saved." : "Live score saved.");
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -1600,13 +1602,22 @@ export default function AdminPage() {
                             })
                           }
                         />
-                        <button
-                          type="button"
-                          onClick={() => saveQuickScore(match)}
-                          className="h-11 rounded-lg bg-[#171717] px-4 text-sm font-black text-white"
-                        >
-                          Save Score
-                        </button>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={() => saveQuickScore(match)}
+                            className="h-11 rounded-lg bg-[#171717] px-4 text-sm font-black text-white"
+                          >
+                            {match.status === "completed" ? "Update Final" : "Save Live"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => saveQuickScore(match, "completed")}
+                            className="h-11 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white"
+                          >
+                            Complete
+                          </button>
+                        </div>
                       </div>
                     </article>
                   ))}
