@@ -2394,7 +2394,7 @@ export default function AdminPage() {
   }
 
   function getPlayersForTeamName(teamName: string) {
-    const team = teams.find((nextTeam) => normalizeAdminLabel(nextTeam.name) === normalizeAdminLabel(teamName));
+    const team = activeTeams.find((nextTeam) => normalizeAdminLabel(nextTeam.name) === normalizeAdminLabel(teamName));
     if (!team) return [];
 
     const teamPlayerIds = new Set(getTeamRoster(team.id).map((row) => row.player_id));
@@ -2631,6 +2631,9 @@ function buildPollCandidatePlayers(
   activePlayers: Player[],
 ) {
   const gameDayTeamNames = new Set<string>();
+  const gameDayDate = gameDayMatches[0]?.match_date || "";
+  const teamsForDate = gameDayDate ? teams.filter((team) => team.session_date === gameDayDate) : [];
+  const candidateTeams = teamsForDate.length > 0 ? teamsForDate : teams;
 
   for (const match of gameDayMatches) {
     gameDayTeamNames.add(normalizeAdminLabel(match.team_a_name));
@@ -2638,7 +2641,7 @@ function buildPollCandidatePlayers(
   }
 
   const gameDayTeamIds = new Set(
-    teams
+    candidateTeams
       .filter((team) => gameDayTeamNames.has(normalizeAdminLabel(team.name)))
       .map((team) => team.id),
   );
