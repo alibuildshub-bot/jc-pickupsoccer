@@ -72,6 +72,13 @@ type PlayerHonor = {
   type: "mvp" | "golden-boot" | "champion";
 };
 
+const manualMvpHonors = [
+  {
+    playerName: "Hamzah Q",
+    sessionDate: "2026-07-25",
+  },
+];
+
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
@@ -487,15 +494,19 @@ function buildPlayerHonors({
 }) {
   const honors: PlayerHonor[] = [];
   const mvpHonor = countMvpHonors(polls, pollOptions, pollVotes, matchingPlayerIds, matchingPlayerNames);
+  const manualMvpSessions = manualMvpHonors
+    .filter((honor) => matchingPlayerNames.has(normalizePlayerName(honor.playerName)))
+    .map((honor) => formatDate(honor.sessionDate));
+  const mvpSessions = Array.from(new Set([...mvpHonor.sessions, ...manualMvpSessions]));
   const goldenBootCount = countGoldenBoots(matches, allStats, players, matchingPlayerIds);
   const championCount = countChampionSessions(matches, allStats, matchingPlayerIds);
 
-  if (mvpHonor.count > 0) {
+  if (mvpSessions.length > 0) {
     honors.push({
       label: "Tournament MVP",
-      count: mvpHonor.count,
-      description: "Most votes after a closed MVP poll.",
-      sessions: mvpHonor.sessions,
+      count: mvpSessions.length,
+      description: "Selected as player of the session.",
+      sessions: mvpSessions,
       type: "mvp",
     });
   }
