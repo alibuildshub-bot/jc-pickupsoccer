@@ -740,7 +740,7 @@ async function getDashboardData() {
   const teamRosters = buildTeamRosters(currentTeams, rawTeams, (rosterRows || []) as unknown as RosterRow[]);
   const playerLeaderboardDate = getLatestStatSessionDate(matches, matchStats) || getLatestCompletedSessionDate(matches) || tournamentDate;
   const playerLeaderboardMatches = playerLeaderboardDate
-    ? matches.filter((match) => match.match_date === playerLeaderboardDate && isPlayerLeaderboardMatch(match))
+    ? getPlayerLeaderboardMatches(matches, matchStats, playerLeaderboardDate)
     : [];
   const playerLeaderboardMatchIds = new Set(playerLeaderboardMatches.map((match) => match.id));
   const currentMatchStats = matchStats.filter((stat) => playerLeaderboardMatchIds.has(stat.match_id));
@@ -1050,13 +1050,19 @@ function getLatestStatSessionDate(matches: MatchRow[], matchStats: MatchPlayerRo
   const statMatchIds = new Set(matchStats.map((stat) => stat.match_id));
 
   return matches
-    .filter((match) => statMatchIds.has(match.id) && isPlayerLeaderboardMatch(match))
+    .filter((match) => statMatchIds.has(match.id))
     .map((match) => match.match_date)
     .sort((first, second) => second.localeCompare(first))[0] || "";
 }
 
-function isPlayerLeaderboardMatch(match: MatchRow) {
-  return match.status === "completed";
+function getPlayerLeaderboardMatches(
+  matches: MatchRow[],
+  matchStats: MatchPlayerRow[],
+  matchDate: string,
+) {
+  const statMatchIds = new Set(matchStats.map((stat) => stat.match_id));
+
+  return matches.filter((match) => match.match_date === matchDate && statMatchIds.has(match.id));
 }
 
 function buildUpcomingSession(
