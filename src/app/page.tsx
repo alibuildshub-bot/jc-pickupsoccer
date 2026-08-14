@@ -716,16 +716,16 @@ export default async function Home() {
               <div className="rounded-lg border border-dashed border-black/20 bg-white p-4 md:col-span-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm font-black">Full archive has its own page.</p>
+                    <p className="text-sm font-black">Past results are saved here.</p>
                     <p className="mt-1 text-sm font-semibold text-black/50">
-                      Open Past Sessions to view every saved date, match, table, and player stat.
+                      View previous pickup dates, final tables, match scores, and player stats.
                     </p>
                   </div>
                   <a
                     href="/past-sessions"
                     className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-[#171717] px-4 text-sm font-black text-white transition hover:bg-[#2a2a2a]"
                   >
-                    Open Past Sessions
+                    View Past Games
                   </a>
                 </div>
               </div>
