@@ -2511,6 +2511,10 @@ function normalizeAdminLabel(label: string) {
   return label.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+function normalizeAdminPlayerName(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 function getQuickStatKey(matchId: string, playerId: string, teamName: string) {
   return `${matchId}:${playerId}:${normalizeAdminLabel(teamName)}`;
 }
@@ -2715,8 +2719,10 @@ function buildPastGameSessions(
       for (const stat of stats) {
         if (!matchIds.has(stat.match_id)) continue;
 
-        const existing = playerTotals.get(stat.player_id) || {
-          name: stat.players?.name || playerNames.get(stat.player_id) || "Unknown player",
+        const playerName = stat.players?.name || playerNames.get(stat.player_id) || "Unknown player";
+        const playerKey = normalizeAdminPlayerName(playerName);
+        const existing = playerTotals.get(playerKey) || {
+          name: playerName,
           team: stat.team_name,
           goals: 0,
           assists: 0,
@@ -2724,7 +2730,7 @@ function buildPastGameSessions(
 
         existing.goals += stat.goals || 0;
         existing.assists += stat.assists || 0;
-        playerTotals.set(stat.player_id, existing);
+        playerTotals.set(playerKey, existing);
       }
 
       return {

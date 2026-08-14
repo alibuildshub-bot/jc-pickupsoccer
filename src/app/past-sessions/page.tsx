@@ -318,7 +318,10 @@ function buildResultsArchive(
         const playerName = playerNames.get(stat.player_id);
         if (!playerName) continue;
 
-        const existing = playerTotals.get(stat.player_id) || {
+        const playerKey = normalizePlayerName(playerName);
+        if (!playerKey) continue;
+
+        const existing = playerTotals.get(playerKey) || {
           name: playerName,
           team: getTeamDisplayName(stat.team_name, teamDisplayNames),
           goals: 0,
@@ -329,7 +332,7 @@ function buildResultsArchive(
         existing.goals += stat.goals || 0;
         existing.assists += stat.assists || 0;
         existing.points = existing.goals + existing.assists;
-        playerTotals.set(stat.player_id, existing);
+        playerTotals.set(playerKey, existing);
       }
 
       const dayTeams = getTeamsForMatches(teams, dayMatches, rawDate);
@@ -615,6 +618,10 @@ function normalizeTeamName(name: string) {
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
+}
+
+function normalizePlayerName(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 function cleanTeamName(name: string) {
