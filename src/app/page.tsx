@@ -245,17 +245,23 @@ export default async function Home() {
           <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-wide text-[#17613d] sm:text-sm">Next Pickup</p>
+                <p className="text-xs font-black uppercase tracking-wide text-[#17613d] sm:text-sm">
+                  {data.upcomingSession ? "Next Pickup" : "Latest Session Recap"}
+                </p>
                 <h2 className="mt-2 text-3xl font-black leading-none sm:text-5xl">
-                  {data.upcomingSession ? data.upcomingSession.date : "Not scheduled yet"}
+                  {data.upcomingSession ? data.upcomingSession.date : latestSession.label}
                 </h2>
                 <p className="mt-3 max-w-xl text-sm font-semibold leading-5 text-black/55 sm:leading-6">
                   {data.upcomingSession
                     ? "Add it to your calendar, complete the waiver, and check back after games for updated stats."
-                    : "Stay tuned for the next matchup. Complete the waiver now so you are ready for the next pickup."}
+                    : "The latest pickup is complete. Review the winner, player stats, and full session results below."}
                 </p>
               </div>
-              <CalendarDays className="shrink-0 text-[#b7791f]" size={38} />
+              {data.upcomingSession ? (
+                <CalendarDays className="shrink-0 text-[#b7791f]" size={38} />
+              ) : (
+                <Trophy className="shrink-0 text-[#b7791f]" size={38} />
+              )}
             </div>
             {data.upcomingSession ? (
               <>
@@ -317,16 +323,56 @@ export default async function Home() {
                 ) : null}
               </>
             ) : (
-              <div className="mt-6">
+              <div className="mt-5">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  <MiniStat label="Winner" value={latestSession.winner} icon={Trophy} />
+                  <MiniStat
+                    label="Games Complete"
+                    value={`${data.completedTournamentGames}/${data.tournamentGames || data.completedTournamentGames}`}
+                  />
+                  <MiniStat label="Total Goals" value={String(data.goalsTracked)} />
+                  <MiniStat
+                    label={data.mvpWinner.isReady ? "MVP" : "Top Player"}
+                    value={data.mvpWinner.isReady
+                      ? data.mvpWinner.name
+                      : data.players[0]
+                        ? `${data.players[0].name} - ${data.players[0].points} G+A`
+                        : "Stats pending"}
+                    icon={Trophy}
+                  />
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  <a
+                    href="#progress"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-center text-sm font-black text-white transition hover:bg-[#17613d]"
+                  >
+                    <Trophy size={17} />
+                    View Results
+                  </a>
+                  <a
+                    href="#leaderboard"
+                    className="inline-flex h-11 items-center justify-center rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-black text-black transition hover:border-black/30"
+                  >
+                    Player Stats
+                  </a>
+                  <a
+                    href="/past-sessions"
+                    className="inline-flex h-11 items-center justify-center rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-black text-black transition hover:border-black/30"
+                  >
+                    Past Sessions
+                  </a>
+                </div>
+                <div className="mt-4">
                 <a
                   href="https://bondsports.co/login"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-center text-sm font-black text-white transition hover:bg-[#17613d]"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#1f7a4d]/30 bg-[#edf4f0] px-4 text-center text-sm font-black text-[#17613d] transition hover:border-[#17613d]"
                 >
                   <ShieldCheck size={17} />
                   Complete Waiver
                 </a>
+                </div>
               </div>
             )}
 
@@ -973,7 +1019,7 @@ async function getMvpWinnerForPoll(
 }
 
 function getCurrentSessionDate(matches: MatchRow[], teams: TeamRow[] = []) {
-  const nextTeamSession = getNextTeamSessionDate(teams);
+  const nextTeamSession = getNextTeamSessionDate(teams, matches);
 
   if (nextTeamSession) return nextTeamSession;
 
@@ -996,12 +1042,24 @@ function getCurrentSessionDate(matches: MatchRow[], teams: TeamRow[] = []) {
   return "";
 }
 
-function getNextTeamSessionDate(teams: TeamRow[]) {
+function getNextTeamSessionDate(teams: TeamRow[], matches: MatchRow[] = []) {
   const today = getTodayDateInput();
+  const matchesByDate = new Map<string, MatchRow[]>();
+
+  for (const match of matches) {
+    const dateMatches = matchesByDate.get(match.match_date) || [];
+    dateMatches.push(match);
+    matchesByDate.set(match.match_date, dateMatches);
+  }
 
   return teams
     .map((team) => team.session_date)
-    .filter((date): date is string => Boolean(date && date >= today))
+    .filter((date): date is string => {
+      if (!date || date < today) return false;
+
+      const dateMatches = matchesByDate.get(date) || [];
+      return dateMatches.length === 0 || dateMatches.some((match) => match.status !== "completed");
+    })
     .sort((first, second) => first.localeCompare(second))[0] || "";
 }
 
@@ -1084,7 +1142,7 @@ function buildUpcomingSession(
   const sessionDate = upcomingMatches[0]?.match_date;
 
   if (!sessionDate) {
-    const teamSessionDate = getNextTeamSessionDate(teams) || getCurrentSessionDate(matches, teams);
+    const teamSessionDate = getNextTeamSessionDate(teams, matches);
 
     if (!teamSessionDate) return null;
 
