@@ -166,6 +166,8 @@ type SessionGoalTrend = {
 
 const fallbackTeamOfTheWeek = {
   name: "Coming soon",
+  color: "#1f7a4d",
+  logo: null,
   goalsFor: 0,
   points: 0,
   record: "0W - 0D - 0L",
@@ -188,6 +190,8 @@ export default async function Home() {
   const latestSession = data.latestSession || {
     label: "Latest Session",
     winner: "Waiting on results",
+    winnerLogo: null,
+    winnerColor: "#1f7a4d",
     mvp: "Voting pending",
   };
   const topPlayers = data.players.slice(0, 3);
@@ -440,7 +444,12 @@ export default async function Home() {
                 <h2 className="mt-1 text-xl font-black sm:text-2xl">{latestSession.label}</h2>
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                <CompactResult label="Winner" value={latestSession.winner} />
+                <TeamCompactResult
+                  label="Winner"
+                  value={latestSession.winner}
+                  logo={latestSession.winnerLogo}
+                  color={latestSession.winnerColor}
+                />
                 <CompactResult label="MVP" value={latestSession.mvp} />
               </div>
             </article>
@@ -786,6 +795,8 @@ async function getDashboardData() {
       latestSession: {
         label: "Latest Session",
         winner: "Waiting on results",
+        winnerLogo: null,
+        winnerColor: "#1f7a4d",
         mvp: "Voting pending",
       },
       upcomingSession: null,
@@ -1116,6 +1127,8 @@ async function buildLatestSessionSummary(
     return {
       label: "Latest Session",
       winner: "Waiting on results",
+      winnerLogo: null,
+      winnerColor: "#1f7a4d",
       mvp: "Voting pending",
     };
   }
@@ -1129,6 +1142,8 @@ async function buildLatestSessionSummary(
   return {
     label: formatDate(latestDate),
     winner: winner.isReady ? winner.name : "Waiting on results",
+    winnerLogo: winner.isReady ? winner.logo : null,
+    winnerColor: winner.isReady ? winner.color : "#1f7a4d",
     mvp: latestMvp.isReady ? latestMvp.name : "Voting pending",
   };
 }
@@ -1273,6 +1288,8 @@ function buildTeamOfTheWeek(standings: TeamStanding[]) {
 
   return {
     name: winner.name,
+    color: winner.color,
+    logo: winner.logo,
     goalsFor: winner.goalsFor,
     points: winner.points,
     record: `${winner.wins}W - ${winner.draws}D - ${winner.losses}L`,
@@ -2225,6 +2242,28 @@ function CompactResult({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg bg-[#fbfaf7] px-3 py-4">
       <p className="text-xs font-black uppercase text-black/45">{label}</p>
       <p className="mt-1 break-words text-lg font-black">{value}</p>
+    </div>
+  );
+}
+
+function TeamCompactResult({
+  label,
+  value,
+  logo,
+  color,
+}: {
+  label: string;
+  value: string;
+  logo?: string | null;
+  color?: string | null;
+}) {
+  return (
+    <div className="rounded-lg bg-[#fbfaf7] px-3 py-4">
+      <p className="text-xs font-black uppercase text-black/45">{label}</p>
+      <div className="mt-2 flex min-w-0 items-center gap-2">
+        <TeamLogo logo={logo} color={color || "#1f7a4d"} name={value} size="md" />
+        <p className="min-w-0 break-words text-lg font-black">{value}</p>
+      </div>
     </div>
   );
 }
