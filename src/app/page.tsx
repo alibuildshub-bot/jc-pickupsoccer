@@ -409,6 +409,27 @@ export default async function Home() {
                   </div>
                 )}
               </div>
+              {data.recentMatches.length > 2 ? (
+                <div className="mt-3 rounded-lg bg-[#fbfaf7] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-xs font-black uppercase tracking-wide text-black/45">Session Timeline</p>
+                    <p className="text-xs font-bold text-black/40">{data.recentMatches.length} games</p>
+                  </div>
+                  <div className="grid gap-1.5 sm:grid-cols-2">
+                    {data.recentMatches.slice(2).map((match) => (
+                      <a
+                        key={`timeline-${match.week}-${match.date}-${match.game}`}
+                        href="/past-sessions"
+                        className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white px-2.5 py-2 text-xs transition hover:bg-[#f1ece3]"
+                      >
+                        <span className="font-black uppercase text-[#17613d]">{match.game}</span>
+                        <span className="truncate font-bold text-black/60">{match.teamA} vs {match.teamB}</span>
+                        <span className="rounded-md bg-[#171717] px-2 py-1 font-black text-white">{match.score}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </article>
 
