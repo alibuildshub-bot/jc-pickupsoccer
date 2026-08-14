@@ -200,6 +200,7 @@ export default function AdminPage() {
   });
   const [quickScores, setQuickScores] = useState<Record<string, { team_a_score: string; team_b_score: string }>>({});
   const [quickStatMatchId, setQuickStatMatchId] = useState("");
+  const [pastStatMatchByDate, setPastStatMatchByDate] = useState<Record<string, string>>({});
   const [quickStatDrafts, setQuickStatDrafts] = useState<Record<string, { goals: string; assists: string }>>({});
   const [quickSingleStat, setQuickSingleStat] = useState({
     player_id: "",
@@ -1385,7 +1386,11 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="grid gap-4">
-              {pastGameSessions.map((session) => (
+              {pastGameSessions.map((session) => {
+                const selectedPastMatch =
+                  session.matches.find((match) => match.id === pastStatMatchByDate[session.rawDate]) || session.matches[0];
+
+                return (
                 <details key={session.rawDate} className="group rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
                   <summary className="list-none cursor-pointer">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1417,10 +1422,13 @@ export default function AdminPage() {
                         <p className="text-xs font-black uppercase text-black/45">Games</p>
                         <button
                           type="button"
-                          onClick={() => selectGameDayDate(session.rawDate)}
+                          onClick={() => {
+                            selectGameDayDate(session.rawDate);
+                            if (selectedPastMatch) setQuickStatMatchId(selectedPastMatch.id);
+                          }}
                           className="rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-black text-black/70 hover:bg-black/5"
                         >
-                          Edit This Date
+                          Open in Console
                         </button>
                       </div>
                       <div className="grid gap-2 md:grid-cols-2">
@@ -1480,9 +1488,74 @@ export default function AdminPage() {
                         </div>
                       )}
                     </div>
+
+                    {selectedPastMatch && (
+                      <div className="rounded-lg bg-white p-3 sm:p-4 lg:col-span-2">
+                        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                          <div>
+                            <p className="text-xs font-black uppercase text-[#1f7a4d]">Correct player stats</p>
+                            <h3 className="mt-1 text-lg font-black">{session.date}</h3>
+                            <p className="mt-1 text-xs font-bold leading-5 text-black/50">
+                              Pick a game below, adjust each player&apos;s goals or assists, then press Save. Changes update the public stats.
+                            </p>
+                          </div>
+                          <AdminSelect
+                            label="Game"
+                            value={selectedPastMatch.id}
+                            onChange={(value) =>
+                              setPastStatMatchByDate((current) => ({
+                                ...current,
+                                [session.rawDate]: value,
+                              }))
+                            }
+                          >
+                            {session.matches.map((match) => (
+                              <option key={match.id} value={match.id}>
+                                {formatMatchOption(match, matchGameLabels)}
+                              </option>
+                            ))}
+                          </AdminSelect>
+                        </div>
+                        <div className="mb-3 rounded-lg bg-[#f7f3ec] p-3">
+                          <p className="text-xs font-black uppercase text-[#17613d]">
+                            {matchGameLabels.get(selectedPastMatch.id)}
+                          </p>
+                          <p className="mt-1 text-sm font-black">
+                            {selectedPastMatch.team_a_name} {selectedPastMatch.team_a_score} - {selectedPastMatch.team_b_score}{" "}
+                            {selectedPastMatch.team_b_name}
+                          </p>
+                          <p className="mt-1 text-xs font-bold capitalize text-black/45">
+                            Status: {selectedPastMatch.status}. Existing saved stats are prefilled.
+                          </p>
+                        </div>
+                        <div className="grid gap-3 xl:grid-cols-2">
+                          <QuickStatTeamSheet
+                            match={selectedPastMatch}
+                            teamName={selectedPastMatch.team_a_name}
+                            players={getPlayersForTeamNameOnDate(selectedPastMatch.team_a_name, session.rawDate)}
+                            getDraft={getQuickStatDraft}
+                            updateDraft={updateQuickStatDraft}
+                            adjustDraft={adjustQuickStatDraft}
+                            savePlayerStat={saveQuickPlayerStat}
+                            loading={loading}
+                          />
+                          <QuickStatTeamSheet
+                            match={selectedPastMatch}
+                            teamName={selectedPastMatch.team_b_name}
+                            players={getPlayersForTeamNameOnDate(selectedPastMatch.team_b_name, session.rawDate)}
+                            getDraft={getQuickStatDraft}
+                            updateDraft={updateQuickStatDraft}
+                            adjustDraft={adjustQuickStatDraft}
+                            savePlayerStat={saveQuickPlayerStat}
+                            loading={loading}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </details>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -2395,6 +2468,18 @@ export default function AdminPage() {
 
   function getPlayersForTeamName(teamName: string) {
     const team = activeTeams.find((nextTeam) => normalizeAdminLabel(nextTeam.name) === normalizeAdminLabel(teamName));
+    if (!team) return [];
+
+    const teamPlayerIds = new Set(getTeamRoster(team.id).map((row) => row.player_id));
+
+    return activePlayers.filter((player) => teamPlayerIds.has(player.id));
+  }
+
+  function getPlayersForTeamNameOnDate(teamName: string, date: string) {
+    const dateMatches = matches.filter((match) => match.match_date === date);
+    const sessionTeams = getCurrentSetupTeams(teams, dateMatches, date);
+    const team = sessionTeams.find((nextTeam) => normalizeAdminLabel(nextTeam.name) === normalizeAdminLabel(teamName));
+
     if (!team) return [];
 
     const teamPlayerIds = new Set(getTeamRoster(team.id).map((row) => row.player_id));
