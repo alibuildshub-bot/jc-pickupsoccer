@@ -15,6 +15,7 @@ type PlayerRow = {
   id: string;
   name: string;
   position: string | null;
+  is_active?: boolean;
 };
 
 type MatchRow = {
@@ -715,7 +716,7 @@ async function getDashboardData() {
   }
 
   const [{ data: playerRows }, matchRowsResult, { data: statRows }, teamRowsResult, { data: rosterRows }] = await Promise.all([
-    supabase.from("players").select("id,name,position").eq("is_active", true).order("name"),
+    supabase.from("players").select("id,name,position,is_active").order("name"),
     selectPublicMatches(supabase),
     supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result"),
     selectPublicTeams(supabase),
@@ -749,31 +750,18 @@ async function getDashboardData() {
   const teamDisplayNames = buildTeamDisplayNames(teams);
   const latestSession = await buildLatestSessionSummary(supabase, matches, teams, teamDisplayNames);
   const upcomingSession = buildUpcomingSession(matches, teams, rawTeams, (rosterRows || []) as unknown as RosterRow[], teamDisplayNames);
+  const playerNamesById = buildPlayerNamesById(players);
+  const playerDisplayNamesByKey = buildPlayerDisplayNamesByKey(players);
   const playerTeamNames = buildPlayerTeamNames(rawTeams, (rosterRows || []) as RosterRow[], teamDisplayNames);
-  const currentPlayerTeamNames = buildCurrentPlayerTeamNames(currentMatchStats, teamDisplayNames);
+  const playerTeamNamesByKey = buildPlayerTeamNamesByKey(playerTeamNames, playerNamesById);
+  const currentPlayerTeamNamesByKey = buildCurrentPlayerTeamNamesByKey(currentMatchStats, playerNamesById, teamDisplayNames);
+  const totalsByPlayerKey = buildLeaderboardTotalsByPlayerKey(currentMatchStats, playerNamesById);
 
-  const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name" | "team">>();
-
-  for (const player of players) {
-    totalsByPlayer.set(player.id, { games: 0, wins: 0, goals: 0, assists: 0, points: 0 });
-  }
-
-  for (const stat of currentMatchStats) {
-    const totals = totalsByPlayer.get(stat.player_id);
-    if (!totals) continue;
-
-    totals.games += 1;
-    totals.goals += stat.goals || 0;
-    totals.assists += stat.assists || 0;
-    totals.wins += stat.result === "win" ? 1 : 0;
-    totals.points = totals.goals + totals.assists;
-  }
-
-  const leaderboard = players
-    .map((player) => ({
-      name: player.name,
-      team: currentPlayerTeamNames.get(player.id) || playerTeamNames.get(player.id) || "Unassigned",
-      ...(totalsByPlayer.get(player.id) || { games: 0, wins: 0, goals: 0, assists: 0, points: 0 }),
+  const leaderboard = Array.from(playerDisplayNamesByKey.entries())
+    .map(([playerKey, playerName]) => ({
+      name: playerName,
+      team: currentPlayerTeamNamesByKey.get(playerKey) || playerTeamNamesByKey.get(playerKey) || "Unassigned",
+      ...(totalsByPlayerKey.get(playerKey) || { games: 0, wins: 0, goals: 0, assists: 0, points: 0 }),
     }))
     .sort((a, b) => b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name));
   const activeLeaderboard = leaderboard.filter((player) => player.games > 0);
@@ -794,7 +782,7 @@ async function getDashboardData() {
 
   return {
     isConnected: true,
-    activePlayers: players.length,
+    activePlayers: players.filter((player) => player.is_active !== false).length,
     activeTeams: currentTeams.length,
     gamesPlayed: tournamentMatches.filter((match) => match.status === "completed").length,
     goalsTracked,
@@ -1063,7 +1051,7 @@ function getLatestStatSessionDate(matches: MatchRow[], matchStats: MatchPlayerRo
 }
 
 function isPlayerLeaderboardMatch(match: MatchRow) {
-  return match.status === "completed" || match.status === "live";
+  return match.status === "completed";
 }
 
 function buildUpcomingSession(
@@ -1206,19 +1194,86 @@ function buildPlayerTeamNames(
   return playerTeams;
 }
 
-function buildCurrentPlayerTeamNames(
+function buildPlayerNamesById(players: PlayerRow[]) {
+  return new Map(players.map((player) => [player.id, player.name]));
+}
+
+function buildPlayerDisplayNamesByKey(players: PlayerRow[]) {
+  const playerNames = new Map<string, string>();
+
+  for (const player of players) {
+    const key = normalizePlayerName(player.name);
+    if (!key || playerNames.has(key)) continue;
+
+    playerNames.set(key, player.name);
+  }
+
+  return playerNames;
+}
+
+function buildPlayerTeamNamesByKey(
+  playerTeamNames: Map<string, string>,
+  playerNamesById: Map<string, string>,
+) {
+  const playerTeams = new Map<string, string>();
+
+  for (const [playerId, teamName] of playerTeamNames.entries()) {
+    const playerName = playerNamesById.get(playerId);
+    if (!playerName) continue;
+
+    const playerKey = normalizePlayerName(playerName);
+    if (!playerKey || playerTeams.has(playerKey)) continue;
+
+    playerTeams.set(playerKey, teamName);
+  }
+
+  return playerTeams;
+}
+
+function buildCurrentPlayerTeamNamesByKey(
   currentMatchStats: MatchPlayerRow[],
+  playerNamesById: Map<string, string>,
   teamDisplayNames: Map<string, string>,
 ) {
   const playerTeams = new Map<string, string>();
 
   for (const stat of currentMatchStats) {
-    if (playerTeams.has(stat.player_id)) continue;
+    const playerName = playerNamesById.get(stat.player_id);
+    if (!playerName) continue;
 
-    playerTeams.set(stat.player_id, getTeamDisplayName(stat.team_name, teamDisplayNames));
+    const playerKey = normalizePlayerName(playerName);
+    if (!playerKey || playerTeams.has(playerKey)) continue;
+
+    playerTeams.set(playerKey, getTeamDisplayName(stat.team_name, teamDisplayNames));
   }
 
   return playerTeams;
+}
+
+function buildLeaderboardTotalsByPlayerKey(
+  currentMatchStats: MatchPlayerRow[],
+  playerNamesById: Map<string, string>,
+) {
+  const totalsByPlayer = new Map<string, Omit<LeaderboardPlayer, "name" | "team">>();
+
+  for (const stat of currentMatchStats) {
+    const playerName = playerNamesById.get(stat.player_id);
+    if (!playerName) continue;
+
+    const playerKey = normalizePlayerName(playerName);
+    if (!playerKey) continue;
+
+    const totals = totalsByPlayer.get(playerKey) || { games: 0, wins: 0, goals: 0, assists: 0, points: 0 };
+
+    totals.games += 1;
+    totals.goals += stat.goals || 0;
+    totals.assists += stat.assists || 0;
+    totals.wins += stat.result === "win" ? 1 : 0;
+    totals.points = totals.goals + totals.assists;
+    totalsByPlayer.set(playerKey, totals);
+  }
+
+  return totalsByPlayer;
 }
 
 function buildResultsArchive(
@@ -1262,7 +1317,10 @@ function buildResultsArchive(
         const playerName = playerNames.get(stat.player_id);
         if (!playerName) continue;
 
-        const existing = playerTotals.get(stat.player_id) || {
+        const playerKey = normalizePlayerName(playerName);
+        if (!playerKey) continue;
+
+        const existing = playerTotals.get(playerKey) || {
           name: playerName,
           team: getTeamDisplayName(stat.team_name, teamDisplayNames),
           goals: 0,
@@ -1273,7 +1331,7 @@ function buildResultsArchive(
         existing.goals += stat.goals || 0;
         existing.assists += stat.assists || 0;
         existing.points = existing.goals + existing.assists;
-        playerTotals.set(stat.player_id, existing);
+        playerTotals.set(playerKey, existing);
       }
 
       const dayTeams = getTeamsForMatches(teams, dayMatches);
@@ -1639,6 +1697,10 @@ function normalizeTeamName(name: string) {
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
+}
+
+function normalizePlayerName(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 function cleanTeamName(name: string) {

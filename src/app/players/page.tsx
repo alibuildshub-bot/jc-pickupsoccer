@@ -188,12 +188,16 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
   const completedMatchIds = new Set(matches.map((match) => match.id));
   const completedDates = new Set(matches.map((match) => match.match_date));
   const matchDates = new Map(matches.map((match) => [match.id, match.match_date]));
-  const playerIdsByName = new Map(players.map((player) => [player.name.trim().toLowerCase(), player.id]));
+  const playerKeysById = new Map(players.map((player) => [player.id, normalizePlayerName(player.name)]));
+  const playerKeysByName = new Map(players.map((player) => [normalizePlayerName(player.name), normalizePlayerName(player.name)]));
   const pollDates = new Map(polls.map((poll) => [poll.id, poll.match_date]));
   const totals = new Map<string, PlayerTotal & { sessionDates: Set<string> }>();
 
   for (const player of players) {
-    totals.set(player.id, {
+    const playerKey = normalizePlayerName(player.name);
+    if (!playerKey || totals.has(playerKey)) continue;
+
+    totals.set(playerKey, {
       id: player.id,
       name: player.name,
       goals: 0,
@@ -208,7 +212,10 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
   for (const stat of stats) {
     if (!completedMatchIds.has(stat.match_id)) continue;
 
-    const player = totals.get(stat.player_id);
+    const playerKey = playerKeysById.get(stat.player_id);
+    if (!playerKey) continue;
+
+    const player = totals.get(playerKey);
     if (!player) continue;
 
     player.goals += stat.goals || 0;
@@ -233,7 +240,10 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
     for (const teamName of teamNames) {
       for (const teamId of teamIdsByName.get(teamName) || []) {
         for (const playerId of rosterByTeamId.get(teamId) || []) {
-          totals.get(playerId)?.sessionDates.add(matchDate);
+          const playerKey = playerKeysById.get(playerId);
+          if (!playerKey) continue;
+
+          totals.get(playerKey)?.sessionDates.add(matchDate);
         }
       }
     }
@@ -243,10 +253,12 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
     const pollDate = pollDates.get(option.poll_id);
     if (!pollDate || !completedDates.has(pollDate)) continue;
 
-    const playerId = option.player_id || playerIdsByName.get(option.label.trim().toLowerCase());
-    if (!playerId) continue;
+    const playerKey = option.player_id
+      ? playerKeysById.get(option.player_id)
+      : playerKeysByName.get(normalizePlayerName(option.label));
+    if (!playerKey) continue;
 
-    const player = totals.get(playerId);
+    const player = totals.get(playerKey);
     if (!player) continue;
 
     player.sessionDates.add(pollDate);
@@ -356,4 +368,8 @@ function normalizeLabel(value: string) {
     .replace(/[^\p{L}\p{N}\s]/gu, "")
     .replace(/\s+/g, " ")
     .toLowerCase();
+}
+
+function normalizePlayerName(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
 }

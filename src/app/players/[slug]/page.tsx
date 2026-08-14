@@ -186,12 +186,15 @@ async function getPlayerProfile(slug: string) {
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
-  const player = players.find((row) => slugify(row.name) === slug);
+  const matchingPlayers = players.filter((row) => slugify(row.name) === slug);
+  const player = matchingPlayers[0];
 
   if (!player) return null;
 
+  const matchingPlayerIds = new Set(matchingPlayers.map((row) => row.id));
+  const matchingPlayerNames = new Set(matchingPlayers.map((row) => normalizePlayerName(row.name)));
   const matches = ((matchRows || []) as MatchRow[]).filter((match) => match.status === "completed");
-  const stats = ((statRows || []) as MatchPlayerRow[]).filter((stat) => stat.player_id === player.id);
+  const stats = ((statRows || []) as MatchPlayerRow[]).filter((stat) => matchingPlayerIds.has(stat.player_id));
   const teams = (teamRows || []) as TeamRow[];
   const roster = (rosterRows || []) as RosterRow[];
   const polls = (pollRows || []) as PollRow[];
@@ -221,7 +224,7 @@ async function getPlayerProfile(slug: string) {
     sessionsByDate.set(rawDate, existing);
   }
 
-  const playerTeamIds = new Set(roster.filter((row) => row.player_id === player.id).map((row) => row.team_id));
+  const playerTeamIds = new Set(roster.filter((row) => matchingPlayerIds.has(row.player_id)).map((row) => row.team_id));
   const teamIdsByName = buildTeamIdsByName(teams);
 
   for (const match of matches) {
@@ -245,7 +248,7 @@ async function getPlayerProfile(slug: string) {
     const pollDate = pollDates.get(option.poll_id);
     if (!pollDate || !completedDates.has(pollDate)) continue;
 
-    const isPlayerOption = option.player_id === player.id || option.label.trim().toLowerCase() === player.name.trim().toLowerCase();
+    const isPlayerOption = Boolean(option.player_id && matchingPlayerIds.has(option.player_id)) || matchingPlayerNames.has(normalizePlayerName(option.label));
     if (!isPlayerOption || sessionsByDate.has(pollDate)) continue;
 
     sessionsByDate.set(pollDate, {
@@ -338,4 +341,8 @@ function normalizeLabel(value: string) {
     .replace(/[^\p{L}\p{N}\s]/gu, "")
     .replace(/\s+/g, " ")
     .toLowerCase();
+}
+
+function normalizePlayerName(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
