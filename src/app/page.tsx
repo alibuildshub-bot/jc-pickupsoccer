@@ -1531,7 +1531,7 @@ async function selectPublicMatches(
     .from("matches")
     .select("id,match_date,start_time,end_time,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
     .order("match_date", { ascending: false })
-    .limit(50);
+    .limit(500);
 
   if (!isMissingStartTimeColumn(withStartTime.error)) {
     return withStartTime;
@@ -1541,7 +1541,7 @@ async function selectPublicMatches(
     .from("matches")
     .select("id,match_date,week_label,location,team_a_name,team_b_name,team_a_score,team_b_score,status,created_at")
     .order("match_date", { ascending: false })
-    .limit(50);
+    .limit(500);
 
   return {
     ...withoutStartTime,

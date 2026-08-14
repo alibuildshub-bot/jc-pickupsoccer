@@ -1095,17 +1095,22 @@ export default function AdminPage() {
       return;
     }
 
+    const existingStatsForDay = stats.filter(
+      (stat) =>
+        gameDayMatchIds.has(stat.match_id) &&
+        stat.player_id === quickSingleStat.player_id &&
+        normalizeAdminLabel(stat.team_name) === normalizeAdminLabel(quickSingleStat.team_name),
+    );
+
+    if (existingStatsForDay.length > 0) {
+      setMessage("This player already has match-by-match stats for this date. Edit the saved game rows below so totals stay accurate.");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
     try {
-      const existingStatsForDay = stats.filter(
-        (stat) =>
-          gameDayMatchIds.has(stat.match_id) &&
-          stat.player_id === quickSingleStat.player_id &&
-          normalizeAdminLabel(stat.team_name) === normalizeAdminLabel(quickSingleStat.team_name),
-      );
-
       const response = await adminFetch(
         "/api/admin/stats",
         {
@@ -1121,14 +1126,6 @@ export default function AdminPage() {
         adminCredential,
       );
       const playerName = getPlayerName(quickSingleStat.player_id);
-      const savedStatId = response.stat?.id;
-      const duplicateStats = existingStatsForDay.filter((stat) => stat.id !== savedStatId);
-
-      await Promise.all(
-        duplicateStats.map((stat) =>
-          adminFetch(`/api/admin/stats?id=${stat.id}`, { method: "DELETE" }, adminCredential),
-        ),
-      );
 
       setQuickSingleStat({
         player_id: "",
@@ -2280,7 +2277,7 @@ export default function AdminPage() {
             </summary>
             <form onSubmit={saveQuickSinglePlayerStat} className="mt-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
               <p className="text-xs font-bold leading-5 text-black/45">
-                This shortcut saves totals to one eligible Live or Completed match. Use match-by-match entry above for accurate per-game history.
+                Only use this if you did not enter match-by-match stats for this player. If game rows already exist, edit them below instead.
               </p>
               <div className="grid gap-3 lg:grid-cols-2">
                 <AdminSelect
