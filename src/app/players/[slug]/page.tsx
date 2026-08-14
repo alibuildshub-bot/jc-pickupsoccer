@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Trophy } from "lucide-react";
+import { ArrowLeft, Award, Medal, ShieldCheck, Trophy } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -42,12 +42,18 @@ type RosterRow = {
 type PollRow = {
   id: string;
   match_date: string | null;
+  status: string | null;
 };
 
 type PollOptionRow = {
+  id: string;
   poll_id: string;
   player_id: string | null;
   label: string;
+};
+
+type PollVoteRow = {
+  option_id: string;
 };
 
 type PlayerFormMatch = {
@@ -56,6 +62,13 @@ type PlayerFormMatch = {
   result: "W" | "D" | "L";
   goals: number;
   assists: number;
+};
+
+type PlayerHonor = {
+  label: string;
+  count: number;
+  description: string;
+  type: "mvp" | "golden-boot" | "champion";
 };
 
 export const revalidate = 0;
@@ -121,6 +134,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
             <ProfileAverageStat label="Goals/Session" value={profile.goalsPerSession} />
             <ProfileAverageStat label="Assists/Session" value={profile.assistsPerSession} />
           </div>
+          <PlayerHonors honors={profile.honors} />
           <PlayerFormGuide form={profile.form} />
         </section>
 
@@ -185,7 +199,16 @@ async function getPlayerProfile(slug: string) {
 
   if (!supabase) return null;
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: teamRows }, { data: rosterRows }, { data: pollRows }, { data: pollOptionRows }] = await Promise.all([
+  const [
+    { data: playerRows },
+    { data: matchRows },
+    { data: statRows },
+    { data: teamRows },
+    { data: rosterRows },
+    { data: pollRows },
+    { data: pollOptionRows },
+    { data: pollVoteRows },
+  ] = await Promise.all([
     supabase.from("players").select("id,name,position").order("name"),
     supabase
       .from("matches")
@@ -195,8 +218,9 @@ async function getPlayerProfile(slug: string) {
     supabase.from("match_players").select("match_id,player_id,team_name,goals,assists,result"),
     supabase.from("tournament_teams").select("id,name"),
     supabase.from("tournament_team_players").select("team_id,player_id"),
-    supabase.from("mvp_polls").select("id,match_date"),
-    supabase.from("mvp_poll_options").select("poll_id,player_id,label"),
+    supabase.from("mvp_polls").select("id,match_date,status"),
+    supabase.from("mvp_poll_options").select("id,poll_id,player_id,label"),
+    supabase.from("mvp_votes").select("option_id"),
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
@@ -208,11 +232,13 @@ async function getPlayerProfile(slug: string) {
   const matchingPlayerIds = new Set(matchingPlayers.map((row) => row.id));
   const matchingPlayerNames = new Set(matchingPlayers.map((row) => normalizePlayerName(row.name)));
   const matches = ((matchRows || []) as MatchRow[]).filter((match) => match.status === "completed");
-  const stats = ((statRows || []) as MatchPlayerRow[]).filter((stat) => matchingPlayerIds.has(stat.player_id));
+  const allStats = (statRows || []) as MatchPlayerRow[];
+  const stats = allStats.filter((stat) => matchingPlayerIds.has(stat.player_id));
   const teams = (teamRows || []) as TeamRow[];
   const roster = (rosterRows || []) as RosterRow[];
   const polls = (pollRows || []) as PollRow[];
   const pollOptions = (pollOptionRows || []) as PollOptionRow[];
+  const pollVotes = (pollVoteRows || []) as PollVoteRow[];
   const completedMatchIds = new Set(matches.map((match) => match.id));
   const completedDates = new Set(matches.map((match) => match.match_date));
   const matchesById = new Map(matches.map((match) => [match.id, match]));
@@ -280,6 +306,16 @@ async function getPlayerProfile(slug: string) {
   const goals = sessions.reduce((total, session) => total + session.goals, 0);
   const assists = sessions.reduce((total, session) => total + session.assists, 0);
   const form = buildPlayerForm(stats, matchesById);
+  const honors = buildPlayerHonors({
+    allStats,
+    matches,
+    matchingPlayerIds,
+    matchingPlayerNames,
+    players,
+    pollOptions,
+    polls,
+    pollVotes,
+  });
 
   return {
     name: player.name,
@@ -291,6 +327,7 @@ async function getPlayerProfile(slug: string) {
     goalsPerSession: getPerSessionAverage(goals, sessions.length),
     assistsPerSession: getPerSessionAverage(assists, sessions.length),
     form,
+    honors,
     sessions,
   };
 }
@@ -310,6 +347,51 @@ function ProfileAverageStat({ label, value }: { label: string; value: string }) 
       <p className="text-xs font-black uppercase text-black/45">{label}</p>
       <p className="mt-2 text-2xl font-black">{value}</p>
     </div>
+  );
+}
+
+function PlayerHonors({ honors }: { honors: PlayerHonor[] }) {
+  return (
+    <div className="mt-3 rounded-lg bg-[#fbfaf7] p-3 sm:p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase text-black/45">Trophies / Honors</p>
+          <p className="mt-1 text-sm font-bold text-black/55">Automatically earned from saved sessions</p>
+        </div>
+        <Award className="shrink-0 text-[#b7791f]" size={22} />
+      </div>
+
+      {honors.length > 0 ? (
+        <div className="grid gap-2 sm:grid-cols-3">
+          {honors.map((honor) => (
+            <HonorCard key={honor.type} honor={honor} />
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-lg border border-black/10 bg-white px-3 py-3 text-sm font-semibold text-black/55">
+          Honors will appear after this player earns an MVP, Golden Boot, or Champion session.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function HonorCard({ honor }: { honor: PlayerHonor }) {
+  const Icon = honor.type === "mvp" ? Trophy : honor.type === "golden-boot" ? Medal : ShieldCheck;
+
+  return (
+    <article className="rounded-lg border border-black/10 bg-white p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-2xl font-black">{honor.count}x</p>
+          <h3 className="mt-1 text-sm font-black leading-tight">{honor.label}</h3>
+        </div>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-[#17613d]">
+          <Icon size={18} />
+        </span>
+      </div>
+      <p className="mt-2 text-xs font-semibold leading-5 text-black/50">{honor.description}</p>
+    </article>
   );
 }
 
@@ -378,6 +460,199 @@ function buildPlayerForm(stats: MatchPlayerRow[], matchesById: Map<string, Match
     .filter((match): match is PlayerFormMatch => Boolean(match))
     .sort((first, second) => second.date.localeCompare(first.date) || second.label.localeCompare(first.label))
     .slice(0, 5);
+}
+
+function buildPlayerHonors({
+  allStats,
+  matches,
+  matchingPlayerIds,
+  matchingPlayerNames,
+  players,
+  pollOptions,
+  polls,
+  pollVotes,
+}: {
+  allStats: MatchPlayerRow[];
+  matches: MatchRow[];
+  matchingPlayerIds: Set<string>;
+  matchingPlayerNames: Set<string>;
+  players: PlayerRow[];
+  pollOptions: PollOptionRow[];
+  polls: PollRow[];
+  pollVotes: PollVoteRow[];
+}) {
+  const honors: PlayerHonor[] = [];
+  const mvpCount = countMvpHonors(polls, pollOptions, pollVotes, matchingPlayerIds, matchingPlayerNames);
+  const goldenBootCount = countGoldenBoots(matches, allStats, players, matchingPlayerIds);
+  const championCount = countChampionSessions(matches, allStats, matchingPlayerIds);
+
+  if (mvpCount > 0) {
+    honors.push({
+      label: "Tournament MVP",
+      count: mvpCount,
+      description: "Most votes after a closed MVP poll.",
+      type: "mvp",
+    });
+  }
+
+  if (goldenBootCount > 0) {
+    honors.push({
+      label: "Golden Boot",
+      count: goldenBootCount,
+      description: "Top goal scorer for a session.",
+      type: "golden-boot",
+    });
+  }
+
+  if (championCount > 0) {
+    honors.push({
+      label: "Champion",
+      count: championCount,
+      description: "Played for the top team of a session.",
+      type: "champion",
+    });
+  }
+
+  return honors;
+}
+
+function countMvpHonors(
+  polls: PollRow[],
+  pollOptions: PollOptionRow[],
+  pollVotes: PollVoteRow[],
+  matchingPlayerIds: Set<string>,
+  matchingPlayerNames: Set<string>,
+) {
+  let honors = 0;
+  const optionsByPoll = new Map<string, PollOptionRow[]>();
+  const voteCounts = new Map<string, number>();
+
+  for (const option of pollOptions) {
+    const options = optionsByPoll.get(option.poll_id) || [];
+    options.push(option);
+    optionsByPoll.set(option.poll_id, options);
+  }
+
+  for (const vote of pollVotes) {
+    voteCounts.set(vote.option_id, (voteCounts.get(vote.option_id) || 0) + 1);
+  }
+
+  for (const poll of polls) {
+    if (poll.status !== "closed") continue;
+
+    const options = optionsByPoll.get(poll.id) || [];
+    const topVotes = Math.max(0, ...options.map((option) => voteCounts.get(option.id) || 0));
+    if (topVotes === 0) continue;
+
+    const playerWonPoll = options.some((option) => {
+      const optionVotes = voteCounts.get(option.id) || 0;
+      const isPlayerOption =
+        Boolean(option.player_id && matchingPlayerIds.has(option.player_id)) || matchingPlayerNames.has(normalizePlayerName(option.label));
+
+      return isPlayerOption && optionVotes === topVotes;
+    });
+
+    if (playerWonPoll) honors += 1;
+  }
+
+  return honors;
+}
+
+function countGoldenBoots(matches: MatchRow[], allStats: MatchPlayerRow[], players: PlayerRow[], matchingPlayerIds: Set<string>) {
+  let honors = 0;
+  const matchesById = new Map(matches.map((match) => [match.id, match]));
+  const playerNamesById = new Map(players.map((player) => [player.id, player.name]));
+  const sessionScoring = new Map<string, Map<string, { goals: number; isTargetPlayer: boolean }>>();
+
+  for (const stat of allStats) {
+    const match = matchesById.get(stat.match_id);
+    if (!match) continue;
+
+    const playerName = playerNamesById.get(stat.player_id) || stat.player_id;
+    const playerKey = normalizePlayerName(playerName);
+    const session = sessionScoring.get(match.match_date) || new Map<string, { goals: number; isTargetPlayer: boolean }>();
+    const existing = session.get(playerKey) || { goals: 0, isTargetPlayer: false };
+
+    existing.goals += stat.goals || 0;
+    existing.isTargetPlayer = existing.isTargetPlayer || matchingPlayerIds.has(stat.player_id);
+    session.set(playerKey, existing);
+    sessionScoring.set(match.match_date, session);
+  }
+
+  for (const session of sessionScoring.values()) {
+    const scores = Array.from(session.values());
+    const topGoals = Math.max(0, ...scores.map((score) => score.goals));
+    if (topGoals === 0) continue;
+
+    if (scores.some((score) => score.isTargetPlayer && score.goals === topGoals)) honors += 1;
+  }
+
+  return honors;
+}
+
+function countChampionSessions(matches: MatchRow[], allStats: MatchPlayerRow[], matchingPlayerIds: Set<string>) {
+  let honors = 0;
+  const matchesById = new Map(matches.map((match) => [match.id, match]));
+  const matchesByDate = new Map<string, MatchRow[]>();
+  const playerTeamsByDate = new Map<string, Set<string>>();
+
+  for (const match of matches) {
+    const sessionMatches = matchesByDate.get(match.match_date) || [];
+    sessionMatches.push(match);
+    matchesByDate.set(match.match_date, sessionMatches);
+  }
+
+  for (const stat of allStats) {
+    if (!matchingPlayerIds.has(stat.player_id)) continue;
+
+    const match = matchesById.get(stat.match_id);
+    if (!match || !stat.team_name) continue;
+
+    const teams = playerTeamsByDate.get(match.match_date) || new Set<string>();
+    teams.add(normalizeLabel(stat.team_name));
+    playerTeamsByDate.set(match.match_date, teams);
+  }
+
+  for (const [date, sessionMatches] of matchesByDate.entries()) {
+    const championTeam = getChampionTeamKey(sessionMatches);
+    if (!championTeam) continue;
+
+    if (playerTeamsByDate.get(date)?.has(championTeam)) honors += 1;
+  }
+
+  return honors;
+}
+
+function getChampionTeamKey(matches: MatchRow[]) {
+  const standings = new Map<string, { points: number; goalDifference: number; goalsFor: number }>();
+
+  for (const match of matches) {
+    const teamA = normalizeLabel(match.team_a_name);
+    const teamB = normalizeLabel(match.team_b_name);
+    const teamAStats = standings.get(teamA) || { points: 0, goalDifference: 0, goalsFor: 0 };
+    const teamBStats = standings.get(teamB) || { points: 0, goalDifference: 0, goalsFor: 0 };
+
+    teamAStats.goalsFor += match.team_a_score || 0;
+    teamBStats.goalsFor += match.team_b_score || 0;
+    teamAStats.goalDifference += (match.team_a_score || 0) - (match.team_b_score || 0);
+    teamBStats.goalDifference += (match.team_b_score || 0) - (match.team_a_score || 0);
+
+    if ((match.team_a_score || 0) > (match.team_b_score || 0)) {
+      teamAStats.points += 3;
+    } else if ((match.team_b_score || 0) > (match.team_a_score || 0)) {
+      teamBStats.points += 3;
+    } else {
+      teamAStats.points += 1;
+      teamBStats.points += 1;
+    }
+
+    standings.set(teamA, teamAStats);
+    standings.set(teamB, teamBStats);
+  }
+
+  return Array.from(standings.entries()).sort(([, first], [, second]) => {
+    return second.points - first.points || second.goalDifference - first.goalDifference || second.goalsFor - first.goalsFor;
+  })[0]?.[0];
 }
 
 function normalizeResult(result: string): PlayerFormMatch["result"] | null {
