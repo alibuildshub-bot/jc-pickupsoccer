@@ -2117,38 +2117,38 @@ function SessionGoalChart({ trends }: { trends: SessionGoalTrend[] }) {
   const latestTrend = trends[trends.length - 1];
 
   return (
-    <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <article className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold text-black/50 sm:text-sm">Session Data</p>
-          <h2 className="mt-1 text-xl font-black sm:text-2xl">Goals by Session</h2>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-black/45">Session Data</p>
+          <h2 className="mt-0.5 text-lg font-black sm:text-xl">Goals by Session</h2>
         </div>
-        <BarChart3 className="text-[#1f7a4d]" size={28} />
+        <BarChart3 className="text-[#1f7a4d]" size={22} />
       </div>
 
       {trends.length > 0 ? (
         <>
-          <div className="grid grid-cols-3 gap-2">
-            <CompactResult label="Latest Goals" value={String(latestTrend?.totalGoals || 0)} />
-            <CompactResult label="Games" value={String(latestTrend?.games || 0)} />
-            <CompactResult label="Goals/Game" value={formatDecimal(latestTrend?.goalsPerGame || 0)} />
+          <div className="grid grid-cols-3 gap-1.5">
+            <TinyStat label="Latest" value={String(latestTrend?.totalGoals || 0)} />
+            <TinyStat label="Games" value={String(latestTrend?.games || 0)} />
+            <TinyStat label="G/Game" value={formatDecimal(latestTrend?.goalsPerGame || 0)} />
           </div>
 
-          <div className="mt-5 flex h-36 items-end gap-2 rounded-lg bg-[#fbfaf7] px-3 py-3">
+          <div className="mt-4 flex h-24 items-end gap-1.5 rounded-lg bg-[#fbfaf7] px-2.5 py-2">
             {trends.map((trend) => {
               const barHeight = Math.max((trend.totalGoals / maxGoals) * 100, trend.totalGoals > 0 ? 12 : 4);
 
               return (
-                <div key={trend.date} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
-                  <p className="text-xs font-black text-black/70">{trend.totalGoals}</p>
-                  <div className="flex h-24 w-full items-end rounded-full bg-white/80 px-1">
+                <div key={trend.date} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
+                  <p className="text-[11px] font-black text-black/65">{trend.totalGoals}</p>
+                  <div className="flex h-14 w-full items-end rounded-full bg-white/80 px-1">
                     <div
                       className="w-full rounded-full bg-[#1f7a4d] transition-all"
                       style={{ height: `${barHeight}%` }}
                       title={`${trend.date}: ${trend.totalGoals} goals`}
                     />
                   </div>
-                  <p className="w-full truncate text-center text-[11px] font-bold text-black/45">{trend.date.replace(",", "")}</p>
+                  <p className="w-full truncate text-center text-[10px] font-bold text-black/40">{trend.date.replace(",", "")}</p>
                 </div>
               );
             })}
@@ -2204,6 +2204,15 @@ function CompactResult({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg bg-[#fbfaf7] px-3 py-4">
       <p className="text-xs font-black uppercase text-black/45">{label}</p>
       <p className="mt-1 break-words text-lg font-black">{value}</p>
+    </div>
+  );
+}
+
+function TinyStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-[#fbfaf7] px-2 py-2">
+      <p className="text-[10px] font-black uppercase text-black/40">{label}</p>
+      <p className="mt-0.5 text-sm font-black">{value}</p>
     </div>
   );
 }
