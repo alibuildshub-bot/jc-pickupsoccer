@@ -50,6 +50,14 @@ type PollOptionRow = {
   label: string;
 };
 
+type PlayerFormMatch = {
+  date: string;
+  label: string;
+  result: "W" | "D" | "L";
+  goals: number;
+  assists: number;
+};
+
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
@@ -113,6 +121,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
             <ProfileAverageStat label="Goals/Session" value={profile.goalsPerSession} />
             <ProfileAverageStat label="Assists/Session" value={profile.assistsPerSession} />
           </div>
+          <PlayerFormGuide form={profile.form} />
         </section>
 
         <section className="mt-4 rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:mt-5 sm:p-6">
@@ -206,6 +215,7 @@ async function getPlayerProfile(slug: string) {
   const pollOptions = (pollOptionRows || []) as PollOptionRow[];
   const completedMatchIds = new Set(matches.map((match) => match.id));
   const completedDates = new Set(matches.map((match) => match.match_date));
+  const matchesById = new Map(matches.map((match) => [match.id, match]));
   const matchDates = new Map(matches.map((match) => [match.id, match.match_date]));
   const pollDates = new Map(polls.map((poll) => [poll.id, poll.match_date]));
   const sessionsByDate = new Map<string, { date: string; goals: number; assists: number; points: number }>();
@@ -269,6 +279,7 @@ async function getPlayerProfile(slug: string) {
     .map(([, session]) => session);
   const goals = sessions.reduce((total, session) => total + session.goals, 0);
   const assists = sessions.reduce((total, session) => total + session.assists, 0);
+  const form = buildPlayerForm(stats, matchesById);
 
   return {
     name: player.name,
@@ -279,6 +290,7 @@ async function getPlayerProfile(slug: string) {
     sessionsPlayed: sessions.length,
     goalsPerSession: getPerSessionAverage(goals, sessions.length),
     assistsPerSession: getPerSessionAverage(assists, sessions.length),
+    form,
     sessions,
   };
 }
@@ -301,6 +313,43 @@ function ProfileAverageStat({ label, value }: { label: string; value: string }) 
   );
 }
 
+function PlayerFormGuide({ form }: { form: PlayerFormMatch[] }) {
+  if (form.length === 0) return null;
+
+  return (
+    <div className="mt-3 rounded-lg bg-[#fbfaf7] p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase text-black/45">Last 5 Form</p>
+          <p className="mt-1 text-sm font-bold text-black/55">{getFormSummary(form)}</p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {form.map((match, index) => (
+            <FormBadge key={`${match.date}-${match.label}-${index}`} result={match.result} title={`${match.label}: ${match.goals}G ${match.assists}A`} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FormBadge({ result, title }: { result: PlayerFormMatch["result"]; title: string }) {
+  return (
+    <span
+      title={title}
+      className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black ${
+        result === "W"
+          ? "bg-[#dff0e7] text-[#17613d]"
+          : result === "D"
+            ? "bg-[#efe9dd] text-black/55"
+            : "bg-red-50 text-red-700"
+      }`}
+    >
+      {result}
+    </span>
+  );
+}
+
 function ProfileMiniStat({ label, value, dark = false }: { label: string; value: number; dark?: boolean }) {
   return (
     <div className={`rounded-lg p-3 ${dark ? "bg-[#171717] text-white" : "bg-white text-black"}`}>
@@ -308,6 +357,71 @@ function ProfileMiniStat({ label, value, dark = false }: { label: string; value:
       <p className="mt-1 text-lg font-black">{value}</p>
     </div>
   );
+}
+
+function buildPlayerForm(stats: MatchPlayerRow[], matchesById: Map<string, MatchRow>): PlayerFormMatch[] {
+  return stats
+    .map((stat) => {
+      const match = matchesById.get(stat.match_id);
+      const result = normalizeResult(stat.result);
+
+      if (!match || !result) return null;
+
+      return {
+        date: match.match_date,
+        label: match.week_label || formatDate(match.match_date),
+        result,
+        goals: stat.goals || 0,
+        assists: stat.assists || 0,
+      };
+    })
+    .filter((match): match is PlayerFormMatch => Boolean(match))
+    .sort((first, second) => second.date.localeCompare(first.date) || second.label.localeCompare(first.label))
+    .slice(0, 5);
+}
+
+function normalizeResult(result: string): PlayerFormMatch["result"] | null {
+  const normalized = result.trim().toLowerCase();
+
+  if (normalized === "win" || normalized === "w") return "W";
+  if (normalized === "draw" || normalized === "tie" || normalized === "d") return "D";
+  if (normalized === "loss" || normalized === "lose" || normalized === "l") return "L";
+
+  return null;
+}
+
+function getFormSummary(form: PlayerFormMatch[]) {
+  const winStreak = getCurrentStreak(form, "W");
+  const pointStreak = getContributionStreak(form);
+
+  if (winStreak >= 3 && pointStreak >= 3) return `${winStreak}-game win streak, ${pointStreak}-game G+A streak`;
+  if (winStreak >= 3) return `${winStreak}-game win streak`;
+  if (pointStreak >= 3) return `${pointStreak}-game G+A streak`;
+
+  const wins = form.filter((match) => match.result === "W").length;
+  return `${wins} wins in last ${form.length}`;
+}
+
+function getCurrentStreak(form: PlayerFormMatch[], result: PlayerFormMatch["result"]) {
+  let streak = 0;
+
+  for (const match of form) {
+    if (match.result !== result) break;
+    streak += 1;
+  }
+
+  return streak;
+}
+
+function getContributionStreak(form: PlayerFormMatch[]) {
+  let streak = 0;
+
+  for (const match of form) {
+    if (match.goals + match.assists <= 0) break;
+    streak += 1;
+  }
+
+  return streak;
 }
 
 function getPerSessionAverage(total: number, sessionsPlayed: number) {
