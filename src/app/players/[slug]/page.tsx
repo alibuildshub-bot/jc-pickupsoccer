@@ -69,7 +69,7 @@ type PlayerHonor = {
   count: number;
   description: string;
   sessions?: string[];
-  type: "mvp" | "golden-boot" | "champion";
+  type: "mvp" | "golden-boot" | "assist-leader" | "champion";
 };
 
 const manualMvpHonors = [
@@ -385,7 +385,7 @@ function PlayerHonors({ honors }: { honors: PlayerHonor[] }) {
 }
 
 function HonorCard({ honor }: { honor: PlayerHonor }) {
-  const Icon = honor.type === "mvp" ? Trophy : honor.type === "golden-boot" ? Medal : ShieldCheck;
+  const Icon = honor.type === "mvp" ? Trophy : honor.type === "champion" ? ShieldCheck : Medal;
 
   return (
     <article className="rounded-lg border border-black/10 bg-white p-3">
@@ -499,6 +499,7 @@ function buildPlayerHonors({
     .map((honor) => formatDate(honor.sessionDate));
   const mvpSessions = Array.from(new Set([...mvpHonor.sessions, ...manualMvpSessions]));
   const goldenBootCount = countGoldenBoots(matches, allStats, players, matchingPlayerIds);
+  const assistLeaderCount = countAssistLeaderHonors(matches, allStats, players, matchingPlayerIds);
   const championCount = countChampionSessions(matches, allStats, matchingPlayerIds);
 
   if (mvpSessions.length > 0) {
@@ -517,6 +518,15 @@ function buildPlayerHonors({
       count: goldenBootCount,
       description: "Top goal scorer for a session.",
       type: "golden-boot",
+    });
+  }
+
+  if (assistLeaderCount > 0) {
+    honors.push({
+      label: "Assist Leader",
+      count: assistLeaderCount,
+      description: "Most assists in a session.",
+      type: "assist-leader",
     });
   }
 
@@ -584,10 +594,24 @@ function countMvpHonors(
 }
 
 function countGoldenBoots(matches: MatchRow[], allStats: MatchPlayerRow[], players: PlayerRow[], matchingPlayerIds: Set<string>) {
+  return countSessionStatLeaderHonors(matches, allStats, players, matchingPlayerIds, "goals");
+}
+
+function countAssistLeaderHonors(matches: MatchRow[], allStats: MatchPlayerRow[], players: PlayerRow[], matchingPlayerIds: Set<string>) {
+  return countSessionStatLeaderHonors(matches, allStats, players, matchingPlayerIds, "assists");
+}
+
+function countSessionStatLeaderHonors(
+  matches: MatchRow[],
+  allStats: MatchPlayerRow[],
+  players: PlayerRow[],
+  matchingPlayerIds: Set<string>,
+  statKey: "goals" | "assists",
+) {
   let honors = 0;
   const matchesById = new Map(matches.map((match) => [match.id, match]));
   const playerNamesById = new Map(players.map((player) => [player.id, player.name]));
-  const sessionScoring = new Map<string, Map<string, { goals: number; isTargetPlayer: boolean }>>();
+  const sessionStats = new Map<string, Map<string, { total: number; isTargetPlayer: boolean }>>();
 
   for (const stat of allStats) {
     const match = matchesById.get(stat.match_id);
@@ -595,21 +619,21 @@ function countGoldenBoots(matches: MatchRow[], allStats: MatchPlayerRow[], playe
 
     const playerName = playerNamesById.get(stat.player_id) || stat.player_id;
     const playerKey = normalizePlayerName(playerName);
-    const session = sessionScoring.get(match.match_date) || new Map<string, { goals: number; isTargetPlayer: boolean }>();
-    const existing = session.get(playerKey) || { goals: 0, isTargetPlayer: false };
+    const session = sessionStats.get(match.match_date) || new Map<string, { total: number; isTargetPlayer: boolean }>();
+    const existing = session.get(playerKey) || { total: 0, isTargetPlayer: false };
 
-    existing.goals += stat.goals || 0;
+    existing.total += stat[statKey] || 0;
     existing.isTargetPlayer = existing.isTargetPlayer || matchingPlayerIds.has(stat.player_id);
     session.set(playerKey, existing);
-    sessionScoring.set(match.match_date, session);
+    sessionStats.set(match.match_date, session);
   }
 
-  for (const session of sessionScoring.values()) {
+  for (const session of sessionStats.values()) {
     const scores = Array.from(session.values());
-    const topGoals = Math.max(0, ...scores.map((score) => score.goals));
-    if (topGoals === 0) continue;
+    const topTotal = Math.max(0, ...scores.map((score) => score.total));
+    if (topTotal === 0) continue;
 
-    if (scores.some((score) => score.isTargetPlayer && score.goals === topGoals)) honors += 1;
+    if (scores.some((score) => score.isTargetPlayer && score.total === topTotal)) honors += 1;
   }
 
   return honors;
