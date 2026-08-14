@@ -25,13 +25,13 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-3 flex flex-wrap gap-2 sm:mb-4">
         {leaderboardTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setMode(tab.id)}
-            className={`h-10 rounded-lg px-4 text-sm font-black transition ${
+            className={`h-9 rounded-lg px-3 text-xs font-black transition sm:h-10 sm:px-4 sm:text-sm ${
               mode === tab.id
                 ? "bg-[#171717] text-white"
                 : "border border-black/10 bg-[#fbfaf7] text-black/60 hover:bg-black/5"
@@ -40,7 +40,7 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
             {tab.label}
           </button>
         ))}
-        <span className="inline-flex h-10 items-center rounded-lg bg-[#f7f3ec] px-3 text-xs font-black uppercase text-black/45">
+        <span className="inline-flex h-9 items-center rounded-lg bg-[#f7f3ec] px-3 text-[11px] font-black uppercase text-black/45 sm:h-10 sm:text-xs">
           Ranked by {getModeLabel(mode)}
         </span>
       </div>
@@ -49,20 +49,20 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
           <a
             key={player.name}
             href={`/players/${slugify(player.name)}`}
-            className="block rounded-lg border border-black/10 bg-[#fbfaf7] p-4 transition hover:border-[#1f7a4d]/40 hover:bg-[#f1ece3]"
+            className="block rounded-lg border border-black/10 bg-[#fbfaf7] p-3 transition hover:border-[#1f7a4d]/40 hover:bg-[#f1ece3] sm:p-4"
           >
-            <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d] sm:h-8 sm:w-8 sm:text-sm">
                   {index + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="break-words font-black leading-tight">{player.name}</p>
+                  <p className="break-words text-sm font-black leading-tight sm:text-base">{player.name}</p>
                   <p className="mt-1 break-words text-xs font-bold text-black/45">{player.team}</p>
                 </div>
               </div>
               <div className="grid justify-items-end gap-2">
-                <span className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
+                <span className="rounded-lg bg-[#171717] px-2.5 py-1.5 text-xs font-black text-white sm:px-3 sm:py-2 sm:text-sm">
                   {getModeValue(player, mode)}
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1 text-[11px] font-black uppercase text-[#17613d]">
@@ -169,8 +169,8 @@ function slugify(value: string) {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-white p-3">
-      <p className="text-xs font-bold uppercase text-black/45">{label}</p>
+    <div className="rounded-lg bg-white p-2.5 sm:p-3">
+      <p className="text-[11px] font-bold uppercase text-black/45 sm:text-xs">{label}</p>
       <p className="mt-1 text-sm font-black">{value}</p>
     </div>
   );

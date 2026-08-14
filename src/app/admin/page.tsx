@@ -1244,17 +1244,17 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-[#f7f3ec] text-[#171717]">
       <nav className="border-b border-black/10 bg-[#f7f3ec]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:px-6 sm:py-4 lg:px-8">
+          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
             <LogoMark />
-            <div>
-              <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
-              <p className="text-xs font-medium text-black/55">
+            <div className="min-w-0">
+              <p className="truncate text-base font-black leading-none sm:text-lg">JC Pickup Soccer</p>
+              <p className="truncate text-[11px] font-medium text-black/55 sm:text-xs">
                 {session?.user.email ? `Signed in as ${session.user.email}` : "Admin dashboard"}
               </p>
             </div>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <button
               onClick={() => loadData()}
               className="hidden h-10 rounded-lg border border-black/15 bg-white px-4 text-sm font-bold sm:block"
@@ -1263,7 +1263,7 @@ export default function AdminPage() {
             </button>
             <button
               onClick={signOut}
-              className="h-10 rounded-lg bg-[#171717] px-4 text-sm font-bold text-white"
+              className="h-9 rounded-lg bg-[#171717] px-3 text-xs font-bold text-white sm:h-10 sm:px-4 sm:text-sm"
             >
               Lock
             </button>
@@ -1271,15 +1271,15 @@ export default function AdminPage() {
         </div>
       </nav>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:mb-6 sm:gap-4 lg:grid-cols-4">
           <AdminMetric icon={Users} label="Active Players" value={String(activePlayers.length)} />
           <AdminMetric icon={Users} label="Teams" value={String(teams.filter((team) => team.is_active).length)} />
           <AdminMetric icon={CalendarDays} label="Current Games" value={String(gameDayMatches.length)} />
           <AdminMetric icon={Target} label="Current Stat Rows" value={String(gameDayStats.length)} />
         </div>
 
-        <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+        <section className="mb-5 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:mb-6 sm:p-5">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-bold text-black/50">Site Analytics</p>
@@ -1490,12 +1490,12 @@ export default function AdminPage() {
           )}
         </section>
 
-        <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <section className="mb-5 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:mb-6 sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 lg:mb-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-sm font-bold text-black/50">Game Day Console</p>
-              <h1 className="text-2xl font-black">Run {formatDateLabel(gameDayForm.date)}</h1>
-              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
+              <p className="text-xs font-bold text-black/50 sm:text-sm">Game Day Console</p>
+              <h1 className="text-xl font-black sm:text-2xl">Run {formatDateLabel(gameDayForm.date)}</h1>
+              <p className="mt-2 max-w-2xl text-xs font-semibold leading-5 text-black/55 sm:text-sm sm:leading-6">
                 Create the matchups, save scores as games end, and enter goals or assists from one place.
               </p>
             </div>
@@ -1510,7 +1510,7 @@ export default function AdminPage() {
             </button>
           </div>
 
-          <div className="mb-5 grid gap-3 md:grid-cols-3">
+          <div className="mb-4 grid gap-3 md:mb-5 md:grid-cols-3">
             <AdminSelect
               label="Previous sessions"
               value={sessionOptions.some((sessionOption) => sessionOption.date === gameDayForm.date) ? gameDayForm.date : ""}
@@ -1545,7 +1545,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+          <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr] xl:gap-5">
             <div>
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="font-black">Scores</h2>
@@ -1558,14 +1558,14 @@ export default function AdminPage() {
               ) : (
                 <div className="grid gap-3">
                   {gameDayMatches.map((match) => (
-                    <article key={match.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                    <article key={match.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-3 sm:p-4">
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-bold text-black/50">{match.week_label}</p>
+                          <p className="text-xs font-bold text-black/50 sm:text-sm">{match.week_label}</p>
                           <p className="text-xs font-black uppercase text-[#1f7a4d]">
                             {matchGameLabels.get(match.id)}
                           </p>
-                          <p className="font-black">
+                          <p className="text-sm font-black sm:text-base">
                             {match.team_a_name} vs {match.team_b_name}
                           </p>
                         </div>
@@ -1573,7 +1573,7 @@ export default function AdminPage() {
                           {formatMatchStatus(match.status)}
                         </span>
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end sm:gap-3">
                         <AdminInput
                           type="number"
                           label={match.team_a_name}
@@ -1602,18 +1602,18 @@ export default function AdminPage() {
                             })
                           }
                         />
-                        <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
                             onClick={() => saveQuickScore(match)}
-                            className="h-11 rounded-lg bg-[#171717] px-4 text-sm font-black text-white"
+                            className="h-10 rounded-lg bg-[#171717] px-3 text-xs font-black text-white sm:h-11 sm:px-4 sm:text-sm"
                           >
                             {match.status === "completed" ? "Update Final" : "Save Live"}
                           </button>
                           <button
                             type="button"
                             onClick={() => saveQuickScore(match, "completed")}
-                            className="h-11 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white"
+                            className="h-10 rounded-lg bg-[#1f7a4d] px-3 text-xs font-black text-white sm:h-11 sm:px-4 sm:text-sm"
                           >
                             Complete
                           </button>
@@ -1627,7 +1627,7 @@ export default function AdminPage() {
 
             <div>
               <h2 className="mb-3 font-black">Match-by-match Stats</h2>
-              <div className="grid gap-3 rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+              <div className="grid gap-3 rounded-lg border border-black/10 bg-[#fbfaf7] p-3 sm:p-4">
                 <p className="rounded-lg bg-white p-3 text-xs font-bold leading-5 text-black/50">
                   Select one game, save that game&apos;s score as Live or Completed, then enter each player&apos;s goals and assists.
                   Win/loss/draw is calculated automatically from the saved score.
@@ -1653,7 +1653,7 @@ export default function AdminPage() {
                   <div className="grid gap-3">
                     <div className="rounded-lg bg-white p-3">
                       <p className="text-xs font-black uppercase text-[#17613d]">{quickStatMatch.week_label}</p>
-                      <p className="mt-1 text-sm font-black">
+                      <p className="mt-1 text-xs font-black sm:text-sm">
                         {quickStatMatch.team_a_name} {quickStatMatch.team_a_score} - {quickStatMatch.team_b_score} {quickStatMatch.team_b_name}
                       </p>
                       <p className="mt-1 text-xs font-bold capitalize text-black/45">
@@ -2857,19 +2857,19 @@ function AdminMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
-      <Icon className="mb-4 text-[#1f7a4d]" size={24} />
-      <p className="text-3xl font-black">{value}</p>
-      <p className="mt-1 text-sm font-semibold text-black/55">{label}</p>
+    <div className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
+      <Icon className="mb-2 text-[#1f7a4d] sm:mb-4" size={20} />
+      <p className="text-2xl font-black sm:text-3xl">{value}</p>
+      <p className="mt-1 text-xs font-semibold text-black/55 sm:text-sm">{label}</p>
     </div>
   );
 }
 
 function AdminMiniMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-[#fbfaf7] p-4">
-      <p className="text-2xl font-black">{value}</p>
-      <p className="mt-1 text-sm font-bold text-black/50">{label}</p>
+    <div className="rounded-lg bg-[#fbfaf7] p-3 sm:p-4">
+      <p className="text-xl font-black sm:text-2xl">{value}</p>
+      <p className="mt-1 text-xs font-bold text-black/50 sm:text-sm">{label}</p>
     </div>
   );
 }
@@ -2891,14 +2891,14 @@ function AdminInput({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-bold text-black/60">{label}</span>
+      <span className="text-xs font-bold text-black/60 sm:text-sm">{label}</span>
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         required={required}
-        className="mt-2 h-11 w-full rounded-lg border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-[#1f7a4d]"
+        className="mt-1.5 h-10 w-full rounded-lg border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-[#1f7a4d] sm:mt-2 sm:h-11"
       />
     </label>
   );
@@ -2919,12 +2919,12 @@ function AdminSelect({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-bold text-black/60">{label}</span>
+      <span className="text-xs font-bold text-black/60 sm:text-sm">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
-        className="mt-2 h-11 w-full rounded-lg border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-[#1f7a4d]"
+        className="mt-1.5 h-10 w-full rounded-lg border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-[#1f7a4d] sm:mt-2 sm:h-11"
       >
         {children}
       </select>
@@ -2999,15 +2999,15 @@ function TeamCards({
         const teamRoster = getTeamRoster(team.id);
 
         return (
-          <article key={team.id} className="rounded-lg border border-black/10 bg-white p-4">
+          <article key={team.id} className="rounded-lg border border-black/10 bg-white p-3 sm:p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="mb-3 h-2 w-14 rounded-full" style={{ backgroundColor: team.color || "#1f7a4d" }} />
                 <div className="flex min-w-0 items-center gap-2">
                   <TeamLogo logo={team.logo_url} color={team.color} name={team.name} size="md" />
-                  <h2 className="min-w-0 break-words font-black">{team.name}</h2>
+                  <h2 className="min-w-0 break-words text-sm font-black sm:text-base">{team.name}</h2>
                 </div>
-                <p className="mt-1 text-sm font-semibold text-black/50">
+                <p className="mt-1 text-xs font-semibold text-black/50 sm:text-sm">
                   {formatPlayerCount(teamRoster.length)} {team.is_active ? "" : "| inactive"}
                 </p>
               </div>
@@ -3015,7 +3015,7 @@ function TeamCards({
                 <button
                   type="button"
                   onClick={() => editTeam(team)}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-black/10 bg-white px-3 text-sm font-black text-black/70 hover:bg-black/5"
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-black/10 bg-white px-2.5 text-xs font-black text-black/70 hover:bg-black/5 sm:h-10 sm:px-3 sm:text-sm"
                 >
                   <Edit3 size={16} />
                   <span className="hidden sm:inline">Edit</span>
@@ -3031,7 +3031,7 @@ function TeamCards({
               ) : (
                 teamRoster.map((row) => (
                   <div key={row.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2">
-                    <span className="min-w-0 break-words text-sm font-bold">{row.players?.name || getPlayerName(row.player_id)}</span>
+                    <span className="min-w-0 break-words text-xs font-bold sm:text-sm">{row.players?.name || getPlayerName(row.player_id)}</span>
                     <button
                       type="button"
                       onClick={() => removePlayerFromTeam(row.team_id, row.player_id)}
@@ -3113,7 +3113,7 @@ function QuickStatTeamSheet({
   return (
     <div className="rounded-lg border border-black/10 bg-white p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="font-black">{teamName}</h3>
+        <h3 className="text-sm font-black sm:text-base">{teamName}</h3>
         <span className="rounded-lg bg-[#edf4f0] px-2 py-1 text-xs font-black text-[#17613d]">
           {formatPlayerCount(players.length)}
         </span>
@@ -3128,9 +3128,9 @@ function QuickStatTeamSheet({
             const draft = getDraft(match.id, player.id, teamName);
 
             return (
-              <div key={player.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-3">
-                <p className="mb-3 break-words text-sm font-black">{player.name}</p>
-                <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+              <div key={player.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-2.5 sm:p-3">
+                <p className="mb-2 break-words text-sm font-black sm:mb-3">{player.name}</p>
+                <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-1.5 sm:gap-2">
                   <StatStepper
                     label="G"
                     value={draft.goals}
@@ -3147,7 +3147,7 @@ function QuickStatTeamSheet({
                     type="button"
                     onClick={() => savePlayerStat(match, player, teamName)}
                     disabled={loading}
-                    className="h-10 rounded-lg bg-[#171717] px-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-9 rounded-lg bg-[#171717] px-2.5 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:px-3"
                   >
                     Save
                   </button>
@@ -3175,7 +3175,7 @@ function StatStepper({
   return (
     <label className="block">
       <span className="text-xs font-black uppercase text-black/45">{label}</span>
-      <div className="mt-1 grid h-10 grid-cols-[32px_1fr_32px] overflow-hidden rounded-lg border border-black/15 bg-white">
+      <div className="mt-1 grid h-9 grid-cols-[28px_1fr_28px] overflow-hidden rounded-lg border border-black/15 bg-white sm:h-10 sm:grid-cols-[32px_1fr_32px]">
         <button type="button" onClick={() => onAdjust(-1)} className="font-black text-black/55 hover:bg-black/5">
           -
         </button>
@@ -3211,7 +3211,7 @@ function IconButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
+      className={`flex h-9 w-9 items-center justify-center rounded-lg border transition sm:h-10 sm:w-10 ${
         danger
           ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
           : "border-black/10 bg-white text-black/70 hover:bg-black/5"

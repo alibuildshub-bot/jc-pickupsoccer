@@ -212,13 +212,13 @@ export default async function Home() {
         </div>
       </nav>
 
-      <section className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <section className="mx-auto max-w-7xl px-3 py-4 sm:px-6 lg:px-8 lg:py-8">
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="mb-3 inline-flex w-fit rounded-lg bg-[#edf4f0] px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-[#17613d] sm:text-sm">
+            <p className="mb-2 inline-flex w-fit rounded-lg bg-[#edf4f0] px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#17613d] sm:px-3 sm:py-2 sm:text-sm">
               JC Footy
             </p>
-            <h1 className="text-[2.35rem] font-black leading-none tracking-normal sm:text-6xl">
+            <h1 className="text-[2rem] font-black leading-none tracking-normal sm:text-6xl">
               Matchday Dashboard
             </h1>
           </div>
@@ -239,14 +239,14 @@ export default async function Home() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.35fr_0.9fr]">
-          <article className="rounded-lg border border-black/10 bg-white p-5 shadow-sm sm:p-6">
-            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
-                <p className="text-sm font-black uppercase tracking-wide text-[#17613d]">Next Pickup</p>
-                <h2 className="mt-2 text-4xl font-black leading-none sm:text-5xl">
+                <p className="text-xs font-black uppercase tracking-wide text-[#17613d] sm:text-sm">Next Pickup</p>
+                <h2 className="mt-2 text-3xl font-black leading-none sm:text-5xl">
                   {data.upcomingSession ? data.upcomingSession.date : "Not scheduled yet"}
                 </h2>
-                <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-black/55">
+                <p className="mt-3 max-w-xl text-sm font-semibold leading-5 text-black/55 sm:leading-6">
                   {data.upcomingSession
                     ? "Add it to your calendar, complete the waiver, and check back after games for updated stats."
                     : "Stay tuned for the next matchup. Complete the waiver now so you are ready for the next pickup."}
@@ -256,16 +256,16 @@ export default async function Home() {
             </div>
             {data.upcomingSession ? (
               <>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-sm font-bold text-black/60">
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-xs font-bold text-black/60 sm:text-sm">
                     <MapPin size={16} />
                     {data.upcomingSession.location}
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-sm font-bold text-black/60">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-xs font-bold text-black/60 sm:text-sm">
                     <Clock size={16} />
                     {data.upcomingSession.time}
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-sm font-bold text-black/60">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-xs font-bold text-black/60 sm:text-sm">
                     <Users size={16} />
                     {data.upcomingSession.teams.length} teams
                   </span>
@@ -358,8 +358,8 @@ export default async function Home() {
           <div className="grid gap-4">
             <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
               <div>
-                <p className="text-sm font-bold text-black/50">Latest Session</p>
-                <h2 className="mt-1 text-2xl font-black">{latestSession.label}</h2>
+                <p className="text-xs font-bold text-black/50 sm:text-sm">Latest Session</p>
+                <h2 className="mt-1 text-xl font-black sm:text-2xl">{latestSession.label}</h2>
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
                 <CompactResult label="Winner" value={latestSession.winner} />
@@ -370,8 +370,8 @@ export default async function Home() {
             <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-bold text-black/50">Top Players</p>
-                  <h2 className="mt-1 text-2xl font-black">{topPlayersLabel} Top 3</h2>
+                  <p className="text-xs font-bold text-black/50 sm:text-sm">Top Players</p>
+                  <h2 className="mt-1 text-xl font-black sm:text-2xl">{topPlayersLabel} Top 3</h2>
                 </div>
                 <Trophy className="text-[#c7922b]" size={28} />
               </div>
@@ -391,16 +391,16 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="progress" className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <section id="progress" className="mx-auto max-w-7xl px-3 pb-6 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-bold text-black/50">
+              <p className="text-xs font-bold text-black/50 sm:text-sm">
                 {showUpcomingTeams ? "Upcoming Teams" : "Tournament Progress"}
               </p>
-              <h2 className="text-2xl font-black">{data.tournamentLabel}</h2>
+              <h2 className="text-xl font-black sm:text-2xl">{data.tournamentLabel}</h2>
             </div>
-            <p className="text-sm font-bold text-black/50">
+            <p className="text-xs font-bold text-black/50 sm:text-sm">
               {showUpcomingTeams
                 ? "Standings will appear after Game 1"
                 : `${data.completedTournamentGames} completed / ${data.tournamentGames} games`}
@@ -410,12 +410,12 @@ export default async function Home() {
             <UpcomingTeams teams={data.teamRosters} />
           ) : (
             <>
-              <div className="grid gap-3 md:hidden">
+              <div className="grid gap-2 md:hidden">
                 {data.teamStandings.length > 0 ? data.teamStandings.map((team, index) => (
-                  <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                    <div className="mb-4 flex items-start justify-between gap-3">
+                  <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-3">
+                    <div className="mb-3 flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-sm font-black text-[#17613d]">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-xs font-black text-[#17613d]">
                           {index + 1}
                         </span>
                         <div className="min-w-0">
@@ -429,7 +429,7 @@ export default async function Home() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-black">{team.points}</p>
+                        <p className="text-xl font-black">{team.points}</p>
                         <p className="text-xs font-black uppercase text-black/40">PTS</p>
                       </div>
                     </div>
@@ -522,21 +522,21 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="teams" className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
+      <section id="teams" className="mx-auto max-w-7xl px-3 pb-6 sm:px-6 lg:px-8">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-bold text-black/50">Rosters</p>
-            <h2 className="text-2xl font-black">Teams & Players</h2>
+            <h2 className="text-xl font-black sm:text-2xl">Teams & Players</h2>
           </div>
           <Users className="hidden text-[#1f7a4d] sm:block" size={26} />
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.teamRosters.length > 0 ? data.teamRosters.map((team) => (
-            <article key={team.name} className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-              <div className="mb-4 flex items-center justify-between gap-3 border-b border-black/10 pb-4">
+            <article key={team.name} className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
+              <div className="mb-3 flex items-center justify-between gap-3 border-b border-black/10 pb-3 sm:mb-4 sm:pb-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <TeamLogo logo={team.logo} color={team.color} name={team.name} size="md" />
-                  <h3 className="break-words text-lg font-black leading-tight">{team.name}</h3>
+                  <h3 className="break-words text-base font-black leading-tight sm:text-lg">{team.name}</h3>
                 </div>
                 <p className="shrink-0 text-sm font-black text-black/45">{formatPlayerCount(team.players.length)}</p>
               </div>
@@ -570,24 +570,24 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl items-start gap-5 px-4 pb-8 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
-        <div id="matches" className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-          <div className="mb-5 flex items-center justify-between">
+      <section className="mx-auto grid max-w-7xl items-start gap-4 px-3 pb-6 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
+        <div id="matches" className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
+          <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-black/50">Game Log</p>
-              <h2 className="text-2xl font-black">Recent Matches</h2>
+              <p className="text-xs font-bold text-black/50 sm:text-sm">Game Log</p>
+              <h2 className="text-xl font-black sm:text-2xl">Recent Matches</h2>
             </div>
             <CalendarDays className="text-[#1f7a4d]" size={26} />
           </div>
           <div className="space-y-3">
             {data.recentMatches.length > 0 ? (
               data.recentMatches.map((match) => (
-                <article key={`${match.week}-${match.date}-${match.game}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+                <article key={`${match.week}-${match.date}-${match.game}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-3 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-black/50">{match.date}</p>
                       <p className="mt-1 text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
-                      <h3 className="mt-1 text-lg font-black">{match.week}</h3>
+                      <h3 className="mt-1 text-base font-black sm:text-lg">{match.week}</h3>
                     </div>
                     <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white sm:text-lg">{match.score}</p>
                   </div>
@@ -607,11 +607,11 @@ export default async function Home() {
           </div>
         </div>
 
-        <div id="leaderboard" className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-          <div className="mb-5 flex items-center justify-between">
+        <div id="leaderboard" className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
+          <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-black/50">{data.playerLeaderboardLabel}</p>
-              <h2 className="text-2xl font-black">Player Leaderboard</h2>
+              <p className="text-xs font-bold text-black/50 sm:text-sm">{data.playerLeaderboardLabel}</p>
+              <h2 className="text-xl font-black sm:text-2xl">Player Leaderboard</h2>
             </div>
             <Trophy className="text-[#b7791f]" size={28} />
           </div>
@@ -628,12 +628,12 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-          <div className="mb-5 flex items-center justify-between">
+      <section className="mx-auto max-w-7xl px-3 pb-6 sm:px-6 lg:px-8">
+        <div className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
+          <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-black/50">Results</p>
-              <h2 className="text-2xl font-black">Past Sessions</h2>
+              <p className="text-xs font-bold text-black/50 sm:text-sm">Results</p>
+              <h2 className="text-xl font-black sm:text-2xl">Past Sessions</h2>
             </div>
             <CalendarDays className="text-[#1f7a4d]" size={26} />
           </div>
