@@ -109,6 +109,10 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
             <ProfileStat label="Assists" value={profile.assists} />
             <ProfileStat label="Sessions" value={profile.sessionsPlayed} />
           </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <ProfileAverageStat label="Goals/Session" value={profile.goalsPerSession} />
+            <ProfileAverageStat label="Assists/Session" value={profile.assistsPerSession} />
+          </div>
         </section>
 
         <section className="mt-5 rounded-lg border border-black/10 bg-white p-5 shadow-sm sm:p-6">
@@ -273,6 +277,8 @@ async function getPlayerProfile(slug: string) {
     assists,
     points: goals + assists,
     sessionsPlayed: sessions.length,
+    goalsPerSession: getPerSessionAverage(goals, sessions.length),
+    assistsPerSession: getPerSessionAverage(assists, sessions.length),
     sessions,
   };
 }
@@ -286,6 +292,15 @@ function ProfileStat({ label, value }: { label: string; value: number }) {
   );
 }
 
+function ProfileAverageStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-black/10 bg-white p-4 text-center">
+      <p className="text-xs font-black uppercase text-black/45">{label}</p>
+      <p className="mt-2 text-2xl font-black">{value}</p>
+    </div>
+  );
+}
+
 function ProfileMiniStat({ label, value, dark = false }: { label: string; value: number; dark?: boolean }) {
   return (
     <div className={`rounded-lg p-3 ${dark ? "bg-[#171717] text-white" : "bg-white text-black"}`}>
@@ -293,6 +308,14 @@ function ProfileMiniStat({ label, value, dark = false }: { label: string; value:
       <p className="mt-1 text-lg font-black">{value}</p>
     </div>
   );
+}
+
+function getPerSessionAverage(total: number, sessionsPlayed: number) {
+  if (sessionsPlayed === 0) return "0";
+
+  const average = total / sessionsPlayed;
+
+  return Number.isInteger(average) ? String(average) : average.toFixed(1);
 }
 
 function slugify(value: string) {
