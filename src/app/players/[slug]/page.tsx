@@ -68,6 +68,7 @@ type PlayerHonor = {
   label: string;
   count: number;
   description: string;
+  sessions?: string[];
   type: "mvp" | "golden-boot" | "champion";
 };
 
@@ -391,6 +392,9 @@ function HonorCard({ honor }: { honor: PlayerHonor }) {
         </span>
       </div>
       <p className="mt-2 text-xs font-semibold leading-5 text-black/50">{honor.description}</p>
+      {honor.sessions && honor.sessions.length > 0 ? (
+        <p className="mt-2 text-xs font-black text-[#17613d]">{formatHonorSessions(honor.sessions)}</p>
+      ) : null}
     </article>
   );
 }
@@ -482,15 +486,16 @@ function buildPlayerHonors({
   pollVotes: PollVoteRow[];
 }) {
   const honors: PlayerHonor[] = [];
-  const mvpCount = countMvpHonors(polls, pollOptions, pollVotes, matchingPlayerIds, matchingPlayerNames);
+  const mvpHonor = countMvpHonors(polls, pollOptions, pollVotes, matchingPlayerIds, matchingPlayerNames);
   const goldenBootCount = countGoldenBoots(matches, allStats, players, matchingPlayerIds);
   const championCount = countChampionSessions(matches, allStats, matchingPlayerIds);
 
-  if (mvpCount > 0) {
+  if (mvpHonor.count > 0) {
     honors.push({
       label: "Tournament MVP",
-      count: mvpCount,
+      count: mvpHonor.count,
       description: "Most votes after a closed MVP poll.",
+      sessions: mvpHonor.sessions,
       type: "mvp",
     });
   }
@@ -523,7 +528,7 @@ function countMvpHonors(
   matchingPlayerIds: Set<string>,
   matchingPlayerNames: Set<string>,
 ) {
-  let honors = 0;
+  const mvpSessions: string[] = [];
   const optionsByPoll = new Map<string, PollOptionRow[]>();
   const voteCounts = new Map<string, number>();
 
@@ -538,24 +543,33 @@ function countMvpHonors(
   }
 
   for (const poll of polls) {
-    if (poll.status !== "closed") continue;
+    if (poll.status?.toLowerCase() !== "closed") continue;
 
     const options = optionsByPoll.get(poll.id) || [];
-    const topVotes = Math.max(0, ...options.map((option) => voteCounts.get(option.id) || 0));
-    if (topVotes === 0) continue;
+    const rankedOptions = options
+      .map((option) => ({
+        ...option,
+        votes: voteCounts.get(option.id) || 0,
+      }))
+      .sort((first, second) => second.votes - first.votes || first.label.localeCompare(second.label));
+    const winner = rankedOptions[0];
 
-    const playerWonPoll = options.some((option) => {
-      const optionVotes = voteCounts.get(option.id) || 0;
+    if (!winner || winner.votes === 0) continue;
+
+    const playerWonPoll = rankedOptions.some((option) => {
       const isPlayerOption =
         Boolean(option.player_id && matchingPlayerIds.has(option.player_id)) || matchingPlayerNames.has(normalizePlayerName(option.label));
 
-      return isPlayerOption && optionVotes === topVotes;
+      return isPlayerOption && option.votes === winner.votes;
     });
 
-    if (playerWonPoll) honors += 1;
+    if (playerWonPoll) mvpSessions.push(poll.match_date ? formatDate(poll.match_date) : "MVP Poll");
   }
 
-  return honors;
+  return {
+    count: mvpSessions.length,
+    sessions: mvpSessions,
+  };
 }
 
 function countGoldenBoots(matches: MatchRow[], allStats: MatchPlayerRow[], players: PlayerRow[], matchingPlayerIds: Set<string>) {
@@ -705,6 +719,14 @@ function getPerSessionAverage(total: number, sessionsPlayed: number) {
   const average = total / sessionsPlayed;
 
   return Number.isInteger(average) ? String(average) : average.toFixed(1);
+}
+
+function formatHonorSessions(sessions: string[]) {
+  const visibleSessions = sessions.slice(0, 3);
+  const remaining = sessions.length - visibleSessions.length;
+  const suffix = remaining > 0 ? ` +${remaining} more` : "";
+
+  return `${visibleSessions.join(", ")}${suffix}`;
 }
 
 function slugify(value: string) {
