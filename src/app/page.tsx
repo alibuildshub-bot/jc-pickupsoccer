@@ -1105,7 +1105,7 @@ function buildUpcomingSession(
 
   const sessionMatches = upcomingMatches.filter((match) => match.match_date === sessionDate);
   const sessionTeams = getTeamsForMatches(teams, sessionMatches);
-  const rosters = buildTeamRosters(sessionTeams, rawTeams, rosterRows);
+  const rosters = buildTeamRostersWithMatchTeams(sessionTeams, rawTeams, rosterRows, sessionMatches, teamDisplayNames);
   const sessionDetails = getTeamSessionDetails(sessionTeams);
   const location =
     sessionMatches.find((match) => match.location?.trim())?.location?.trim() ||
@@ -1584,6 +1584,41 @@ function buildTeamRosters(teams: TeamRow[], rawTeams: TeamRow[], rosterRows: Ros
     ...team,
     players: team.players.sort((a, b) => a.localeCompare(b)),
   }));
+}
+
+function buildTeamRostersWithMatchTeams(
+  teams: TeamRow[],
+  rawTeams: TeamRow[],
+  rosterRows: RosterRow[],
+  matches: MatchRow[],
+  teamDisplayNames: Map<string, string>,
+) {
+  const rosters = buildTeamRosters(teams, rawTeams, rosterRows);
+  const rostersByKey = new Map(rosters.map((roster) => [normalizeTeamName(roster.name), roster]));
+
+  for (const match of matches) {
+    addMatchTeamRoster(match.team_a_name, rostersByKey, teamDisplayNames);
+    addMatchTeamRoster(match.team_b_name, rostersByKey, teamDisplayNames);
+  }
+
+  return Array.from(rostersByKey.values());
+}
+
+function addMatchTeamRoster(
+  teamName: string,
+  rostersByKey: Map<string, TeamRoster>,
+  teamDisplayNames: Map<string, string>,
+) {
+  const key = normalizeTeamName(teamName);
+
+  if (rostersByKey.has(key)) return;
+
+  rostersByKey.set(key, {
+    name: getTeamDisplayName(teamName, teamDisplayNames),
+    color: "#1f7a4d",
+    logo: null,
+    players: [],
+  });
 }
 
 function getRosterPlayerName(players: RosterRow["players"]) {
