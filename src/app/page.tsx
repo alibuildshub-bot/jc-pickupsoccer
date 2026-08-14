@@ -249,7 +249,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1.35fr_0.9fr]">
+        <div className="grid items-start gap-4 lg:grid-cols-[1.35fr_0.9fr]">
           <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
