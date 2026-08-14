@@ -75,51 +75,51 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f3ec] px-4 py-8 text-[#171717] sm:px-6">
+    <main className="min-h-screen bg-[#f7f3ec] px-3 py-5 text-[#171717] sm:px-6 sm:py-8">
       <div className="mx-auto max-w-5xl">
         <SiteHeader />
 
-        <section className="rounded-lg border border-black/10 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-5 border-b border-black/10 pb-5 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-2xl font-black text-[#17613d]">
+        <section className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 border-b border-black/10 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5 sm:pb-5">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-lg font-black text-[#17613d] sm:h-16 sm:w-16 sm:text-2xl">
                 {getInitials(profile.name)}
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold text-black/50">Player Profile</p>
-                <h1 className="mt-1 break-words text-4xl font-black leading-none">{profile.name}</h1>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-bold text-black/60">
+                <h1 className="mt-1 break-words text-2xl font-black leading-none sm:text-4xl">{profile.name}</h1>
+                <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-2.5 py-1.5 text-xs font-bold text-black/60 sm:px-3 sm:py-2 sm:text-sm">
                     All-time stats
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-3 py-2 text-sm font-bold text-black/60">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#f7f3ec] px-2.5 py-1.5 text-xs font-bold text-black/60 sm:px-3 sm:py-2 sm:text-sm">
                     {profile.position || "Player"}
                   </span>
                 </div>
               </div>
             </div>
-            <div className="rounded-lg bg-[#171717] px-4 py-3 text-center text-white">
+            <div className="rounded-lg bg-[#171717] px-3 py-2.5 text-center text-white sm:px-4 sm:py-3">
               <p className="text-xs font-black uppercase text-white/55">G+A</p>
-              <p className="text-3xl font-black">{profile.points}</p>
+              <p className="text-2xl font-black sm:text-3xl">{profile.points}</p>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
             <ProfileStat label="Goals" value={profile.goals} />
             <ProfileStat label="Assists" value={profile.assists} />
             <ProfileStat label="Sessions" value={profile.sessionsPlayed} />
           </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:mt-3 sm:gap-3">
             <ProfileAverageStat label="Goals/Session" value={profile.goalsPerSession} />
             <ProfileAverageStat label="Assists/Session" value={profile.assistsPerSession} />
           </div>
         </section>
 
-        <section className="mt-5 rounded-lg border border-black/10 bg-white p-5 shadow-sm sm:p-6">
+        <section className="mt-4 rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:mt-5 sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-bold text-black/50">Performance</p>
-              <h2 className="text-2xl font-black">Session History</h2>
+              <h2 className="text-xl font-black sm:text-2xl">Session History</h2>
             </div>
             <Trophy className="text-[#b7791f]" size={28} />
           </div>
@@ -127,7 +127,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
           {profile.sessions.length > 0 ? (
             <div className="grid gap-3">
               {profile.sessions.map((session) => (
-                <article key={session.date} className="rounded-lg bg-[#fbfaf7] p-4">
+                <article key={session.date} className="rounded-lg bg-[#fbfaf7] p-3 sm:p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-bold text-black/50">{session.date}</p>

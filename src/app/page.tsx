@@ -218,26 +218,26 @@ export default async function Home() {
             <a href="/past-sessions" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Past Sessions</a>
           </div>
         </div>
-        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-3 text-sm font-black text-black/65 sm:px-6 md:hidden">
-          <a href="#progress" className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2">Standings</a>
-          <a href="/players" className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2">Players</a>
-          <a href="#matches" className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2">Matches</a>
-          <a href="#teams" className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2">Teams</a>
-          <a href="/past-sessions" className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-white">Past Sessions</a>
+        <div className="mx-auto flex max-w-7xl gap-1.5 overflow-x-auto px-3 pb-2 text-xs font-black text-black/65 sm:px-6 md:hidden">
+          <a href="#progress" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Standings</a>
+          <a href="/players" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Players</a>
+          <a href="#matches" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Matches</a>
+          <a href="#teams" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Teams</a>
+          <a href="/past-sessions" className="shrink-0 rounded-lg bg-[#171717] px-2.5 py-2 text-white">Past Games</a>
         </div>
       </nav>
 
-      <section className="mx-auto max-w-7xl px-3 py-4 sm:px-6 lg:px-8 lg:py-8">
-        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <section className="mx-auto max-w-7xl px-3 py-3 sm:px-6 lg:px-8 lg:py-8">
+        <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between lg:mb-4">
           <div>
             <p className="mb-2 inline-flex w-fit rounded-lg bg-[#edf4f0] px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#17613d] sm:px-3 sm:py-2 sm:text-sm">
               JC Footy
             </p>
-            <h1 className="text-[2rem] font-black leading-none tracking-normal sm:text-6xl">
+            <h1 className="text-[1.85rem] font-black leading-none tracking-normal sm:text-6xl">
               Matchday Dashboard
             </h1>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="hidden flex-wrap gap-2 sm:flex">
             <a
               href="/players"
               className="inline-flex h-11 items-center justify-center rounded-lg bg-[#1f7a4d] px-4 text-center text-sm font-black text-white transition hover:bg-[#17613d]"
@@ -254,30 +254,30 @@ export default async function Home() {
         </div>
 
         <div className="grid items-start gap-4 lg:grid-cols-[1.35fr_0.9fr]">
-          <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <article className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-wide text-[#17613d] sm:text-sm">
                   {data.upcomingSession ? "Next Pickup" : "Latest Session Recap"}
                 </p>
-                <h2 className="mt-2 text-3xl font-black leading-none sm:text-5xl">
+                <h2 className="mt-1.5 text-2xl font-black leading-none sm:text-5xl">
                   {data.upcomingSession ? data.upcomingSession.date : latestSession.label}
                 </h2>
-                <p className="mt-3 max-w-xl text-sm font-semibold leading-5 text-black/55 sm:leading-6">
+                <p className="mt-2 max-w-xl text-xs font-semibold leading-5 text-black/55 sm:mt-3 sm:text-sm sm:leading-6">
                   {data.upcomingSession
                     ? "Add it to your calendar, complete the waiver, and check back after games for updated stats."
                     : "The latest pickup is complete. Review the winner, player stats, and full session results below."}
                 </p>
               </div>
               {data.upcomingSession ? (
-                <CalendarDays className="shrink-0 text-[#b7791f]" size={38} />
+                <CalendarDays className="hidden shrink-0 text-[#b7791f] sm:block" size={38} />
               ) : (
-                <Trophy className="shrink-0 text-[#b7791f]" size={38} />
+                <Trophy className="hidden shrink-0 text-[#b7791f] sm:block" size={38} />
               )}
             </div>
             {data.upcomingSession ? (
               <>
-                <div className="mt-5 flex flex-wrap gap-2">
+                <div className="mt-4 flex flex-wrap gap-1.5 sm:mt-5 sm:gap-2">
                   <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-xs font-bold text-black/60 sm:text-sm">
                     <MapPin size={16} />
                     {data.upcomingSession.location}
@@ -291,7 +291,7 @@ export default async function Home() {
                     {data.upcomingSession.teams.length} teams
                   </span>
                 </div>
-                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-3">
                   <a
                     href={data.upcomingSession.calendarUrl}
                     download={`jc-footy-${data.upcomingSession.rawDate}.ics`}
@@ -335,7 +335,7 @@ export default async function Home() {
                 ) : null}
               </>
             ) : (
-              <div className="mt-5">
+              <div className="mt-4 sm:mt-5">
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   <MiniStat label="Winner" value={latestSession.winner} icon={Trophy} />
                   <MiniStat
@@ -353,7 +353,7 @@ export default async function Home() {
                     icon={Trophy}
                   />
                 </div>
-                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-3">
                   <a
                     href="#progress"
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-center text-sm font-black text-white transition hover:bg-[#17613d]"
@@ -374,7 +374,7 @@ export default async function Home() {
                     Past Sessions
                   </a>
                 </div>
-                <div className="mt-4">
+                <div className="mt-3 sm:mt-4">
                 <a
                   href="https://bondsports.co/login"
                   target="_blank"
@@ -388,23 +388,23 @@ export default async function Home() {
               </div>
             )}
 
-            <div className="mt-6 border-t border-black/10 pt-5">
+            <div className="mt-4 border-t border-black/10 pt-4 sm:mt-6 sm:pt-5">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-black uppercase tracking-wide text-black/45">Latest Results</p>
-                <a href="/past-sessions" className="text-sm font-black text-[#17613d] hover:text-black">View all</a>
+                <p className="text-xs font-black uppercase tracking-wide text-black/45 sm:text-sm">Latest Results</p>
+                <a href="/past-sessions" className="text-xs font-black text-[#17613d] hover:text-black sm:text-sm">View all</a>
               </div>
               <div className="grid gap-2 md:grid-cols-2">
                 {data.recentMatches.length > 0 ? (
                   data.recentMatches.slice(0, 2).map((match) => (
-                    <article key={`latest-${match.week}-${match.date}-${match.game}`} className="rounded-lg bg-[#fbfaf7] p-3">
-                      <div className="mb-3 flex items-start justify-between gap-3">
+                    <article key={`latest-${match.week}-${match.date}-${match.game}`} className="rounded-lg bg-[#fbfaf7] p-2.5 sm:p-3">
+                      <div className="mb-2 flex items-start justify-between gap-3 sm:mb-3">
                         <div>
                           <p className="text-xs font-black uppercase text-[#17613d]">{match.game}</p>
                           <p className="mt-1 text-xs font-bold text-black/45">{match.date}</p>
                         </div>
                         <p className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">{match.score}</p>
                       </div>
-                      <p className="break-words text-sm font-black">{match.teamA} vs {match.teamB}</p>
+                      <p className="break-words text-xs font-black leading-5 sm:text-sm">{match.teamA} vs {match.teamB}</p>
                     </article>
                   ))
                 ) : (
@@ -414,7 +414,7 @@ export default async function Home() {
                 )}
               </div>
               {data.recentMatches.length > 2 ? (
-                <div className="mt-3 rounded-lg bg-[#fbfaf7] p-3">
+                <div className="mt-3 rounded-lg bg-[#fbfaf7] p-2.5 sm:p-3">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <p className="text-xs font-black uppercase tracking-wide text-black/45">Session Timeline</p>
                     <p className="text-xs font-bold text-black/40">{data.recentMatches.length} games</p>
@@ -424,7 +424,7 @@ export default async function Home() {
                       <a
                         key={`timeline-${match.week}-${match.date}-${match.game}`}
                         href="/past-sessions"
-                        className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white px-2.5 py-2 text-xs transition hover:bg-[#f1ece3]"
+                        className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white px-2.5 py-1.5 text-[11px] transition hover:bg-[#f1ece3] sm:py-2 sm:text-xs"
                       >
                         <span className="font-black uppercase text-[#17613d]">{match.game}</span>
                         <span className="truncate font-bold text-black/60">{match.teamA} vs {match.teamB}</span>
@@ -438,7 +438,7 @@ export default async function Home() {
           </article>
 
           <div className="grid gap-4">
-            <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+            <article className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
               <div>
                 <p className="text-xs font-bold text-black/50 sm:text-sm">Latest Session</p>
                 <h2 className="mt-1 text-xl font-black sm:text-2xl">{latestSession.label}</h2>
@@ -456,7 +456,7 @@ export default async function Home() {
 
             <SessionGoalChart trends={data.sessionGoalTrends} />
 
-            <article className="rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+            <article className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold text-black/50 sm:text-sm">Top Players</p>

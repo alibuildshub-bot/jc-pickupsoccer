@@ -63,9 +63,9 @@ export default async function PlayersPage() {
   const topPlayer = players[0];
 
   return (
-    <main className="min-h-screen bg-[#f7f3ec] px-4 py-8 text-[#171717] sm:px-6">
+    <main className="min-h-screen bg-[#f7f3ec] px-3 py-5 text-[#171717] sm:px-6 sm:py-8">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6 sm:gap-4">
           <Link href="/" className="flex items-center gap-3">
             <LogoMark />
             <div>
@@ -79,33 +79,33 @@ export default async function PlayersPage() {
           </Link>
         </div>
 
-        <section className="rounded-lg border border-black/10 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-5 border-b border-black/10 pb-5 md:flex-row md:items-end md:justify-between">
+        <section className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 border-b border-black/10 pb-4 md:flex-row md:items-end md:justify-between md:gap-5 md:pb-5">
             <div>
               <p className="text-sm font-bold text-black/50">Players</p>
-              <h1 className="mt-1 text-4xl font-black leading-none sm:text-5xl">All-Time Player Hub</h1>
-              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-black/55 sm:text-base">
+              <h1 className="mt-1 text-2xl font-black leading-none sm:text-5xl">All-Time Player Hub</h1>
+              <p className="mt-2 max-w-2xl text-xs font-semibold leading-5 text-black/55 sm:mt-3 sm:text-base sm:leading-6">
                 Historical goals and assists across every completed JC Footy session.
               </p>
             </div>
-            <div className="rounded-lg bg-[#171717] px-4 py-3 text-white">
+            <div className="rounded-lg bg-[#171717] px-3 py-2.5 text-white sm:px-4 sm:py-3">
               <p className="text-xs font-black uppercase text-white/55">Current Leader</p>
-              <p className="mt-1 text-xl font-black">{topPlayer?.name || "Coming soon"}</p>
+              <p className="mt-1 text-lg font-black sm:text-xl">{topPlayer?.name || "Coming soon"}</p>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
             <SummaryStat label="Players" value={players.length} icon={Users} />
             <SummaryStat label="Total Goals" value={players.reduce((total, player) => total + player.goals, 0)} />
             <SummaryStat label="Total Assists" value={players.reduce((total, player) => total + player.assists, 0)} />
           </div>
         </section>
 
-        <section className="mt-5 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
-          <div className="mb-5 flex items-center justify-between gap-3">
+        <section className="mt-4 rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:mt-5 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3 sm:mb-5">
             <div>
               <p className="text-sm font-bold text-black/50">All-Time Table</p>
-              <h2 className="text-2xl font-black">Player Rankings</h2>
+              <h2 className="text-xl font-black sm:text-2xl">Player Rankings</h2>
             </div>
             <Trophy className="text-[#b7791f]" size={28} />
           </div>
