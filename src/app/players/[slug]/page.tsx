@@ -498,8 +498,8 @@ function buildPlayerHonors({
     .filter((honor) => matchingPlayerNames.has(normalizePlayerName(honor.playerName)))
     .map((honor) => formatDate(honor.sessionDate));
   const mvpSessions = Array.from(new Set([...mvpHonor.sessions, ...manualMvpSessions]));
-  const goldenBootCount = countGoldenBoots(matches, allStats, players, matchingPlayerIds);
-  const assistLeaderCount = countAssistLeaderHonors(matches, allStats, players, matchingPlayerIds);
+  const goldenBootHonor = countGoldenBoots(matches, allStats, players, matchingPlayerIds);
+  const assistLeaderHonor = countAssistLeaderHonors(matches, allStats, players, matchingPlayerIds);
   const championCount = countChampionSessions(matches, allStats, matchingPlayerIds);
 
   if (mvpSessions.length > 0) {
@@ -512,20 +512,22 @@ function buildPlayerHonors({
     });
   }
 
-  if (goldenBootCount > 0) {
+  if (goldenBootHonor.count > 0) {
     honors.push({
       label: "Golden Boot",
-      count: goldenBootCount,
+      count: goldenBootHonor.count,
       description: "Top goal scorer for a session.",
+      sessions: goldenBootHonor.sessions,
       type: "golden-boot",
     });
   }
 
-  if (assistLeaderCount > 0) {
+  if (assistLeaderHonor.count > 0) {
     honors.push({
       label: "Assist Leader",
-      count: assistLeaderCount,
+      count: assistLeaderHonor.count,
       description: "Most assists in a session.",
+      sessions: assistLeaderHonor.sessions,
       type: "assist-leader",
     });
   }
@@ -608,7 +610,7 @@ function countSessionStatLeaderHonors(
   matchingPlayerIds: Set<string>,
   statKey: "goals" | "assists",
 ) {
-  let honors = 0;
+  const honorSessions: string[] = [];
   const matchesById = new Map(matches.map((match) => [match.id, match]));
   const playerNamesById = new Map(players.map((player) => [player.id, player.name]));
   const sessionStats = new Map<string, Map<string, { total: number; isTargetPlayer: boolean }>>();
@@ -628,15 +630,18 @@ function countSessionStatLeaderHonors(
     sessionStats.set(match.match_date, session);
   }
 
-  for (const session of sessionStats.values()) {
+  for (const [sessionDate, session] of sessionStats.entries()) {
     const scores = Array.from(session.values());
     const topTotal = Math.max(0, ...scores.map((score) => score.total));
     if (topTotal === 0) continue;
 
-    if (scores.some((score) => score.isTargetPlayer && score.total === topTotal)) honors += 1;
+    if (scores.some((score) => score.isTargetPlayer && score.total === topTotal)) honorSessions.push(formatDate(sessionDate));
   }
 
-  return honors;
+  return {
+    count: honorSessions.length,
+    sessions: honorSessions,
+  };
 }
 
 function countChampionSessions(matches: MatchRow[], allStats: MatchPlayerRow[], matchingPlayerIds: Set<string>) {
