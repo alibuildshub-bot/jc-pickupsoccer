@@ -3163,9 +3163,9 @@ function TeamCards({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="mb-3 h-2 w-14 rounded-full" style={{ backgroundColor: team.color || "#1f7a4d" }} />
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 items-start gap-2">
                   <TeamLogo logo={team.logo_url} color={team.color} name={team.name} size="md" />
-                  <h2 className="min-w-0 break-words text-sm font-black sm:text-base">{team.name}</h2>
+                  <h2 className="min-w-0 whitespace-normal break-normal text-sm font-black leading-tight sm:text-base">{team.name}</h2>
                 </div>
                 <p className="mt-1 text-xs font-semibold text-black/50 sm:text-sm">
                   {formatPlayerCount(teamRoster.length)} {team.is_active ? "" : "| inactive"}
