@@ -1463,12 +1463,27 @@ export default function AdminPage() {
                           <div key={match.id} className="rounded-lg bg-[#f7f3ec] px-3 py-2">
                             <div className="mb-2 flex items-center justify-between gap-2">
                               <p className="text-xs font-black uppercase text-[#1f7a4d]">{matchGameLabels.get(match.id)}</p>
-                              <span className="rounded-lg bg-white px-2 py-1 text-xs font-black text-black/45">
-                                {formatMatchStatus(match.status)}
-                              </span>
+                              <div className="flex shrink-0 items-center gap-1">
+                                <span className="rounded-lg bg-white px-2 py-1 text-xs font-black text-black/45">
+                                  {formatMatchStatus(match.status)}
+                                </span>
+                                <IconButton
+                                  label="Edit past match"
+                                  onClick={() => {
+                                    selectGameDayDate(session.rawDate);
+                                    editMatch(match);
+                                    window.scrollTo({ top: 0, behavior: "smooth" });
+                                  }}
+                                  icon={Edit3}
+                                />
+                                <IconButton label="Delete duplicate match" onClick={() => deleteMatch(match.id)} icon={Trash2} danger />
+                              </div>
                             </div>
                             <p className="text-sm font-black">
                               {match.team_a_name} {match.team_a_score} - {match.team_b_score} {match.team_b_name}
+                            </p>
+                            <p className="mt-1 text-xs font-bold text-black/45">
+                              Use edit for wrong teams/scores. Use delete only for duplicates.
                             </p>
                           </div>
                         ))}
