@@ -1714,7 +1714,7 @@ export default function AdminPage() {
                             })
                           }
                         />
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                           <button
                             type="button"
                             onClick={() => saveQuickScore(match)}
@@ -1728,6 +1728,13 @@ export default function AdminPage() {
                             className="h-10 rounded-lg bg-[#1f7a4d] px-3 text-xs font-black text-white sm:h-11 sm:px-4 sm:text-sm"
                           >
                             Complete
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteMatch(match.id)}
+                            className="col-span-2 h-10 rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-black text-red-700 sm:col-span-1 sm:h-11 sm:px-4 sm:text-sm"
+                          >
+                            Delete
                           </button>
                         </div>
                       </div>
