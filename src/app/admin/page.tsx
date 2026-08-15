@@ -55,6 +55,16 @@ type PlayerStat = {
   matches: { week_label: string; match_date: string } | null;
 };
 
+type PlayerDateTotal = {
+  key: string;
+  player_id: string;
+  playerName: string;
+  team_name: string;
+  goals: number;
+  assists: number;
+  statIds: string[];
+};
+
 type TournamentTeam = {
   id: string;
   name: string;
@@ -254,6 +264,10 @@ export default function AdminPage() {
         });
     },
     [gameDayMatchIds, gameDayMatches, stats],
+  );
+  const gameDayPlayerTotals = useMemo(
+    () => buildPlayerDateTotals(gameDayStats, players),
+    [gameDayStats, players],
   );
   const selectedDateIsCompletedSession = useMemo(
     () => gameDayMatches.length > 0 && gameDayMatches.every((match) => match.status === "completed"),
@@ -1191,15 +1205,18 @@ export default function AdminPage() {
     updateQuickStatDraft(matchId, playerId, teamName, field, String(nextValue));
   }
 
-  async function deleteStat(statId: string) {
-    if (!window.confirm("Remove this player stat row?")) return;
+  async function deleteDateStatTotal(total: PlayerDateTotal) {
+    if (!window.confirm(`Remove all saved stats for ${total.playerName} on ${formatDateLabel(gameDayForm.date)}?`)) return;
 
     setLoading(true);
     setMessage("");
 
     try {
-      await adminFetch(`/api/admin/stats?id=${statId}`, { method: "DELETE" }, adminCredential);
-      setMessage("Player stat removed.");
+      for (const statId of total.statIds) {
+        await adminFetch(`/api/admin/stats?id=${statId}`, { method: "DELETE" }, adminCredential);
+      }
+
+      setMessage(`${total.playerName} stats removed for ${formatDateLabel(gameDayForm.date)}.`);
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -1208,27 +1225,15 @@ export default function AdminPage() {
     }
   }
 
-  function editStat(stat: PlayerStat) {
-    const statDate = stat.matches?.match_date || gameDayForm.date;
-    const statDateMatchIds = new Set(matches.filter((match) => match.match_date === statDate).map((match) => match.id));
-    const matchingStatsForDate = stats.filter(
-      (nextStat) =>
-        statDateMatchIds.has(nextStat.match_id) &&
-        nextStat.player_id === stat.player_id &&
-        normalizeAdminLabel(nextStat.team_name) === normalizeAdminLabel(stat.team_name),
-    );
-    const goals = matchingStatsForDate.reduce((total, nextStat) => total + (nextStat.goals || 0), 0);
-    const assists = matchingStatsForDate.reduce((total, nextStat) => total + (nextStat.assists || 0), 0);
-
-    selectGameDayDate(statDate);
+  function editDateStatTotal(total: PlayerDateTotal) {
     setQuickSingleStat({
-      player_id: stat.player_id,
-      team_name: stat.team_name,
-      goals: String(goals),
-      assists: String(assists),
+      player_id: total.player_id,
+      team_name: total.team_name,
+      goals: String(total.goals),
+      assists: String(total.assists),
     });
     setStatCorrectionOpen(true);
-    setMessage(`Loaded ${stat.players?.name || getPlayerName(stat.player_id)} for ${formatDateLabel(statDate)}. Update totals, then press Save Corrected Totals.`);
+    setMessage(`Loaded ${total.playerName} for ${formatDateLabel(gameDayForm.date)}. Update totals, then press Save Corrected Totals.`);
 
     window.setTimeout(() => {
       document.getElementById("stat-correction-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2403,7 +2408,7 @@ export default function AdminPage() {
               <p className="text-sm font-bold text-black/50">Player Performance</p>
               <h1 className="text-2xl font-black">Saved Game Stats</h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
-                These rows are saved per match. Player profiles, leaderboards, and all-time totals roll up from this table automatically.
+                Pick a date to review each player&apos;s total goals and assists for that pickup.
               </p>
             </div>
             <Target className="text-[#1f7a4d]" size={26} />
@@ -2501,41 +2506,35 @@ export default function AdminPage() {
           </details>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left">
+            <table className="w-full min-w-[680px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-black/10 text-xs font-black uppercase text-black/45">
-                  <th className="py-3">Match</th>
                   <th className="py-3">Player</th>
                   <th className="py-3">Team</th>
-                  <th className="py-3 text-center">G</th>
-                  <th className="py-3 text-center">A</th>
+                  <th className="py-3 text-center">Goals</th>
+                  <th className="py-3 text-center">Assists</th>
                   <th className="py-3 text-center">G+A</th>
-                  <th className="py-3 text-center">Result</th>
                   <th className="py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {gameDayStats.length === 0 ? (
+                {gameDayPlayerTotals.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-6 text-center text-sm font-bold text-black/45">
+                    <td colSpan={6} className="py-6 text-center text-sm font-bold text-black/45">
                       No player stats for {formatDateLabel(gameDayForm.date)} yet.
                     </td>
                   </tr>
-                ) : gameDayStats.map((stat) => (
-                  <tr key={stat.id} className="border-b border-black/10 last:border-0">
-                    <td className="py-4 font-bold">
-                      {stat.matches?.week_label || getMatchLabel(stat.match_id)}
-                    </td>
-                    <td className="py-4 font-black">{stat.players?.name || getPlayerName(stat.player_id)}</td>
-                    <td className="py-4 font-bold">{stat.team_name}</td>
-                    <td className="py-4 text-center font-bold">{stat.goals}</td>
-                    <td className="py-4 text-center font-bold">{stat.assists}</td>
-                    <td className="py-4 text-center font-black">{stat.goals + stat.assists}</td>
-                    <td className="py-4 text-center font-bold capitalize">{stat.result}</td>
+                ) : gameDayPlayerTotals.map((total) => (
+                  <tr key={total.key} className="border-b border-black/10 last:border-0">
+                    <td className="py-4 font-black">{total.playerName}</td>
+                    <td className="py-4 font-bold">{total.team_name}</td>
+                    <td className="py-4 text-center font-bold">{total.goals}</td>
+                    <td className="py-4 text-center font-bold">{total.assists}</td>
+                    <td className="py-4 text-center font-black">{total.goals + total.assists}</td>
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
-                        <IconButton label="Edit corrected total" onClick={() => editStat(stat)} icon={Edit3} />
-                        <IconButton label="Delete stat" onClick={() => deleteStat(stat.id)} icon={Trash2} danger />
+                        <IconButton label="Edit corrected total" onClick={() => editDateStatTotal(total)} icon={Edit3} />
+                        <IconButton label="Delete player date stats" onClick={() => deleteDateStatTotal(total)} icon={Trash2} danger />
                       </div>
                     </td>
                   </tr>
@@ -2550,10 +2549,6 @@ export default function AdminPage() {
 
   function getPlayerName(playerId: string) {
     return players.find((player) => player.id === playerId)?.name || "Unknown player";
-  }
-
-  function getMatchLabel(matchId: string) {
-    return matches.find((match) => match.id === matchId)?.week_label || "Unknown match";
   }
 
   function getTeamRoster(teamId: string) {
@@ -2689,6 +2684,37 @@ function normalizeAdminLabel(label: string) {
 
 function normalizeAdminPlayerName(name: string) {
   return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function buildPlayerDateTotals(stats: PlayerStat[], players: Player[]): PlayerDateTotal[] {
+  const playerNames = new Map(players.map((player) => [player.id, player.name]));
+  const totals = new Map<string, PlayerDateTotal>();
+
+  for (const stat of stats) {
+    const playerName = stat.players?.name || playerNames.get(stat.player_id) || "Unknown player";
+    const key = `${stat.player_id}:${normalizeAdminLabel(stat.team_name)}`;
+    const existing = totals.get(key) || {
+      key,
+      player_id: stat.player_id,
+      playerName,
+      team_name: stat.team_name,
+      goals: 0,
+      assists: 0,
+      statIds: [],
+    };
+
+    existing.goals += stat.goals || 0;
+    existing.assists += stat.assists || 0;
+    existing.statIds.push(stat.id);
+    totals.set(key, existing);
+  }
+
+  return Array.from(totals.values()).sort(
+    (first, second) =>
+      second.goals + second.assists - (first.goals + first.assists) ||
+      second.goals - first.goals ||
+      first.playerName.localeCompare(second.playerName),
+  );
 }
 
 function getQuickStatKey(matchId: string, playerId: string, teamName: string) {
