@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Award, CircleDot, Crown, Footprints, Medal, Trophy } from "lucide-react";
+import { ArrowLeft, Award, CircleDot, Crown, Medal, Trophy } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -385,12 +385,13 @@ function PlayerHonors({ honors }: { honors: PlayerHonor[] }) {
 }
 
 function HonorCard({ honor }: { honor: PlayerHonor }) {
-  const isAssistLeader = honor.type === "assist-leader";
   const Icon =
     honor.type === "mvp"
       ? Trophy
       : honor.type === "champion"
         ? Crown
+        : honor.type === "assist-leader"
+          ? CircleDot
         : Medal;
 
   return (
@@ -400,15 +401,8 @@ function HonorCard({ honor }: { honor: PlayerHonor }) {
           <p className="text-2xl font-black">{honor.count}x</p>
           <h3 className="mt-1 text-sm font-black leading-tight">{honor.label}</h3>
         </div>
-        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-[#17613d]">
-          {isAssistLeader ? (
-            <>
-              <Footprints size={17} className="-translate-x-1" />
-              <CircleDot size={12} className="absolute bottom-2 right-2" />
-            </>
-          ) : (
-            <Icon size={18} />
-          )}
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-[#17613d]">
+          <Icon size={18} />
         </span>
       </div>
       <p className="mt-2 text-xs font-semibold leading-5 text-black/50">{honor.description}</p>
