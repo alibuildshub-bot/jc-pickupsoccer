@@ -1104,14 +1104,24 @@ export default function AdminPage() {
     );
 
     if (existingStatsForDay.length > 0) {
-      setMessage("This player already has match-by-match stats for this date. Edit the saved game rows below so totals stay accurate.");
-      return;
+      const playerName = getPlayerName(quickSingleStat.player_id);
+      const currentGoals = existingStatsForDay.reduce((total, stat) => total + (stat.goals || 0), 0);
+      const currentAssists = existingStatsForDay.reduce((total, stat) => total + (stat.assists || 0), 0);
+      const shouldReplaceStats = window.confirm(
+        `${playerName} already has ${currentGoals} goals and ${currentAssists} assists saved for ${formatDateLabel(gameDayForm.date)}. Replace those rows with the totals you entered?`,
+      );
+
+      if (!shouldReplaceStats) return;
     }
 
     setLoading(true);
     setMessage("");
 
     try {
+      for (const stat of existingStatsForDay) {
+        await adminFetch(`/api/admin/stats?id=${stat.id}`, { method: "DELETE" }, adminCredential);
+      }
+
       const response = await adminFetch(
         "/api/admin/stats",
         {
@@ -1134,7 +1144,13 @@ export default function AdminPage() {
         goals: "0",
         assists: "0",
       });
-      setMessage(response.updatedExisting ? `${playerName} updated.` : `${playerName} day totals saved.`);
+      setMessage(
+        existingStatsForDay.length > 0
+          ? `${playerName} corrected for ${formatDateLabel(gameDayForm.date)}.`
+          : response.updatedExisting
+            ? `${playerName} updated.`
+            : `${playerName} day totals saved.`,
+      );
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -2346,11 +2362,11 @@ export default function AdminPage() {
 
           <details className="mb-6 rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
             <summary className="cursor-pointer text-sm font-black text-black/70">
-              Optional: add a player&apos;s day totals without choosing every match
+              Edit a player&apos;s total stats for this date
             </summary>
             <form onSubmit={saveQuickSinglePlayerStat} className="mt-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
               <p className="text-xs font-bold leading-5 text-black/45">
-                Only use this if you did not enter match-by-match stats for this player. If game rows already exist, edit them below instead.
+                Pick the date above, then select a player and team. If they already have saved rows for this date, this will ask before replacing them with the corrected total.
               </p>
               <div className="grid gap-3 lg:grid-cols-2">
                 <AdminSelect
@@ -2400,7 +2416,7 @@ export default function AdminPage() {
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Plus size={16} />
-                  Save Totals
+                  Save Corrected Totals
                 </button>
               </div>
             </form>
