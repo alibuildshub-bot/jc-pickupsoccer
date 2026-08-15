@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Award, Medal, ShieldCheck, Trophy } from "lucide-react";
+import { ArrowLeft, Award, Crown, Medal, Trophy } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -385,7 +385,7 @@ function PlayerHonors({ honors }: { honors: PlayerHonor[] }) {
 }
 
 function HonorCard({ honor }: { honor: PlayerHonor }) {
-  const Icon = honor.type === "mvp" ? Trophy : honor.type === "champion" ? ShieldCheck : Medal;
+  const Icon = honor.type === "mvp" ? Trophy : honor.type === "champion" ? Crown : Medal;
 
   return (
     <article className="rounded-lg border border-black/10 bg-white p-3">
@@ -500,7 +500,7 @@ function buildPlayerHonors({
   const mvpSessions = Array.from(new Set([...mvpHonor.sessions, ...manualMvpSessions]));
   const goldenBootHonor = countGoldenBoots(matches, allStats, players, matchingPlayerIds);
   const assistLeaderHonor = countAssistLeaderHonors(matches, allStats, players, matchingPlayerIds);
-  const championCount = countChampionSessions(matches, allStats, matchingPlayerIds);
+  const championHonor = countChampionSessions(matches, allStats, matchingPlayerIds);
 
   if (mvpSessions.length > 0) {
     honors.push({
@@ -532,11 +532,12 @@ function buildPlayerHonors({
     });
   }
 
-  if (championCount > 0) {
+  if (championHonor.count > 0) {
     honors.push({
       label: "Champion",
-      count: championCount,
+      count: championHonor.count,
       description: "Played for the top team of a session.",
+      sessions: championHonor.sessions,
       type: "champion",
     });
   }
@@ -645,7 +646,7 @@ function countSessionStatLeaderHonors(
 }
 
 function countChampionSessions(matches: MatchRow[], allStats: MatchPlayerRow[], matchingPlayerIds: Set<string>) {
-  let honors = 0;
+  const honorSessions: string[] = [];
   const matchesById = new Map(matches.map((match) => [match.id, match]));
   const matchesByDate = new Map<string, MatchRow[]>();
   const playerTeamsByDate = new Map<string, Set<string>>();
@@ -671,10 +672,13 @@ function countChampionSessions(matches: MatchRow[], allStats: MatchPlayerRow[], 
     const championTeam = getChampionTeamKey(sessionMatches);
     if (!championTeam) continue;
 
-    if (playerTeamsByDate.get(date)?.has(championTeam)) honors += 1;
+    if (playerTeamsByDate.get(date)?.has(championTeam)) honorSessions.push(formatDate(date));
   }
 
-  return honors;
+  return {
+    count: honorSessions.length,
+    sessions: honorSessions,
+  };
 }
 
 function getChampionTeamKey(matches: MatchRow[]) {
