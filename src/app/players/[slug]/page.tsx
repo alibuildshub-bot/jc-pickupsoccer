@@ -413,15 +413,23 @@ function HonorCard({ honor }: { honor: PlayerHonor }) {
 
 function CleatIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none">
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[21px] w-[21px]" fill="none">
       <path
-        d="M4.5 8.5c3.6 2.5 7.7 4 12.4 4.2l2.6.1c.7 0 1.2.5 1.2 1.2v1.1c0 .8-.6 1.4-1.4 1.4H8.2c-2 0-3.7-1-4.7-2.7L2.6 12c-.3-.6-.1-1.3.5-1.6l1.4-.8v-1.1Z"
+        d="M3.2 14.3c2.8.5 5.7.8 8.6.8h7.4c1 0 1.8.8 1.8 1.8v.4c0 .9-.7 1.6-1.6 1.6H8.7c-2.2 0-4.1-1.1-5.2-3l-.3-.6c-.2-.4-.2-.7 0-1Z"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.9"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M5.3 8.8 7.8 5h3.4l-1.4 5.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 19h1.5M13 19h1.5M18 19h1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M4.8 14.5V7.2h3l1.3 5.1 4.6 1.6"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M8.5 21v-1.7M13 21v-1.7M17.5 21v-1.7" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M8.3 8.8h3M8.8 11h3.7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
