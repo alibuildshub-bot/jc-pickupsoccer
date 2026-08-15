@@ -208,6 +208,7 @@ export default function AdminPage() {
     goals: "0",
     assists: "0",
   });
+  const [statCorrectionOpen, setStatCorrectionOpen] = useState(false);
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
@@ -1208,15 +1209,30 @@ export default function AdminPage() {
   }
 
   function editStat(stat: PlayerStat) {
-    setQuickStatMatchId(stat.match_id);
-    setQuickStatDrafts({
-      ...quickStatDrafts,
-      [getQuickStatKey(stat.match_id, stat.player_id, stat.team_name)]: {
-        goals: String(stat.goals),
-        assists: String(stat.assists),
-      },
+    const statDate = stat.matches?.match_date || gameDayForm.date;
+    const statDateMatchIds = new Set(matches.filter((match) => match.match_date === statDate).map((match) => match.id));
+    const matchingStatsForDate = stats.filter(
+      (nextStat) =>
+        statDateMatchIds.has(nextStat.match_id) &&
+        nextStat.player_id === stat.player_id &&
+        normalizeAdminLabel(nextStat.team_name) === normalizeAdminLabel(stat.team_name),
+    );
+    const goals = matchingStatsForDate.reduce((total, nextStat) => total + (nextStat.goals || 0), 0);
+    const assists = matchingStatsForDate.reduce((total, nextStat) => total + (nextStat.assists || 0), 0);
+
+    selectGameDayDate(statDate);
+    setQuickSingleStat({
+      player_id: stat.player_id,
+      team_name: stat.team_name,
+      goals: String(goals),
+      assists: String(assists),
     });
-    setMessage(`Loaded ${stat.players?.name || getPlayerName(stat.player_id)} into match-by-match stats. Update goals or assists, then press Save.`);
+    setStatCorrectionOpen(true);
+    setMessage(`Loaded ${stat.players?.name || getPlayerName(stat.player_id)} for ${formatDateLabel(statDate)}. Update totals, then press Save Corrected Totals.`);
+
+    window.setTimeout(() => {
+      document.getElementById("stat-correction-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   }
 
   if (!isUnlocked) {
@@ -2393,7 +2409,12 @@ export default function AdminPage() {
             <Target className="text-[#1f7a4d]" size={26} />
           </div>
 
-          <details className="mb-6 rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+          <details
+            id="stat-correction-panel"
+            open={statCorrectionOpen}
+            onToggle={(event) => setStatCorrectionOpen(event.currentTarget.open)}
+            className="mb-6 rounded-lg border border-black/10 bg-[#fbfaf7] p-4"
+          >
             <summary className="cursor-pointer text-sm font-black text-black/70">
               Edit a player&apos;s total stats for this date
             </summary>
@@ -2442,6 +2463,10 @@ export default function AdminPage() {
                   required
                 >
                   <option value="">Select team</option>
+                  {quickSingleStat.team_name &&
+                    !activeTeams.some((team) => normalizeAdminLabel(team.name) === normalizeAdminLabel(quickSingleStat.team_name)) && (
+                      <option value={quickSingleStat.team_name}>{quickSingleStat.team_name}</option>
+                    )}
                   {activeTeams.map((team) => (
                     <option key={team.id} value={team.name}>
                       {team.name}
@@ -2509,7 +2534,7 @@ export default function AdminPage() {
                     <td className="py-4 text-center font-bold capitalize">{stat.result}</td>
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
-                        <IconButton label="Edit stat" onClick={() => editStat(stat)} icon={Edit3} />
+                        <IconButton label="Edit corrected total" onClick={() => editStat(stat)} icon={Edit3} />
                         <IconButton label="Delete stat" onClick={() => deleteStat(stat.id)} icon={Trash2} danger />
                       </div>
                     </td>
