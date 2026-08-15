@@ -267,6 +267,17 @@ export default function AdminPage() {
     [gameDayForm.date, matches, players, stats],
   );
   const sessionOptions = useMemo(() => buildSessionOptions(matches, stats), [matches, stats]);
+  const statCorrectionDateOptions = useMemo(() => {
+    if (sessionOptions.some((sessionOption) => sessionOption.date === gameDayForm.date)) return sessionOptions;
+
+    return [
+      {
+        date: gameDayForm.date,
+        label: `${formatDateLabel(gameDayForm.date)} - selected date`,
+      },
+      ...sessionOptions,
+    ];
+  }, [gameDayForm.date, sessionOptions]);
   const setupDateIsPast = gameDayForm.date < getTodayDateInput();
   const quickStatSelectedMatchId = gameDayMatches.some((match) => match.id === quickStatMatchId)
     ? quickStatMatchId
@@ -2366,8 +2377,28 @@ export default function AdminPage() {
             </summary>
             <form onSubmit={saveQuickSinglePlayerStat} className="mt-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
               <p className="text-xs font-bold leading-5 text-black/45">
-                Pick the date above, then select a player and team. If they already have saved rows for this date, this will ask before replacing them with the corrected total.
+                Pick a date, then select a player and team. If they already have saved rows for that date, this will ask before replacing them with the corrected total.
               </p>
+              <AdminSelect
+                label="Stats date"
+                value={gameDayForm.date}
+                onChange={(value) => {
+                  selectGameDayDate(value);
+                  setQuickSingleStat({
+                    player_id: "",
+                    team_name: "",
+                    goals: "0",
+                    assists: "0",
+                  });
+                }}
+                required
+              >
+                {statCorrectionDateOptions.map((sessionOption) => (
+                  <option key={sessionOption.date} value={sessionOption.date}>
+                    {sessionOption.label}
+                  </option>
+                ))}
+              </AdminSelect>
               <div className="grid gap-3 lg:grid-cols-2">
                 <AdminSelect
                   label="Player"
