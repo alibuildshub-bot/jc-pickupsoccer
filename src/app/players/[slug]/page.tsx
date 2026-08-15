@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Award, CircleDot, Crown, Medal, Trophy } from "lucide-react";
+import { ArrowLeft, Award, CircleDot, Crown, Trophy } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -390,9 +390,7 @@ function HonorCard({ honor }: { honor: PlayerHonor }) {
       ? Trophy
       : honor.type === "champion"
         ? Crown
-        : honor.type === "assist-leader"
-          ? CircleDot
-        : Medal;
+        : CircleDot;
 
   return (
     <article className="rounded-lg border border-black/10 bg-white p-3">
@@ -402,7 +400,7 @@ function HonorCard({ honor }: { honor: PlayerHonor }) {
           <h3 className="mt-1 text-sm font-black leading-tight">{honor.label}</h3>
         </div>
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-[#17613d]">
-          <Icon size={18} />
+          {honor.type === "golden-boot" ? <CleatIcon /> : <Icon size={18} />}
         </span>
       </div>
       <p className="mt-2 text-xs font-semibold leading-5 text-black/50">{honor.description}</p>
@@ -410,6 +408,21 @@ function HonorCard({ honor }: { honor: PlayerHonor }) {
         <p className="mt-2 text-xs font-black text-[#17613d]">{formatHonorSessions(honor.sessions)}</p>
       ) : null}
     </article>
+  );
+}
+
+function CleatIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none">
+      <path
+        d="M4.5 8.5c3.6 2.5 7.7 4 12.4 4.2l2.6.1c.7 0 1.2.5 1.2 1.2v1.1c0 .8-.6 1.4-1.4 1.4H8.2c-2 0-3.7-1-4.7-2.7L2.6 12c-.3-.6-.1-1.3.5-1.6l1.4-.8v-1.1Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M5.3 8.8 7.8 5h3.4l-1.4 5.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 19h1.5M13 19h1.5M18 19h1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   );
 }
 
