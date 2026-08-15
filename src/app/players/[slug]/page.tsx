@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Award, CircleDot, Crown, Trophy } from "lucide-react";
+import { ArrowLeft, Award, Crown, Trophy } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -390,7 +390,7 @@ function HonorCard({ honor }: { honor: PlayerHonor }) {
       ? Trophy
       : honor.type === "champion"
         ? Crown
-        : CircleDot;
+        : Trophy;
 
   return (
     <article className="rounded-lg border border-black/10 bg-white p-3">
@@ -400,7 +400,7 @@ function HonorCard({ honor }: { honor: PlayerHonor }) {
           <h3 className="mt-1 text-sm font-black leading-tight">{honor.label}</h3>
         </div>
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-[#17613d]">
-          {honor.type === "golden-boot" ? <CleatIcon /> : <Icon size={18} />}
+          {honor.type === "golden-boot" ? <CleatIcon /> : honor.type === "assist-leader" ? <SoccerBallIcon /> : <Icon size={18} />}
         </span>
       </div>
       <p className="mt-2 text-xs font-semibold leading-5 text-black/50">{honor.description}</p>
@@ -408,6 +408,21 @@ function HonorCard({ honor }: { honor: PlayerHonor }) {
         <p className="mt-2 text-xs font-black text-[#17613d]">{formatHonorSessions(honor.sessions)}</p>
       ) : null}
     </article>
+  );
+}
+
+function SoccerBallIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[20px] w-[20px]" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="m12 7.4 3.1 2.2-1.2 3.7h-3.8L8.9 9.6 12 7.4Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M12 7.4V3.2M15.1 9.6l4-1.3M13.9 13.3l2.4 3.4M10.1 13.3l-2.4 3.4M8.9 9.6l-4-1.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   );
 }
 
