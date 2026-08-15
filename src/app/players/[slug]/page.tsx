@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Award, Crown, Medal, Trophy } from "lucide-react";
+import { ArrowLeft, Award, Crown, Footprints, Medal, Trophy } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -385,7 +385,14 @@ function PlayerHonors({ honors }: { honors: PlayerHonor[] }) {
 }
 
 function HonorCard({ honor }: { honor: PlayerHonor }) {
-  const Icon = honor.type === "mvp" ? Trophy : honor.type === "champion" ? Crown : Medal;
+  const Icon =
+    honor.type === "mvp"
+      ? Trophy
+      : honor.type === "champion"
+        ? Crown
+        : honor.type === "assist-leader"
+          ? Footprints
+          : Medal;
 
   return (
     <article className="rounded-lg border border-black/10 bg-white p-3">
