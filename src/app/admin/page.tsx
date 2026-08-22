@@ -164,8 +164,8 @@ const emptyMatch = {
   end_time: "",
   week_label: "",
   location: "",
-  team_a_name: "Black",
-  team_b_name: "White",
+  team_a_name: "",
+  team_b_name: "",
   team_a_score: 0,
   team_b_score: 0,
   status: "scheduled",
@@ -708,62 +708,6 @@ export default function AdminPage() {
     }
   }
 
-  async function createGameDayMatchups() {
-    if (activeTeams.length < 2) {
-      setMessage("Add at least two active teams first.");
-      return;
-    }
-
-    setLoading(true);
-    setMessage("");
-
-    try {
-      const pairings = getTeamPairings(activeTeams);
-      const existingKeys = new Set(
-        matches
-          .filter((match) => match.match_date === gameDayForm.date)
-          .map((match) => getMatchupKey(match.team_a_name, match.team_b_name)),
-      );
-      const newPairings = pairings.filter(([teamA, teamB]) => !existingKeys.has(getMatchupKey(teamA.name, teamB.name)));
-
-      if (newPairings.length === 0) {
-        setMessage("All matchups for this date already exist.");
-        return;
-      }
-
-      await Promise.all(
-        newPairings.map(([teamA, teamB], index) =>
-          adminFetch(
-            "/api/admin/matches",
-            {
-              method: "POST",
-              body: JSON.stringify({
-                match_date: gameDayForm.date,
-                start_time: gameDayForm.start_time,
-                end_time: gameDayForm.end_time,
-                week_label: `${gameDayForm.label || "Game"} ${gameDayMatches.length + index + 1}`,
-                location: gameDayForm.location,
-                team_a_name: teamA.name,
-                team_b_name: teamB.name,
-                team_a_score: 0,
-                team_b_score: 0,
-                status: "scheduled",
-              }),
-            },
-            adminCredential,
-          ),
-        ),
-      );
-
-      setMessage(`${newPairings.length} matchups created.`);
-      await loadData();
-    } catch (error) {
-      setMessage(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function saveQuickScore(match: Match, nextStatus?: "live" | "completed") {
     const score = quickScores[match.id];
     const teamAScore = score?.team_a_score ?? String(match.team_a_score);
@@ -857,6 +801,17 @@ export default function AdminPage() {
 
   async function saveMatch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!matchForm.team_a_name || !matchForm.team_b_name) {
+      setMessage("Choose both teams before saving the game.");
+      return;
+    }
+
+    if (normalizeAdminLabel(matchForm.team_a_name) === normalizeAdminLabel(matchForm.team_b_name)) {
+      setMessage("Choose two different teams for the game.");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
@@ -1629,18 +1584,9 @@ export default function AdminPage() {
               <p className="text-xs font-bold text-black/50 sm:text-sm">Game Day Console</p>
               <h1 className="text-xl font-black sm:text-2xl">Run {formatDateLabel(gameDayForm.date)}</h1>
               <p className="mt-2 max-w-2xl text-xs font-semibold leading-5 text-black/55 sm:text-sm sm:leading-6">
-                Create the matchups, save scores as games end, and enter goals or assists from one place.
+                Pick the date, manually choose the teams for each game, save the score, then enter player stats.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={createGameDayMatchups}
-              disabled={loading || activeTeams.length < 2}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white transition hover:bg-[#17613d] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Plus size={16} />
-              Create Matchups
-            </button>
           </div>
 
           <div className="mb-4 grid gap-3 md:mb-5 md:grid-cols-3">
@@ -1678,6 +1624,86 @@ export default function AdminPage() {
             </div>
           )}
 
+          <form onSubmit={saveMatch} className="mb-5 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase text-[#1f7a4d]">{editingMatchId ? "Edit selected game" : "Add a game"}</p>
+                <h2 className="text-lg font-black">{formatDateLabel(matchForm.match_date || gameDayForm.date)}</h2>
+              </div>
+              {editingMatchId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingMatchId(null);
+                    setMatchForm(getEmptyMatchForSelectedDate());
+                  }}
+                  className="h-10 rounded-lg border border-black/15 bg-white px-4 text-sm font-bold"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <AdminInput
+                label="Game label"
+                value={matchForm.week_label}
+                onChange={(value) => setMatchForm({ ...matchForm, week_label: value })}
+                placeholder={`Game ${getNextGameNumber(matches, gameDayForm.date, editingMatchId || undefined)}`}
+              />
+              <TeamNameSelect
+                label="Team A"
+                value={matchForm.team_a_name}
+                teams={activeTeams}
+                onChange={(value) => setMatchForm({ ...matchForm, team_a_name: value })}
+              />
+              <TeamNameSelect
+                label="Team B"
+                value={matchForm.team_b_name}
+                teams={activeTeams}
+                onChange={(value) => setMatchForm({ ...matchForm, team_b_name: value })}
+              />
+              <label className="block">
+                <span className="text-sm font-bold text-black/60">Status</span>
+                <select
+                  value={matchForm.status}
+                  onChange={(event) => setMatchForm({ ...matchForm, status: event.target.value })}
+                  className="mt-2 h-11 w-full rounded-lg border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-[#1f7a4d]"
+                >
+                  <option value="scheduled">Scheduled</option>
+                  <option value="live">Live</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <AdminInput
+                type="number"
+                label="Team A score"
+                value={String(matchForm.team_a_score)}
+                onChange={(value) => setMatchForm({ ...matchForm, team_a_score: Number(value) })}
+              />
+              <AdminInput
+                type="number"
+                label="Team B score"
+                value={String(matchForm.team_b_score)}
+                onChange={(value) => setMatchForm({ ...matchForm, team_b_score: Number(value) })}
+              />
+              <button
+                type="submit"
+                disabled={loading || activeTeams.length < 2}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Plus size={16} />
+                {editingMatchId ? "Update Game" : "Add Game"}
+              </button>
+            </div>
+            {activeTeams.length < 2 && (
+              <p className="rounded-lg bg-white p-3 text-xs font-bold text-black/50">
+                Add at least two teams for {formatDateLabel(gameDayForm.date)} before creating games.
+              </p>
+            )}
+          </form>
+
           <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr] xl:gap-5">
             <div>
               <div className="mb-3 flex items-center justify-between">
@@ -1686,7 +1712,7 @@ export default function AdminPage() {
               </div>
               {gameDayMatches.length === 0 ? (
                 <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4 text-sm font-bold text-black/50">
-                  No games for this date yet. Create matchups to start the day.
+                  No games for this date yet. Choose two teams above and add the first game.
                 </div>
               ) : (
                 <div className="grid gap-3">
@@ -2274,99 +2300,6 @@ export default function AdminPage() {
               <CalendarDays className="text-[#1f7a4d]" size={26} />
             </div>
 
-            <form onSubmit={saveMatch} className="mb-6 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <AdminInput
-                  type="date"
-                  label="Date"
-                  value={matchForm.match_date}
-                  onChange={(value) => setMatchForm({ ...matchForm, match_date: value })}
-                  required
-                />
-                <AdminInput
-                  type="time"
-                  label="Start time"
-                  value={matchForm.start_time}
-                  onChange={(value) => setMatchForm({ ...matchForm, start_time: value })}
-                />
-                <AdminInput
-                  type="time"
-                  label="End time"
-                  value={matchForm.end_time}
-                  onChange={(value) => setMatchForm({ ...matchForm, end_time: value })}
-                />
-                <AdminInput
-                  label="Game label"
-                  value={matchForm.week_label}
-                  onChange={(value) => setMatchForm({ ...matchForm, week_label: value })}
-                  placeholder={`Game ${getNextGameNumber(matches, matchForm.match_date, editingMatchId || undefined)}`}
-                />
-                <AdminInput
-                  label="Location"
-                  value={matchForm.location}
-                  onChange={(value) => setMatchForm({ ...matchForm, location: value })}
-                />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <TeamNameSelect
-                  label="Team A"
-                  value={matchForm.team_a_name}
-                  teams={activeTeams}
-                  onChange={(value) => setMatchForm({ ...matchForm, team_a_name: value })}
-                />
-                <TeamNameSelect
-                  label="Team B"
-                  value={matchForm.team_b_name}
-                  teams={activeTeams}
-                  onChange={(value) => setMatchForm({ ...matchForm, team_b_name: value })}
-                />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <AdminInput
-                  type="number"
-                  label="Team A score"
-                  value={String(matchForm.team_a_score)}
-                  onChange={(value) => setMatchForm({ ...matchForm, team_a_score: Number(value) })}
-                />
-                <AdminInput
-                  type="number"
-                  label="Team B score"
-                  value={String(matchForm.team_b_score)}
-                  onChange={(value) => setMatchForm({ ...matchForm, team_b_score: Number(value) })}
-                />
-                <label className="block">
-                  <span className="text-sm font-bold text-black/60">Status</span>
-                  <select
-                    value={matchForm.status}
-                    onChange={(event) => setMatchForm({ ...matchForm, status: event.target.value })}
-                    className="mt-2 h-11 w-full rounded-lg border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-[#1f7a4d]"
-                  >
-                    <option value="scheduled">Scheduled</option>
-                    <option value="live">Live</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </label>
-              </div>
-              <div className="flex gap-2">
-                <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-sm font-black text-white">
-                  <Plus size={16} />
-                  {editingMatchId ? "Update Match" : "Add Match"}
-                </button>
-                {editingMatchId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingMatchId(null);
-                      setMatchForm(getEmptyMatchForSelectedDate());
-                    }}
-                    className="h-11 rounded-lg border border-black/15 bg-white px-4 text-sm font-bold"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </form>
-
             <div className="space-y-3">
               {gameDayMatches.length === 0 ? (
                 <div className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4 text-sm font-bold text-black/50">
@@ -2719,22 +2652,6 @@ function buildPlayerDateTotals(stats: PlayerStat[], players: Player[]): PlayerDa
 
 function getQuickStatKey(matchId: string, playerId: string, teamName: string) {
   return `${matchId}:${playerId}:${normalizeAdminLabel(teamName)}`;
-}
-
-function getTeamPairings(teams: TournamentTeam[]) {
-  const pairings: Array<[TournamentTeam, TournamentTeam]> = [];
-
-  for (let firstIndex = 0; firstIndex < teams.length; firstIndex += 1) {
-    for (let secondIndex = firstIndex + 1; secondIndex < teams.length; secondIndex += 1) {
-      pairings.push([teams[firstIndex], teams[secondIndex]]);
-    }
-  }
-
-  return pairings;
-}
-
-function getMatchupKey(teamA: string, teamB: string) {
-  return [teamA.trim().toLowerCase(), teamB.trim().toLowerCase()].sort().join("|");
 }
 
 function formatMatchStatus(status: string) {
