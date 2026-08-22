@@ -208,6 +208,7 @@ export default function AdminPage() {
     label: "Game",
     location: "",
   });
+  const [pollDate, setPollDate] = useState(defaultPickupDate);
   const [quickScores, setQuickScores] = useState<Record<string, { team_a_score: string; team_b_score: string }>>({});
   const [quickStatMatchId, setQuickStatMatchId] = useState("");
   const [pastStatMatchByDate, setPastStatMatchByDate] = useState<Record<string, string>>({});
@@ -273,9 +274,18 @@ export default function AdminPage() {
     () => gameDayMatches.length > 0 && gameDayMatches.every((match) => match.status === "completed"),
     [gameDayMatches],
   );
+  const pollMatches = useMemo(
+    () => matches.filter((match) => match.match_date === pollDate),
+    [matches, pollDate],
+  );
+  const pollMatchIds = useMemo(() => new Set(pollMatches.map((match) => match.id)), [pollMatches]);
+  const pollStats = useMemo(
+    () => stats.filter((stat) => pollMatchIds.has(stat.match_id)),
+    [pollMatchIds, stats],
+  );
   const pollCandidatePlayers = useMemo(
-    () => buildPollCandidatePlayers(gameDayMatches, teams, roster, players, gameDayStats, activePlayers),
-    [activePlayers, gameDayMatches, gameDayStats, players, roster, teams],
+    () => buildPollCandidatePlayers(pollMatches, teams, roster, players, pollStats, activePlayers, pollDate),
+    [activePlayers, players, pollDate, pollMatches, pollStats, roster, teams],
   );
   const pastGameSessions = useMemo(
     () => buildPastGameSessions(matches, stats, players, gameDayForm.date),
@@ -310,6 +320,7 @@ export default function AdminPage() {
       end_time: "",
       location: "",
     }));
+    setPollDate(date);
   }
 
   function startNewPickup() {
@@ -319,6 +330,7 @@ export default function AdminPage() {
     setEditingTeamId(null);
     setRosterForm({ team_id: "", player_id: "" });
     setGameDayForm((current) => ({ ...current, date }));
+    setPollDate(date);
     setMatchForm({ ...emptyMatch, match_date: date });
     setTeamForm({ ...emptyTeam, session_date: date });
     setMessage(`Ready to set up ${formatDateLabel(date)}.`);
@@ -541,8 +553,8 @@ export default function AdminPage() {
         {
           method: "POST",
           body: JSON.stringify({
-            title: `JC Footy Tournament MVP - ${formatDateLabel(gameDayForm.date)}`,
-            match_date: gameDayForm.date,
+            title: `JC Footy Tournament MVP - ${formatDateLabel(pollDate)}`,
+            match_date: pollDate,
             player_ids: pollCandidatePlayers.map((player) => player.id),
           }),
         },
@@ -551,7 +563,7 @@ export default function AdminPage() {
 
       const pollUrl = getPollUrl(response.poll.token);
       await copyText(pollUrl);
-      setMessage("MVP poll created and link copied.");
+      setMessage(`MVP poll for ${formatDateLabel(pollDate)} created and link copied.`);
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -629,7 +641,7 @@ export default function AdminPage() {
     const pollDate = poll.match_date || gameDayForm.date;
     const pollMatches = matches.filter((match) => match.match_date === pollDate);
     const pollStats = stats.filter((stat) => pollMatches.some((match) => match.id === stat.match_id));
-    const candidates = buildPollCandidatePlayers(pollMatches, teams, roster, players, pollStats, activePlayers);
+    const candidates = buildPollCandidatePlayers(pollMatches, teams, roster, players, pollStats, activePlayers, pollDate);
 
     if (candidates.length < 2) {
       setMessage("No rostered players found for this poll date.");
@@ -1859,9 +1871,9 @@ export default function AdminPage() {
               <p className="text-sm font-bold text-black/50">After the Tournament</p>
               <h1 className="text-2xl font-black">Tournament MVP Poll</h1>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-black/55">
-                Create one vote for the full tournament day after all games are finished, then send it to the group chat.
+                Create one vote for the selected tournament day after all games are finished, then send it to the group chat.
                 {pollCandidatePlayers.length > 0
-                  ? ` Polls will include ${pollCandidatePlayers.length} players from the teams that played this day.`
+                  ? ` Polls will include ${pollCandidatePlayers.length} players from ${formatDateLabel(pollDate)}.`
                   : " Add teams, rosters, or player stats first to limit the poll to players who participated."}
               </p>
             </div>
@@ -1880,14 +1892,29 @@ export default function AdminPage() {
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
               MVP poll tables are not set up yet. Run the SQL file named supabase-mvp-polls.sql in Supabase first.
             </div>
-          ) : polls.length === 0 ? (
-            <div className="rounded-lg border border-black/10 bg-[#f7f3ec] p-4 text-sm font-bold text-black/50">
-              No tournament MVP polls yet.
-            </div>
           ) : (
-            <div className="grid gap-3 lg:grid-cols-2">
-              {polls.map((poll) => (
-                <article key={poll.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
+            <>
+              <div className="mb-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4 sm:grid-cols-[minmax(0,260px)_1fr] sm:items-end">
+                <AdminInput
+                  type="date"
+                  label="Poll date"
+                  value={pollDate}
+                  onChange={setPollDate}
+                  required
+                />
+                <p className="rounded-lg bg-white p-3 text-xs font-bold leading-5 text-black/50">
+                  This poll will be created for {formatDateLabel(pollDate)}. Change this date if you are making a poll for a previous session.
+                </p>
+              </div>
+
+              {polls.length === 0 ? (
+                <div className="rounded-lg border border-black/10 bg-[#f7f3ec] p-4 text-sm font-bold text-black/50">
+                  No tournament MVP polls yet.
+                </div>
+              ) : (
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {polls.map((poll) => (
+                    <article key={poll.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="font-black">{getTournamentPollTitle(poll)}</h2>
@@ -1955,9 +1982,11 @@ export default function AdminPage() {
                       Delete Poll
                     </button>
                   </div>
-                </article>
-              ))}
-            </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
 
@@ -2751,9 +2780,10 @@ function buildPollCandidatePlayers(
   players: Player[],
   gameDayStats: PlayerStat[],
   activePlayers: Player[],
+  selectedDate: string,
 ) {
   const gameDayTeamNames = new Set<string>();
-  const gameDayDate = gameDayMatches[0]?.match_date || "";
+  const gameDayDate = gameDayMatches[0]?.match_date || selectedDate;
   const teamsForDate = gameDayDate ? teams.filter((team) => team.session_date === gameDayDate) : [];
   const candidateTeams = teamsForDate.length > 0 ? teamsForDate : teams;
 
@@ -2764,7 +2794,7 @@ function buildPollCandidatePlayers(
 
   const gameDayTeamIds = new Set(
     candidateTeams
-      .filter((team) => gameDayTeamNames.has(normalizeAdminLabel(team.name)))
+      .filter((team) => gameDayTeamNames.size === 0 || gameDayTeamNames.has(normalizeAdminLabel(team.name)))
       .map((team) => team.id),
   );
   const rosterPlayerIds = new Set(
