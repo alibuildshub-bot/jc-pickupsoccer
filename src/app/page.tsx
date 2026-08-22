@@ -344,12 +344,8 @@ export default async function Home() {
                   />
                   <MiniStat label="Total Goals" value={String(data.goalsTracked)} />
                   <MiniStat
-                    label={data.mvpWinner.isReady ? "MVP" : "Top Player"}
-                    value={data.mvpWinner.isReady
-                      ? data.mvpWinner.name
-                      : data.players[0]
-                        ? `${data.players[0].name} - ${data.players[0].points} G+A`
-                        : "Stats pending"}
+                    label="MVP"
+                    value={latestSession.mvp}
                     icon={Trophy}
                   />
                 </div>
