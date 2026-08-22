@@ -1137,7 +1137,7 @@ async function buildLatestSessionSummary(
   const latestTeams = getTeamsForMatches(teams, latestMatches);
   const standings = buildTeamStandings(latestTeams, latestMatches);
   const winner = buildTeamOfTheWeek(standings);
-  const latestMvp = await getClosedMvpWinner(supabase, latestDate);
+  const latestMvp = await getClosedMvpWinnerFromPolls(supabase, latestDate);
 
   return {
     label: formatDate(latestDate),
