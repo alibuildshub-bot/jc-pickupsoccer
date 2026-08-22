@@ -977,8 +977,7 @@ async function getClosedMvpWinner(
   matchDate: string,
 ): Promise<MvpWinner> {
   if (matchDate) {
-    const currentSessionWinner = await getClosedMvpWinnerFromPolls(supabase, matchDate);
-    if (currentSessionWinner.isReady) return currentSessionWinner;
+    return getClosedMvpWinnerFromPolls(supabase, matchDate);
   }
 
   return getClosedMvpWinnerFromPolls(supabase);
