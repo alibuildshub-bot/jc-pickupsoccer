@@ -12,6 +12,7 @@ type StatPayload = {
   team_name?: string;
   goals?: number;
   assists?: number;
+  own_goals?: number;
 };
 
 type MatchForResult = {
@@ -22,8 +23,10 @@ type MatchForResult = {
   status: string;
 };
 
-const statSelect = "id,match_id,player_id,team_name,goals,assists,result,players(name),matches(week_label,match_date)";
-const statMutationSelect = "id,match_id,player_id,team_name,goals,assists,result";
+const statSelect = "id,match_id,player_id,team_name,goals,assists,own_goals,result,players(name),matches(week_label,match_date)";
+const statSelectWithoutOwnGoals = "id,match_id,player_id,team_name,goals,assists,result,players(name),matches(week_label,match_date)";
+const statMutationSelect = "id,match_id,player_id,team_name,goals,assists,own_goals,result";
+const statMutationSelectWithoutOwnGoals = "id,match_id,player_id,team_name,goals,assists,result";
 
 export async function GET(request: Request) {
   if (!(await isAdminRequest(request))) return unauthorizedError();
@@ -31,10 +34,7 @@ export async function GET(request: Request) {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return adminConfigError();
 
-  const { data, error } = await supabase
-    .from("match_players")
-    .select(statSelect)
-    .order("created_at", { ascending: false });
+  const { data, error } = await selectStats(supabase);
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
@@ -82,6 +82,25 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
+      if (isMissingOwnGoalsColumn(error) && hasOwnGoalsValue(payload)) {
+        return Response.json({ error: "Own goals are not set up yet. Run supabase-own-goals.sql in Supabase first." }, { status: 500 });
+      }
+
+      if (isMissingOwnGoalsColumn(error) && !hasOwnGoalsValue(payload)) {
+        const fallback = await supabase
+          .from("match_players")
+          .update(stripOwnGoals(rowPayload))
+          .eq("id", existingStat.id)
+          .select(statMutationSelectWithoutOwnGoals)
+          .single();
+
+        if (fallback.error) {
+          return Response.json({ error: fallback.error.message }, { status: 500 });
+        }
+
+        return Response.json({ stat: addOwnGoalsDefault(fallback.data), updatedExisting: true });
+      }
+
       return Response.json({ error: error.message }, { status: 500 });
     }
 
@@ -95,6 +114,24 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
+    if (isMissingOwnGoalsColumn(error) && hasOwnGoalsValue(payload)) {
+      return Response.json({ error: "Own goals are not set up yet. Run supabase-own-goals.sql in Supabase first." }, { status: 500 });
+    }
+
+    if (isMissingOwnGoalsColumn(error) && !hasOwnGoalsValue(payload)) {
+      const fallback = await supabase
+        .from("match_players")
+        .insert(stripOwnGoals(rowPayload))
+        .select(statMutationSelectWithoutOwnGoals)
+        .single();
+
+      if (fallback.error) {
+        return Response.json({ error: fallback.error.message }, { status: 500 });
+      }
+
+      return Response.json({ stat: addOwnGoalsDefault(fallback.data) }, { status: 201 });
+    }
+
     return Response.json({ error: error.message }, { status: 500 });
   }
 
@@ -132,6 +169,25 @@ export async function PATCH(request: Request) {
     .single();
 
   if (error) {
+    if (isMissingOwnGoalsColumn(error) && hasOwnGoalsValue(payload)) {
+      return Response.json({ error: "Own goals are not set up yet. Run supabase-own-goals.sql in Supabase first." }, { status: 500 });
+    }
+
+    if (isMissingOwnGoalsColumn(error) && !hasOwnGoalsValue(payload)) {
+      const fallback = await supabase
+        .from("match_players")
+        .update(stripOwnGoals(rowPayload))
+        .eq("id", payload.id)
+        .select(statMutationSelectWithoutOwnGoals)
+        .single();
+
+      if (fallback.error) {
+        return Response.json({ error: fallback.error.message }, { status: 500 });
+      }
+
+      return Response.json({ stat: addOwnGoalsDefault(fallback.data) });
+    }
+
     return Response.json({ error: error.message }, { status: 500 });
   }
 
@@ -211,6 +267,43 @@ function statPayloadToRow(payload: StatPayload, result: string) {
     team_name: payload.team_name?.trim(),
     goals: Number(payload.goals || 0),
     assists: Number(payload.assists || 0),
+    own_goals: Number(payload.own_goals || 0),
     result,
   };
+}
+
+async function selectStats(supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>) {
+  const withOwnGoals = await supabase
+    .from("match_players")
+    .select(statSelect)
+    .order("created_at", { ascending: false });
+
+  if (!isMissingOwnGoalsColumn(withOwnGoals.error)) return withOwnGoals;
+
+  const withoutOwnGoals = await supabase
+    .from("match_players")
+    .select(statSelectWithoutOwnGoals)
+    .order("created_at", { ascending: false });
+
+  return {
+    ...withoutOwnGoals,
+    data: withoutOwnGoals.data?.map(addOwnGoalsDefault),
+  };
+}
+
+function isMissingOwnGoalsColumn(error: { message?: string } | null) {
+  return Boolean(error?.message?.includes("own_goals"));
+}
+
+function hasOwnGoalsValue(payload: StatPayload) {
+  return Number(payload.own_goals || 0) > 0;
+}
+
+function stripOwnGoals<T extends { own_goals?: number }>(row: T) {
+  const { own_goals: _ownGoals, ...rest } = row;
+  return rest;
+}
+
+function addOwnGoalsDefault<T extends object>(row: T) {
+  return { ...row, own_goals: "own_goals" in row ? (row as T & { own_goals: number }).own_goals : 0 };
 }

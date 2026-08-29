@@ -50,6 +50,7 @@ type PlayerStat = {
   team_name: string;
   goals: number;
   assists: number;
+  own_goals: number;
   result: string;
   players: { name: string } | null;
   matches: { week_label: string; match_date: string } | null;
@@ -62,6 +63,7 @@ type PlayerDateTotal = {
   team_name: string;
   goals: number;
   assists: number;
+  own_goals: number;
   statIds: string[];
 };
 
@@ -120,6 +122,7 @@ type PastGameSession = {
     team: string;
     goals: number;
     assists: number;
+    own_goals: number;
   }>;
   totalGoals: number;
 };
@@ -212,14 +215,16 @@ export default function AdminPage() {
   const [quickScores, setQuickScores] = useState<Record<string, { team_a_score: string; team_b_score: string }>>({});
   const [quickStatMatchId, setQuickStatMatchId] = useState("");
   const [pastStatMatchByDate, setPastStatMatchByDate] = useState<Record<string, string>>({});
-  const [quickStatDrafts, setQuickStatDrafts] = useState<Record<string, { goals: string; assists: string }>>({});
+  const [quickStatDrafts, setQuickStatDrafts] = useState<Record<string, { goals: string; assists: string; own_goals: string }>>({});
   const [quickSingleStat, setQuickSingleStat] = useState({
     player_id: "",
     team_name: "",
     goals: "0",
     assists: "0",
+    own_goals: "0",
   });
   const [statCorrectionOpen, setStatCorrectionOpen] = useState(false);
+  const [ownGoalsAddonOpen, setOwnGoalsAddonOpen] = useState(false);
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
@@ -270,6 +275,7 @@ export default function AdminPage() {
     () => buildPlayerDateTotals(gameDayStats, players),
     [gameDayStats, players],
   );
+  const showOwnGoalsAddon = ownGoalsAddonOpen || stats.some((stat) => (stat.own_goals || 0) > 0);
   const selectedDateIsCompletedSession = useMemo(
     () => gameDayMatches.length > 0 && gameDayMatches.every((match) => match.status === "completed"),
     [gameDayMatches],
@@ -1065,6 +1071,7 @@ export default function AdminPage() {
             team_name: teamName,
             goals: Number(draft.goals || 0),
             assists: Number(draft.assists || 0),
+            own_goals: Number(draft.own_goals || 0),
           }),
         },
         adminCredential,
@@ -1100,8 +1107,9 @@ export default function AdminPage() {
       const playerName = getPlayerName(quickSingleStat.player_id);
       const currentGoals = existingStatsForDay.reduce((total, stat) => total + (stat.goals || 0), 0);
       const currentAssists = existingStatsForDay.reduce((total, stat) => total + (stat.assists || 0), 0);
+      const currentOwnGoals = existingStatsForDay.reduce((total, stat) => total + (stat.own_goals || 0), 0);
       const shouldReplaceStats = window.confirm(
-        `${playerName} already has ${currentGoals} goals and ${currentAssists} assists saved for ${formatDateLabel(gameDayForm.date)}. Replace those rows with the totals you entered?`,
+        `${playerName} already has ${currentGoals} goals, ${currentAssists} assists, and ${currentOwnGoals} own goals saved for ${formatDateLabel(gameDayForm.date)}. Replace those rows with the totals you entered?`,
       );
 
       if (!shouldReplaceStats) return;
@@ -1125,6 +1133,7 @@ export default function AdminPage() {
             team_name: quickSingleStat.team_name,
             goals: Number(quickSingleStat.goals || 0),
             assists: Number(quickSingleStat.assists || 0),
+            own_goals: Number(quickSingleStat.own_goals || 0),
           }),
         },
         adminCredential,
@@ -1136,6 +1145,7 @@ export default function AdminPage() {
         team_name: quickSingleStat.team_name,
         goals: "0",
         assists: "0",
+        own_goals: "0",
       });
       setMessage(
         existingStatsForDay.length > 0
@@ -1152,7 +1162,7 @@ export default function AdminPage() {
     }
   }
 
-  function updateQuickStatDraft(matchId: string, playerId: string, teamName: string, field: "goals" | "assists", value: string) {
+  function updateQuickStatDraft(matchId: string, playerId: string, teamName: string, field: "goals" | "assists" | "own_goals", value: string) {
     const key = getQuickStatKey(matchId, playerId, teamName);
     const current = getQuickStatDraft(matchId, playerId, teamName);
 
@@ -1165,7 +1175,7 @@ export default function AdminPage() {
     });
   }
 
-  function adjustQuickStatDraft(matchId: string, playerId: string, teamName: string, field: "goals" | "assists", amount: number) {
+  function adjustQuickStatDraft(matchId: string, playerId: string, teamName: string, field: "goals" | "assists" | "own_goals", amount: number) {
     const current = getQuickStatDraft(matchId, playerId, teamName);
     const nextValue = Math.max(0, Number(current[field] || 0) + amount);
 
@@ -1198,6 +1208,7 @@ export default function AdminPage() {
       team_name: total.team_name,
       goals: String(total.goals),
       assists: String(total.assists),
+      own_goals: String(total.own_goals),
     });
     setStatCorrectionOpen(true);
     setMessage(`Loaded ${total.playerName} for ${formatDateLabel(gameDayForm.date)}. Update totals, then press Save Corrected Totals.`);
@@ -1509,6 +1520,9 @@ export default function AdminPage() {
                               <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">
                                 <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.goals} G</span>
                                 <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.assists} A</span>
+                                {player.own_goals > 0 && (
+                                  <span className="rounded-lg bg-white px-2 py-1 font-bold text-black/55">{player.own_goals} OG</span>
+                                )}
                                 <span className="rounded-lg bg-[#171717] px-2 py-1 font-black text-white">
                                   {player.goals + player.assists} G+A
                                 </span>
@@ -1567,6 +1581,8 @@ export default function AdminPage() {
                             updateDraft={updateQuickStatDraft}
                             adjustDraft={adjustQuickStatDraft}
                             savePlayerStat={saveQuickPlayerStat}
+                            showOwnGoals={showOwnGoalsAddon}
+                            onShowOwnGoals={() => setOwnGoalsAddonOpen(true)}
                             loading={loading}
                           />
                           <QuickStatTeamSheet
@@ -1577,6 +1593,8 @@ export default function AdminPage() {
                             updateDraft={updateQuickStatDraft}
                             adjustDraft={adjustQuickStatDraft}
                             savePlayerStat={saveQuickPlayerStat}
+                            showOwnGoals={showOwnGoalsAddon}
+                            onShowOwnGoals={() => setOwnGoalsAddonOpen(true)}
                             loading={loading}
                           />
                         </div>
@@ -1846,6 +1864,8 @@ export default function AdminPage() {
                       updateDraft={updateQuickStatDraft}
                       adjustDraft={adjustQuickStatDraft}
                       savePlayerStat={saveQuickPlayerStat}
+                      showOwnGoals={showOwnGoalsAddon}
+                      onShowOwnGoals={() => setOwnGoalsAddonOpen(true)}
                       loading={loading}
                     />
                     <QuickStatTeamSheet
@@ -1856,6 +1876,8 @@ export default function AdminPage() {
                       updateDraft={updateQuickStatDraft}
                       adjustDraft={adjustQuickStatDraft}
                       savePlayerStat={saveQuickPlayerStat}
+                      showOwnGoals={showOwnGoalsAddon}
+                      onShowOwnGoals={() => setOwnGoalsAddonOpen(true)}
                       loading={loading}
                     />
                   </div>
@@ -2389,6 +2411,15 @@ export default function AdminPage() {
               <p className="text-xs font-bold leading-5 text-black/45">
                 Pick a date, then select a player and team. If they already have saved rows for that date, this will ask before replacing them with the corrected total.
               </p>
+              {!showOwnGoalsAddon && (
+                <button
+                  type="button"
+                  onClick={() => setOwnGoalsAddonOpen(true)}
+                  className="w-fit rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-black text-black/60 transition hover:border-[#1f7a4d]/30 hover:text-[#17613d]"
+                >
+                  Add own goals
+                </button>
+              )}
               <AdminSelect
                 label="Stats date"
                 value={gameDayForm.date}
@@ -2399,6 +2430,7 @@ export default function AdminPage() {
                     team_name: "",
                     goals: "0",
                     assists: "0",
+                    own_goals: "0",
                   });
                 }}
                 required
@@ -2442,7 +2474,7 @@ export default function AdminPage() {
                 </AdminSelect>
               </div>
 
-              <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+              <div className={`grid gap-3 lg:items-end ${showOwnGoalsAddon ? "lg:grid-cols-[1fr_1fr_1fr_auto]" : "lg:grid-cols-[1fr_1fr_auto]"}`}>
                 <AdminInput
                   type="number"
                   label="Total goals"
@@ -2455,6 +2487,14 @@ export default function AdminPage() {
                   value={quickSingleStat.assists}
                   onChange={(value) => setQuickSingleStat({ ...quickSingleStat, assists: value })}
                 />
+                {showOwnGoalsAddon && (
+                  <AdminInput
+                    type="number"
+                    label="Own goals"
+                    value={quickSingleStat.own_goals}
+                    onChange={(value) => setQuickSingleStat({ ...quickSingleStat, own_goals: value })}
+                  />
+                )}
                 <button
                   type="submit"
                   disabled={loading}
@@ -2475,6 +2515,7 @@ export default function AdminPage() {
                   <th className="py-3">Team</th>
                   <th className="py-3 text-center">Goals</th>
                   <th className="py-3 text-center">Assists</th>
+                  {showOwnGoalsAddon && <th className="py-3 text-center">OG</th>}
                   <th className="py-3 text-center">G+A</th>
                   <th className="py-3 text-right">Actions</th>
                 </tr>
@@ -2482,7 +2523,7 @@ export default function AdminPage() {
               <tbody>
                 {gameDayPlayerTotals.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-sm font-bold text-black/45">
+                    <td colSpan={showOwnGoalsAddon ? 7 : 6} className="py-6 text-center text-sm font-bold text-black/45">
                       No player stats for {formatDateLabel(gameDayForm.date)} yet.
                     </td>
                   </tr>
@@ -2492,6 +2533,7 @@ export default function AdminPage() {
                     <td className="py-4 font-bold">{total.team_name}</td>
                     <td className="py-4 text-center font-bold">{total.goals}</td>
                     <td className="py-4 text-center font-bold">{total.assists}</td>
+                    {showOwnGoalsAddon && <td className="py-4 text-center font-bold">{total.own_goals}</td>}
                     <td className="py-4 text-center font-black">{total.goals + total.assists}</td>
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
@@ -2564,6 +2606,7 @@ export default function AdminPage() {
     return {
       goals: String(existingStat?.goals ?? 0),
       assists: String(existingStat?.assists ?? 0),
+      own_goals: String(existingStat?.own_goals ?? 0),
     };
   }
 }
@@ -2662,11 +2705,13 @@ function buildPlayerDateTotals(stats: PlayerStat[], players: Player[]): PlayerDa
       team_name: stat.team_name,
       goals: 0,
       assists: 0,
+      own_goals: 0,
       statIds: [],
     };
 
     existing.goals += stat.goals || 0;
     existing.assists += stat.assists || 0;
+    existing.own_goals += stat.own_goals || 0;
     existing.statIds.push(stat.id);
     totals.set(key, existing);
   }
@@ -2878,10 +2923,12 @@ function buildPastGameSessions(
           team: stat.team_name,
           goals: 0,
           assists: 0,
+          own_goals: 0,
         };
 
         existing.goals += stat.goals || 0;
         existing.assists += stat.assists || 0;
+        existing.own_goals += stat.own_goals || 0;
         playerTotals.set(playerKey, existing);
       }
 
@@ -3257,15 +3304,19 @@ function QuickStatTeamSheet({
   updateDraft,
   adjustDraft,
   savePlayerStat,
+  showOwnGoals,
+  onShowOwnGoals,
   loading,
 }: {
   match: Match;
   teamName: string;
   players: Player[];
-  getDraft: (matchId: string, playerId: string, teamName: string) => { goals: string; assists: string };
-  updateDraft: (matchId: string, playerId: string, teamName: string, field: "goals" | "assists", value: string) => void;
-  adjustDraft: (matchId: string, playerId: string, teamName: string, field: "goals" | "assists", amount: number) => void;
+  getDraft: (matchId: string, playerId: string, teamName: string) => { goals: string; assists: string; own_goals: string };
+  updateDraft: (matchId: string, playerId: string, teamName: string, field: "goals" | "assists" | "own_goals", value: string) => void;
+  adjustDraft: (matchId: string, playerId: string, teamName: string, field: "goals" | "assists" | "own_goals", amount: number) => void;
   savePlayerStat: (match: Match, player: Player, teamName: string) => void;
+  showOwnGoals: boolean;
+  onShowOwnGoals: () => void;
   loading: boolean;
 }) {
   return (
@@ -3288,7 +3339,7 @@ function QuickStatTeamSheet({
             return (
               <div key={player.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-2.5 sm:p-3">
                 <p className="mb-2 break-words text-sm font-black sm:mb-3">{player.name}</p>
-                <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-1.5 sm:gap-2">
+                <div className={`grid items-end gap-1.5 sm:gap-2 ${showOwnGoals ? "grid-cols-3 sm:grid-cols-[1fr_1fr_1fr_auto]" : "grid-cols-2 sm:grid-cols-[1fr_1fr_auto]"}`}>
                   <StatStepper
                     label="G"
                     value={draft.goals}
@@ -3301,15 +3352,32 @@ function QuickStatTeamSheet({
                     onChange={(value) => updateDraft(match.id, player.id, teamName, "assists", value)}
                     onAdjust={(amount) => adjustDraft(match.id, player.id, teamName, "assists", amount)}
                   />
+                  {showOwnGoals && (
+                    <StatStepper
+                      label="OG"
+                      value={draft.own_goals}
+                      onChange={(value) => updateDraft(match.id, player.id, teamName, "own_goals", value)}
+                      onAdjust={(amount) => adjustDraft(match.id, player.id, teamName, "own_goals", amount)}
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() => savePlayerStat(match, player, teamName)}
                     disabled={loading}
-                    className="h-9 rounded-lg bg-[#171717] px-2.5 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:px-3"
+                    className={`${showOwnGoals ? "col-span-3" : "col-span-2"} h-9 rounded-lg bg-[#171717] px-2.5 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:h-10 sm:px-3`}
                   >
                     Save
                   </button>
                 </div>
+                {!showOwnGoals && (
+                  <button
+                    type="button"
+                    onClick={onShowOwnGoals}
+                    className="mt-2 text-xs font-black text-black/45 underline-offset-4 hover:text-[#17613d] hover:underline"
+                  >
+                    Add own goal
+                  </button>
+                )}
               </div>
             );
           })}
