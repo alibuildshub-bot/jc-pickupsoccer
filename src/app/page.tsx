@@ -154,6 +154,8 @@ type ArchiveDay = {
   players: ArchivePlayer[];
   totalGoals: number;
   teamOfTheWeek: string;
+  teamOfTheWeekLogo: string | null;
+  teamOfTheWeekColor: string | null;
   topScorer: string;
 };
 
@@ -733,7 +735,13 @@ export default async function Home() {
                   <p className="text-xs font-black uppercase text-[#1f7a4d]">Completed session</p>
                   <h3 className="mt-1 text-xl font-black">{day.date}</h3>
                   <div className="mt-4 grid gap-2">
-                    <MiniStat label="Team of the Week" value={day.teamOfTheWeek} icon={Trophy} />
+                    <MiniStat
+                      label="Team of the Week"
+                      value={day.teamOfTheWeek}
+                      icon={Trophy}
+                      logo={day.teamOfTheWeekLogo}
+                      color={day.teamOfTheWeekColor}
+                    />
                     <MiniStat label="Games" value={String(day.matches.length)} />
                     <MiniStat label="Total Goals" value={String(day.totalGoals)} />
                   </div>
@@ -1476,6 +1484,8 @@ function buildResultsArchive(
         players: sortedPlayers,
         totalGoals: dayMatches.reduce((total, match) => total + match.team_a_score + match.team_b_score, 0),
         teamOfTheWeek: teamOfTheWeek.name,
+        teamOfTheWeekLogo: teamOfTheWeek.logo,
+        teamOfTheWeekColor: teamOfTheWeek.color,
         topScorer,
       };
     });
@@ -2318,14 +2328,29 @@ function isLogoImage(value: string) {
   return /^https?:\/\//i.test(value) || value.startsWith("/");
 }
 
-function MiniStat({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof Trophy }) {
+function MiniStat({
+  label,
+  value,
+  icon: Icon,
+  logo,
+  color,
+}: {
+  label: string;
+  value: string;
+  icon?: typeof Trophy;
+  logo?: string | null;
+  color?: string | null;
+}) {
   return (
     <div className="rounded-lg bg-[#f7f3ec] p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-bold uppercase text-black/45">{label}</p>
         {Icon && <Icon className="shrink-0 text-[#b7791f]" size={18} />}
       </div>
-      <p className="mt-1 text-sm font-black">{value}</p>
+      <div className="mt-1 flex min-w-0 items-center gap-2">
+        {(logo || color) && <TeamLogo logo={logo} color={color || "#1f7a4d"} name={value} />}
+        <p className="min-w-0 break-words text-sm font-black">{value}</p>
+      </div>
     </div>
   );
 }
