@@ -217,7 +217,6 @@ export default async function Home() {
             <a href="/players" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Players</a>
             <a href="#matches" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Matches</a>
             <a href="#teams" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Teams</a>
-            <a href="/highlights" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Highlights</a>
             <a href="/past-sessions" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Past Sessions</a>
           </div>
         </div>
@@ -226,7 +225,6 @@ export default async function Home() {
           <a href="/players" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Players</a>
           <a href="#matches" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Matches</a>
           <a href="#teams" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Teams</a>
-          <a href="/highlights" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Highlights</a>
           <a href="/past-sessions" className="shrink-0 rounded-lg bg-[#171717] px-2.5 py-2 text-white">Past Games</a>
         </div>
       </nav>
