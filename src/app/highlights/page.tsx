@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, Clapperboard, Play, Trophy } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clapperboard, Play } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -11,24 +11,12 @@ export const metadata = {
 export const revalidate = 0;
 
 type MatchRow = {
-  id: string;
   match_date: string | null;
-  week_label: string | null;
-  team_a_name: string | null;
-  team_b_name: string | null;
-  team_a_score: number | null;
-  team_b_score: number | null;
-  status: string | null;
-  created_at: string | null;
 };
 
 type DateGroup = {
   key: string;
   label: string;
-  totalGames: number;
-  completedGames: number;
-  totalGoals: number;
-  matches: MatchRow[];
 };
 
 export default async function HighlightsPage() {
@@ -36,9 +24,8 @@ export default async function HighlightsPage() {
   const { data: matches } = supabase
     ? await supabase
         .from("matches")
-        .select("id, match_date, week_label, team_a_name, team_b_name, team_a_score, team_b_score, status, created_at")
+        .select("match_date")
         .order("match_date", { ascending: false })
-        .order("created_at", { ascending: true })
     : { data: [] as MatchRow[] };
 
   const groups = groupMatchesByDate((matches ?? []) as MatchRow[]);
@@ -67,9 +54,9 @@ export default async function HighlightsPage() {
               <p className="inline-flex w-fit rounded-lg bg-[#edf4f0] px-3 py-2 text-xs font-black uppercase text-[#17613d]">
                 Highlights
               </p>
-              <h1 className="mt-3 text-4xl font-black leading-none sm:text-5xl">Goals by Game Date</h1>
+              <h1 className="mt-3 text-4xl font-black leading-none sm:text-5xl">Highlights by Date</h1>
               <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-black/55 sm:text-base">
-                Goal clips will be organized by pickup date, so each session stays easy to find.
+                A simple library for saved goal highlights, organized by pickup date.
               </p>
             </div>
             <div className="rounded-lg bg-[#171717] px-4 py-3 text-white">
@@ -78,78 +65,43 @@ export default async function HighlightsPage() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <InfoCard label="Game Dates" value={String(groups.length)} />
-            <InfoCard label="Latest Goals" value={latestGroup ? String(latestGroup.totalGoals) : "0"} />
-            <InfoCard label="Clip Status" value="Coming soon" />
+            <InfoCard label="Library Status" value="Ready for clips" />
           </div>
         </section>
 
-        <section className="mt-5 space-y-4">
+        <section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groups.length > 0 ? (
-            groups.map((group, index) => (
-              <details
+            groups.map((group) => (
+              <article
                 key={group.key}
-                className="group rounded-lg border border-black/10 bg-white shadow-sm"
-                open={index === 0}
+                className="rounded-lg border border-black/10 bg-white p-5 shadow-sm transition hover:border-[#1f7a4d]/35 hover:bg-[#fbfaf7] sm:p-6"
               >
-                <summary className="flex cursor-pointer list-none flex-col gap-4 p-5 marker:hidden sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-[#17613d]">
-                      <CalendarDays size={24} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black uppercase text-[#17613d]">Game Date</p>
-                      <h2 className="text-2xl font-black">{group.label}</h2>
-                    </div>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase text-[#17613d]">Game Date</p>
+                    <h2 className="mt-2 text-3xl font-black">{group.label}</h2>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[320px]">
-                    <MiniStat label="Games" value={String(group.totalGames)} />
-                    <MiniStat label="Done" value={String(group.completedGames)} />
-                    <MiniStat label="Goals" value={String(group.totalGoals)} />
-                  </div>
-                </summary>
-
-                <div className="border-t border-black/10 p-5 sm:p-6">
-                  <div className="mb-4 rounded-lg border border-dashed border-black/15 bg-[#fbfaf7] p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#171717] text-white">
-                        <Play fill="currentColor" size={18} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black">Goal clips for {group.label}</p>
-                        <p className="text-xs font-semibold text-black/50">Add the goal videos here once they are ready.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {group.matches.map((match, matchIndex) => (
-                      <article key={match.id} className="rounded-lg bg-[#fbfaf7] p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-black uppercase text-[#17613d]">
-                              {match.week_label?.trim() || `Game ${matchIndex + 1}`}
-                            </p>
-                            <h3 className="mt-1 text-base font-black">
-                              {match.team_a_name || "Team A"} vs {match.team_b_name || "Team B"}
-                            </h3>
-                          </div>
-                          <div className="rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white">
-                            {match.team_a_score ?? 0} - {match.team_b_score ?? 0}
-                          </div>
-                        </div>
-                        <p className="mt-3 text-xs font-black uppercase text-black/45">
-                          {(match.status || "scheduled").replaceAll("_", " ")}
-                        </p>
-                      </article>
-                    ))}
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#edf4f0] text-[#17613d]">
+                    <CalendarDays size={22} />
                   </div>
                 </div>
-              </details>
+                <div className="mt-5 rounded-lg border border-dashed border-black/15 bg-[#fbfaf7] p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#171717] text-white">
+                      <Play fill="currentColor" size={18} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black">Goal highlights</p>
+                      <p className="text-xs font-semibold text-black/50">Videos from this date will appear here.</p>
+                    </div>
+                  </div>
+                </div>
+              </article>
             ))
           ) : (
-            <section className="rounded-lg border border-dashed border-black/15 bg-white p-6 text-center shadow-sm">
+            <section className="rounded-lg border border-dashed border-black/15 bg-white p-6 text-center shadow-sm sm:col-span-2 lg:col-span-3">
               <Clapperboard className="mx-auto text-[#b7791f]" size={36} />
               <h2 className="mt-3 text-2xl font-black">No game dates yet</h2>
               <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-black/55">
@@ -171,20 +123,10 @@ function groupMatchesByDate(matches: MatchRow[]) {
     grouped.set(key, [...(grouped.get(key) ?? []), match]);
   });
 
-  return Array.from(grouped.entries()).map(([key, dateMatches]) => {
-    const completedMatches = dateMatches.filter((match) => match.status === "completed");
-    const totalGoals = completedMatches.reduce(
-      (sum, match) => sum + (match.team_a_score ?? 0) + (match.team_b_score ?? 0),
-      0,
-    );
-
+  return Array.from(grouped.keys()).map((key) => {
     return {
       key,
       label: key === "unscheduled" ? "Unscheduled" : formatDate(key),
-      totalGames: dateMatches.length,
-      completedGames: completedMatches.length,
-      totalGoals,
-      matches: dateMatches,
     } satisfies DateGroup;
   });
 }
@@ -203,18 +145,9 @@ function InfoCard({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg bg-[#f7f3ec] p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-black uppercase text-black/45">{label}</p>
-        <Trophy className="text-[#b7791f]" size={20} />
+        <Clapperboard className="text-[#b7791f]" size={20} />
       </div>
       <p className="mt-2 text-lg font-black">{value}</p>
-    </div>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-[#f7f3ec] px-3 py-2">
-      <p className="text-[11px] font-black uppercase text-black/45">{label}</p>
-      <p className="mt-1 text-lg font-black">{value}</p>
     </div>
   );
 }
