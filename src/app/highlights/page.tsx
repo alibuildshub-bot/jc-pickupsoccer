@@ -1,28 +1,28 @@
 import Link from "next/link";
-import { ArrowLeft, Clapperboard, Play, Send, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Clapperboard, Flame, Play, Send, Trophy, type LucideIcon } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 
 const highlightCards = [
   {
-    title: "Best Goals",
-    description: "Top finishes from recent pickup nights.",
-    label: "Goals",
+    title: "Goal of the Week",
+    description: "The cleanest finish from the latest pickup session.",
+    label: "Top Finish",
   },
   {
-    title: "Best Assists",
-    description: "Clean passes, smart cutbacks, and setup plays.",
-    label: "Assists",
+    title: "Latest Goals",
+    description: "New goal clips from the most recent matchday.",
+    label: "Recent",
   },
   {
-    title: "Matchday Moments",
-    description: "Big saves, close games, and plays worth keeping.",
-    label: "Moments",
+    title: "All Goal Clips",
+    description: "Every saved goal highlight in one place.",
+    label: "Library",
   },
 ];
 
 export const metadata = {
   title: "Highlights | JC Footy",
-  description: "JC Footy pickup soccer highlights and matchday clips.",
+  description: "JC Footy pickup soccer goal highlights.",
 };
 
 export default function HighlightsPage() {
@@ -51,11 +51,11 @@ export default function HighlightsPage() {
               </p>
               <h1 className="mt-3 text-4xl font-black leading-none sm:text-5xl">JC Footy Clips</h1>
               <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-black/55 sm:text-base">
-                Goals, assists, saves, and moments from pickup nights.
+                Goal highlights from pickup nights, organized by session and finish.
               </p>
             </div>
             <div className="rounded-lg bg-[#171717] px-4 py-3 text-white">
-              <p className="text-xs font-black uppercase text-white/55">Clip Library</p>
+              <p className="text-xs font-black uppercase text-white/55">Goal Library</p>
               <p className="mt-1 text-xl font-black">Coming Soon</p>
             </div>
           </div>
@@ -67,16 +67,17 @@ export default function HighlightsPage() {
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
                     <Play fill="currentColor" size={26} />
                   </div>
-                  <p className="mt-4 text-xl font-black">Featured highlight</p>
-                  <p className="mt-1 text-sm font-semibold text-white/55">First clip drops here.</p>
+                  <p className="mt-4 text-xl font-black">Featured goal</p>
+                  <p className="mt-1 text-sm font-semibold text-white/55">First goal clip drops here.</p>
                 </div>
               </div>
             </div>
 
             <div className="grid gap-3">
-              <InfoCard icon={Clapperboard} label="Latest Clip" value="Waiting on footage" />
-              <InfoCard icon={Sparkles} label="Moment Type" value="Goals, assists, saves" />
-              <InfoCard icon={Send} label="Send Clips" value="Text or upload after games" />
+              <InfoCard icon={Clapperboard} label="Latest Goal" value="Waiting on footage" />
+              <InfoCard icon={Trophy} label="Goal of the Week" value="Not selected yet" />
+              <InfoCard icon={Flame} label="Goal Clips" value="Session breakdown" />
+              <InfoCard icon={Send} label="Send Goals" value="Text or upload after games" />
             </div>
           </div>
         </section>
