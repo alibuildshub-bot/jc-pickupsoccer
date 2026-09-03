@@ -95,7 +95,7 @@ export default async function PastSessionsPage() {
             <LogoMark />
             <div>
               <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
-              <p className="text-xs font-medium text-black/55">Session archive</p>
+              <p className="text-xs font-medium text-black/55">Past results</p>
             </div>
           </Link>
           <Link href="/" className="inline-flex h-10 items-center gap-2 rounded-lg border border-black/15 bg-white px-3 text-sm font-black">
@@ -107,7 +107,7 @@ export default async function PastSessionsPage() {
         <section className="rounded-lg border border-black/10 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-5 border-b border-black/10 pb-5 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm font-bold text-black/50">Archive</p>
+              <p className="text-sm font-bold text-black/50">Results</p>
               <h1 className="mt-1 text-4xl font-black leading-none sm:text-5xl">Past Sessions</h1>
               <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-black/55 sm:text-base">
                 Completed pickup days with match results, team tables, and player stats.
@@ -124,7 +124,7 @@ export default async function PastSessionsPage() {
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Results</p>
-              <h2 className="text-2xl font-black">Session Folders</h2>
+              <h2 className="text-2xl font-black">Past Games</h2>
             </div>
             <CalendarDays className="text-[#1f7a4d]" size={26} />
           </div>

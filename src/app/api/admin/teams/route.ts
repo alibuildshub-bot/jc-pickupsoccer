@@ -161,6 +161,12 @@ export async function DELETE(request: Request) {
     return Response.json({ error: "Team id is required." }, { status: 400 });
   }
 
+  const { error: rosterError } = await supabase.from("tournament_team_players").delete().eq("team_id", id);
+
+  if (rosterError) {
+    return Response.json({ error: rosterError.message }, { status: 500 });
+  }
+
   const { error } = await supabase.from("tournament_teams").delete().eq("id", id);
 
   if (error) {

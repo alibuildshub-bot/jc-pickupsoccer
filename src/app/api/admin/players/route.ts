@@ -111,6 +111,18 @@ export async function DELETE(request: Request) {
     return Response.json({ error: "Player id is required." }, { status: 400 });
   }
 
+  const { error: statsError } = await supabase.from("match_players").delete().eq("player_id", id);
+
+  if (statsError) {
+    return Response.json({ error: statsError.message }, { status: 500 });
+  }
+
+  const { error: rosterError } = await supabase.from("tournament_team_players").delete().eq("player_id", id);
+
+  if (rosterError) {
+    return Response.json({ error: rosterError.message }, { status: 500 });
+  }
+
   const { error } = await supabase.from("players").delete().eq("id", id);
 
   if (error) {
