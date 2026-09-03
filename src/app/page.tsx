@@ -105,7 +105,6 @@ type UpcomingSession = {
   endTime: string | null;
   location: string;
   calendarUrl: string;
-  googleCalendarUrl: string;
   teams: TeamRoster[];
 };
 
@@ -293,7 +292,7 @@ export default async function Home() {
                     {data.upcomingSession.teams.length} teams
                   </span>
                 </div>
-                <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-3">
+                <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-2">
                   <a
                     href={data.upcomingSession.calendarUrl}
                     download={`jc-footy-${data.upcomingSession.rawDate}.ics`}
@@ -301,15 +300,6 @@ export default async function Home() {
                   >
                     <CalendarDays size={17} />
                     Add to Calendar
-                  </a>
-                  <a
-                    href={data.upcomingSession.googleCalendarUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-black/15 bg-white px-4 text-center text-sm font-black text-black transition hover:border-black/30"
-                  >
-                    <Clock size={17} />
-                    Google
                   </a>
                   <a
                     href="https://bondsports.co/login"
@@ -1213,7 +1203,6 @@ function buildUpcomingSession(
       endTime: sessionDetails.endTime,
       location: sessionDetails.location || "Field TBD",
       calendarUrl: buildIcsCalendarUrl(teamSessionDate, sessionDetails.startTime, sessionDetails.endTime, sessionDetails.location || "Field TBD", details),
-      googleCalendarUrl: buildGoogleCalendarUrl(teamSessionDate, sessionDetails.startTime, sessionDetails.endTime, sessionDetails.location || "Field TBD", details),
       teams: rosters,
     };
   }
@@ -1238,7 +1227,6 @@ function buildUpcomingSession(
     endTime,
     location,
     calendarUrl: buildIcsCalendarUrl(sessionDate, startTime, endTime, location, details),
-    googleCalendarUrl: buildGoogleCalendarUrl(sessionDate, startTime, endTime, location, details),
     teams: rosters,
   };
 }
@@ -1961,23 +1949,6 @@ function buildCalendarDetails(teams: TeamRoster[]) {
   ]
     .filter(Boolean)
     .join("\n\n");
-}
-
-function buildGoogleCalendarUrl(rawDate: string, startTime: string | null, endTime: string | null, location: string, details: string) {
-  const dates = startTime
-    ? `${formatCalendarDateTime(rawDate, startTime)}/${formatCalendarDateTime(rawDate, endTime || startTime, endTime ? 0 : 2)}`
-    : `${formatCalendarDate(rawDate)}/${formatCalendarDate(addDaysToDateInput(rawDate, 1))}`;
-  const params = new URLSearchParams({
-    action: "TEMPLATE",
-    text: "JC Footy Pickup Soccer",
-    dates,
-    details,
-    location,
-  });
-
-  if (startTime) params.set("ctz", "America/Chicago");
-
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 function buildIcsCalendarUrl(rawDate: string, startTime: string | null, endTime: string | null, location: string, details: string) {
