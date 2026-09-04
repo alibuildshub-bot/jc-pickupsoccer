@@ -200,15 +200,20 @@ export default async function Home() {
   const showUpcomingTeams = data.completedTournamentGames === 0 && data.teamRosters.length > 0;
 
   return (
-    <main className="min-h-screen bg-[#f7f3ec] text-[#171717]">
+    <main className="min-h-screen overflow-x-hidden bg-[#f7f3ec] pb-20 text-[#171717] md:pb-0">
       <SiteVisitTracker />
       <nav className="sticky top-0 z-20 border-b border-black/10 bg-[#f7f3ec]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <LogoMark />
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-6 sm:py-4 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+            <div className="sm:hidden">
+              <LogoMark size="sm" />
+            </div>
+            <div className="hidden sm:block">
+              <LogoMark />
+            </div>
             <div>
-              <p className="text-lg font-black leading-none">JC Pickup Soccer</p>
-              <p className="text-xs font-medium text-black/55">Weekly rec league stats</p>
+              <p className="truncate text-base font-black leading-none sm:text-lg">JC Pickup Soccer</p>
+              <p className="mt-0.5 text-[11px] font-medium text-black/55 sm:text-xs">Weekly rec league stats</p>
             </div>
           </div>
           <div className="hidden items-center gap-2 text-sm font-semibold text-black/65 md:flex">
@@ -219,22 +224,15 @@ export default async function Home() {
             <a href="/past-sessions" className="rounded-lg px-3 py-2 hover:bg-white hover:text-black">Past Sessions</a>
           </div>
         </div>
-        <div className="mx-auto flex max-w-7xl gap-1.5 overflow-x-auto px-3 pb-2 text-xs font-black text-black/65 sm:px-6 md:hidden">
-          <a href="#progress" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Standings</a>
-          <a href="/players" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Players</a>
-          <a href="#matches" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Matches</a>
-          <a href="#teams" className="shrink-0 rounded-lg border border-black/10 bg-white px-2.5 py-2">Teams</a>
-          <a href="/past-sessions" className="shrink-0 rounded-lg bg-[#171717] px-2.5 py-2 text-white">Past Games</a>
-        </div>
       </nav>
 
-      <section className="mx-auto max-w-7xl px-3 py-3 sm:px-6 lg:px-8 lg:py-8">
+      <section className="mx-auto max-w-7xl px-3 py-4 sm:px-6 lg:px-8 lg:py-8">
         <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between lg:mb-4">
           <div>
-            <p className="mb-2 inline-flex w-fit rounded-lg bg-[#edf4f0] px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#17613d] sm:px-3 sm:py-2 sm:text-sm">
+            <p className="mb-2 inline-flex w-fit rounded-lg bg-[#edf4f0] px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[#17613d] sm:px-3 sm:py-2 sm:text-sm">
               JC Footy
             </p>
-            <h1 className="text-[1.85rem] font-black leading-none tracking-normal sm:text-6xl">
+            <h1 className="text-[2rem] font-black leading-[0.95] tracking-normal sm:text-6xl">
               Matchday Dashboard
             </h1>
           </div>
@@ -261,7 +259,7 @@ export default async function Home() {
                 <p className="text-xs font-black uppercase tracking-wide text-[#17613d] sm:text-sm">
                   {data.upcomingSession ? "Next Pickup" : "Latest Session Recap"}
                 </p>
-                <h2 className="mt-1.5 text-2xl font-black leading-none sm:text-5xl">
+                <h2 className="mt-1.5 text-3xl font-black leading-none sm:text-5xl">
                   {data.upcomingSession ? data.upcomingSession.date : latestSession.label}
                 </h2>
                 <p className="mt-2 max-w-xl text-xs font-semibold leading-5 text-black/55 sm:mt-3 sm:text-sm sm:leading-6">
@@ -278,10 +276,10 @@ export default async function Home() {
             </div>
             {data.upcomingSession ? (
               <>
-                <div className="mt-4 flex flex-wrap gap-1.5 sm:mt-5 sm:gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-xs font-bold text-black/60 sm:text-sm">
+                <div className="mt-4 grid gap-1.5 sm:mt-5 sm:flex sm:flex-wrap sm:gap-2">
+                  <span className="inline-flex min-w-0 items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-xs font-bold text-black/60 sm:text-sm">
                     <MapPin size={16} />
-                    {data.upcomingSession.location}
+                    <span className="min-w-0 break-words">{data.upcomingSession.location}</span>
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-lg bg-[#fbfaf7] px-3 py-2 text-xs font-bold text-black/60 sm:text-sm">
                     <Clock size={16} />
@@ -362,15 +360,15 @@ export default async function Home() {
                   </a>
                 </div>
                 <div className="mt-3 sm:mt-4">
-                <a
-                  href="https://bondsports.co/login"
-                  target="_blank"
-                  rel="noreferrer"
+                  <a
+                    href="https://bondsports.co/login"
+                    target="_blank"
+                    rel="noreferrer"
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-[#1f7a4d]/30 bg-[#edf4f0] px-4 text-center text-sm font-black text-[#17613d] transition hover:border-[#17613d]"
-                >
-                  <ShieldCheck size={17} />
-                  Complete Waiver
-                </a>
+                  >
+                    <ShieldCheck size={17} />
+                    Complete Waiver
+                  </a>
                 </div>
               </div>
             )}
@@ -598,8 +596,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="teams" className="mx-auto max-w-7xl px-3 pb-6 sm:px-6 lg:px-8">
-        <div className="mb-5 flex items-end justify-between gap-4">
+      <section id="teams" className="mx-auto max-w-7xl px-3 pb-5 sm:px-6 sm:pb-6 lg:px-8">
+        <div className="mb-3 flex items-end justify-between gap-4 sm:mb-5">
           <div>
             <p className="text-sm font-bold text-black/50">Rosters</p>
             <h2 className="text-xl font-black sm:text-2xl">Teams & Players</h2>
@@ -646,7 +644,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl items-start gap-4 px-3 pb-6 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
+      <section className="mx-auto grid max-w-7xl items-start gap-4 px-3 pb-5 sm:px-6 sm:pb-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
         <div id="matches" className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
@@ -761,6 +759,7 @@ export default async function Home() {
         </div>
       </section>
 
+      <MobileBottomNav />
     </main>
   );
 }
@@ -2034,16 +2033,43 @@ function LeagueNumber({ value, strong = false }: { value: number; strong?: boole
   );
 }
 
+function MobileBottomNav() {
+  const items = [
+    { label: "Table", href: "#progress", icon: BarChart3 },
+    { label: "Players", href: "/players", icon: Trophy },
+    { label: "Matches", href: "#matches", icon: CalendarDays },
+    { label: "Teams", href: "#teams", icon: Users },
+    { label: "Past", href: "/past-sessions", icon: CalendarDays },
+  ];
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-black/10 bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur md:hidden">
+      <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
+        {items.map(({ label, href, icon: Icon }) => (
+          <a
+            key={label}
+            href={href}
+            className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-1.5 text-[10px] font-black text-black/55 transition hover:bg-[#edf4f0] hover:text-[#17613d]"
+          >
+            <Icon size={16} />
+            <span className="truncate">{label}</span>
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 function UpcomingTeams({ teams }: { teams: TeamRoster[] }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
       {teams.map((team) => (
-        <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
+        <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-3 sm:p-4">
+          <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
               <TeamLogo logo={team.logo} color={team.color} name={team.name} size="md" />
               <div className="min-w-0">
-                <h3 className="break-words font-black leading-tight">{team.name}</h3>
+                <h3 className="break-words text-sm font-black leading-tight sm:text-base">{team.name}</h3>
                 <p className="mt-1 text-xs font-bold text-black/45">{formatPlayerCount(team.players.length)}</p>
               </div>
             </div>
@@ -2057,7 +2083,7 @@ function UpcomingTeams({ teams }: { teams: TeamRoster[] }) {
                 <a
                   key={`${team.name}-${player}`}
                   href={`/players/${slugify(player)}`}
-                  className="rounded-lg bg-white px-3 py-2 text-sm font-bold hover:underline"
+                  className="rounded-lg bg-white px-3 py-2 text-xs font-bold hover:underline sm:text-sm"
                 >
                   {player}
                 </a>

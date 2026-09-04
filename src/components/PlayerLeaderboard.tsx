@@ -25,13 +25,13 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
 
   return (
     <>
-      <div className="mb-3 flex flex-wrap gap-1.5 sm:mb-4 sm:gap-2">
+      <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1 sm:mb-4 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0">
         {leaderboardTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setMode(tab.id)}
-            className={`h-8 rounded-lg px-2.5 text-xs font-black transition sm:h-10 sm:px-4 sm:text-sm ${
+            className={`h-8 shrink-0 rounded-lg px-2.5 text-[11px] font-black transition sm:h-10 sm:px-4 sm:text-sm ${
               mode === tab.id
                 ? "bg-[#171717] text-white"
                 : "border border-black/10 bg-[#fbfaf7] text-black/60 hover:bg-black/5"
@@ -40,7 +40,7 @@ export default function PlayerLeaderboard({ players }: { players: LeaderboardPla
             {tab.label}
           </button>
         ))}
-        <span className="inline-flex h-8 items-center rounded-lg bg-[#f7f3ec] px-2.5 text-[10px] font-black uppercase text-black/45 sm:h-10 sm:px-3 sm:text-xs">
+        <span className="inline-flex h-8 shrink-0 items-center rounded-lg bg-[#f7f3ec] px-2.5 text-[10px] font-black uppercase text-black/45 sm:h-10 sm:px-3 sm:text-xs">
           Ranked by {getModeLabel(mode)}
         </span>
       </div>
@@ -169,7 +169,7 @@ function slugify(value: string) {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-white p-2 sm:p-3">
+    <div className="rounded-lg bg-white px-2 py-1.5 sm:p-3">
       <p className="text-[10px] font-bold uppercase text-black/45 sm:text-xs">{label}</p>
       <p className="mt-1 text-sm font-black">{value}</p>
     </div>
