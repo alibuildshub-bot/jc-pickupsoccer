@@ -143,6 +143,12 @@ type SiteAnalytics = {
   }>;
 };
 
+type GeneratedTeam = {
+  name: string;
+  color: string;
+  playerIds: string[];
+};
+
 const defaultPickupDate = getDefaultPickupDate();
 
 const emptyAnalytics: SiteAnalytics = {
@@ -204,6 +210,13 @@ export default function AdminPage() {
   const [matchForm, setMatchForm] = useState(emptyMatch);
   const [teamForm, setTeamForm] = useState(emptyTeam);
   const [rosterForm, setRosterForm] = useState({ team_id: "", player_id: "" });
+  const [teamGenerator, setTeamGenerator] = useState({
+    team_count: "3",
+    players_per_team: "5",
+  });
+  const [generatorPlayerIds, setGeneratorPlayerIds] = useState<string[]>([]);
+  const [generatedTeams, setGeneratedTeams] = useState<GeneratedTeam[]>([]);
+  const [generatorInitialized, setGeneratorInitialized] = useState(false);
   const [gameDayForm, setGameDayForm] = useState({
     date: defaultPickupDate,
     start_time: "",
@@ -464,6 +477,13 @@ export default function AdminPage() {
   }, [editingTeamId, gameDayForm.date]);
 
   useEffect(() => {
+    if (generatorInitialized || activePlayers.length === 0) return;
+
+    setGeneratorPlayerIds(activePlayers.map((player) => player.id));
+    setGeneratorInitialized(true);
+  }, [activePlayers, generatorInitialized]);
+
+  useEffect(() => {
     setGameDayForm((current) => {
       const nextStartTime = current.start_time || savedSessionDetails.start_time || "";
       const nextEndTime = current.end_time || savedSessionDetails.end_time || "";
@@ -538,6 +558,9 @@ export default function AdminPage() {
     setStats([]);
     setTeams([]);
     setRoster([]);
+    setGeneratorPlayerIds([]);
+    setGeneratedTeams([]);
+    setGeneratorInitialized(false);
     setTeamSessionDateSetupNeeded(false);
     setTeamSessionDetailsSetupNeeded(false);
     setTeamLogoSetupNeeded(false);
@@ -1046,6 +1069,108 @@ export default function AdminPage() {
       );
 
       setMessage("Player removed from team.");
+      await loadData();
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleGeneratorPlayer(playerId: string) {
+    setGeneratorPlayerIds((current) =>
+      current.includes(playerId)
+        ? current.filter((id) => id !== playerId)
+        : [...current, playerId],
+    );
+  }
+
+  function generateRandomTeams() {
+    const teamCount = Math.max(2, Number(teamGenerator.team_count || 3));
+    const playersPerTeam = Math.max(1, Number(teamGenerator.players_per_team || 5));
+    const selectedPlayers = activePlayers.filter((player) => generatorPlayerIds.includes(player.id));
+    const maxPlayers = teamCount * playersPerTeam;
+
+    if (selectedPlayers.length < teamCount) {
+      setMessage("Select enough players to create at least one player per team.");
+      return;
+    }
+
+    const colors = ["#1f7a4d", "#171717", "#c7922b", "#2563eb", "#dc2626", "#7c3aed"];
+    const nextTeams = Array.from({ length: teamCount }, (_, index) => ({
+      name: `Team ${index + 1}`,
+      color: colors[index % colors.length],
+      playerIds: [] as string[],
+    }));
+
+    shufflePlayers(selectedPlayers)
+      .slice(0, maxPlayers)
+      .forEach((player, index) => {
+        nextTeams[index % teamCount].playerIds.push(player.id);
+      });
+
+    setGeneratedTeams(nextTeams);
+    setMessage(`Generated ${teamCount} teams for ${formatDateLabel(gameDayForm.date)}. Review before saving.`);
+  }
+
+  async function saveGeneratedTeams() {
+    if (generatedTeams.length === 0) {
+      setMessage("Generate teams first, then save them.");
+      return;
+    }
+
+    const confirmed = activeTeams.length === 0 || window.confirm(
+      `This will add ${generatedTeams.length} generated teams to ${formatDateLabel(gameDayForm.date)}. Existing teams will stay unless you delete them. Continue?`,
+    );
+
+    if (!confirmed) return;
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      for (const [index, generatedTeam] of generatedTeams.entries()) {
+        const teamResponse = await adminFetch(
+          "/api/admin/teams",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              name: getUniqueGeneratedTeamName(generatedTeam.name, index + 1, activeTeams),
+              color: generatedTeam.color,
+              logo_url: "",
+              sort_order: index,
+              is_active: true,
+              session_date: gameDayForm.date,
+              session_start_time: gameDayForm.start_time,
+              session_end_time: gameDayForm.end_time,
+              session_location: gameDayForm.location,
+            }),
+          },
+          adminCredential,
+        );
+        const teamId = teamResponse.team?.id;
+
+        if (!teamId) throw new Error("A generated team was created without an id.");
+
+        for (const playerId of generatedTeam.playerIds) {
+          await adminFetch(
+            "/api/admin/teams",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                action: "add_player",
+                team_id: teamId,
+                player_id: playerId,
+              }),
+            },
+            adminCredential,
+          );
+        }
+      }
+
+      setGeneratedTeams([]);
+      setRosterForm({ team_id: "", player_id: "" });
+      setMessage(`Generated teams saved for ${formatDateLabel(gameDayForm.date)}.`);
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -2237,6 +2362,105 @@ export default function AdminPage() {
                 </button>
               </form>
 
+              <section className="mt-4 rounded-lg border border-black/10 bg-white p-4">
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-black/40">Pickup helper</p>
+                    <h2 className="text-lg font-black">Random Team Generator</h2>
+                  </div>
+                  <p className="text-xs font-bold text-black/45">
+                    {generatorPlayerIds.length} selected
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <AdminInput
+                    type="number"
+                    label="Number of teams"
+                    value={teamGenerator.team_count}
+                    onChange={(value) => setTeamGenerator({ ...teamGenerator, team_count: value })}
+                  />
+                  <AdminInput
+                    type="number"
+                    label="Players per team"
+                    value={teamGenerator.players_per_team}
+                    onChange={(value) => setTeamGenerator({ ...teamGenerator, players_per_team: value })}
+                  />
+                </div>
+
+                <div className="my-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGeneratorPlayerIds(activePlayers.map((player) => player.id))}
+                    className="h-10 rounded-lg border border-black/10 bg-[#fbfaf7] px-3 text-xs font-black text-black/70"
+                  >
+                    Select active players
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGeneratorPlayerIds([])}
+                    className="h-10 rounded-lg border border-black/10 bg-white px-3 text-xs font-black text-black/60"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={generateRandomTeams}
+                    disabled={loading || generatorPlayerIds.length === 0}
+                    className="h-10 rounded-lg bg-[#171717] px-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Shuffle Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveGeneratedTeams}
+                    disabled={loading || generatedTeams.length === 0}
+                    className="h-10 rounded-lg bg-[#1f7a4d] px-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Save Generated Teams
+                  </button>
+                </div>
+
+                <div className="max-h-52 overflow-y-auto rounded-lg border border-black/10 bg-[#fbfaf7] p-2">
+                  {activePlayers.length === 0 ? (
+                    <p className="p-3 text-sm font-bold text-black/45">Add active players first.</p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {activePlayers.map((player) => (
+                        <label key={player.id} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-bold">
+                          <input
+                            type="checkbox"
+                            checked={generatorPlayerIds.includes(player.id)}
+                            onChange={() => toggleGeneratorPlayer(player.id)}
+                          />
+                          <span className="min-w-0 truncate">{player.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {generatedTeams.length > 0 && (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {generatedTeams.map((team) => (
+                      <article key={team.name} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-3">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: team.color }} />
+                          <h3 className="font-black">{team.name}</h3>
+                        </div>
+                        <div className="space-y-1">
+                          {team.playerIds.map((playerId) => (
+                            <p key={playerId} className="rounded-md bg-white px-2 py-1 text-xs font-bold">
+                              {getPlayerName(playerId)}
+                            </p>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+
               <div className="mt-4 lg:hidden">
                 <TeamCards
                   teams={activeTeams}
@@ -2639,6 +2863,28 @@ function getStoredPassword() {
   if (typeof window === "undefined") return "";
 
   return window.localStorage.getItem("jc-admin-password") || "";
+}
+
+function shufflePlayers(players: Player[]) {
+  const shuffled = [...players];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function getUniqueGeneratedTeamName(baseName: string, teamNumber: number, existingTeams: TournamentTeam[]) {
+  const existingNames = new Set(existingTeams.map((team) => normalizeAdminLabel(team.name)));
+
+  if (!existingNames.has(normalizeAdminLabel(baseName))) return baseName;
+
+  const fallbackName = `Generated Team ${teamNumber}`;
+  if (!existingNames.has(normalizeAdminLabel(fallbackName))) return fallbackName;
+
+  return `${fallbackName} ${Date.now()}`;
 }
 
 function buildGameLabels(matches: Match[]) {
