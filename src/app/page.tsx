@@ -295,7 +295,6 @@ export default async function Home() {
                 <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-2">
                   <a
                     href={data.upcomingSession.calendarUrl}
-                    download={`jc-footy-${data.upcomingSession.rawDate}.ics`}
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-center text-sm font-black text-white transition hover:bg-[#17613d]"
                   >
                     <CalendarDays size={17} />
@@ -1952,67 +1951,16 @@ function buildCalendarDetails(teams: TeamRoster[]) {
 }
 
 function buildIcsCalendarUrl(rawDate: string, startTime: string | null, endTime: string | null, location: string, details: string) {
-  const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  const startLine = startTime
-    ? `DTSTART;TZID=America/Chicago:${formatCalendarDateTime(rawDate, startTime)}`
-    : `DTSTART;VALUE=DATE:${formatCalendarDate(rawDate)}`;
-  const endLine = startTime
-    ? `DTEND;TZID=America/Chicago:${formatCalendarDateTime(rawDate, endTime || startTime, endTime ? 0 : 2)}`
-    : `DTEND;VALUE=DATE:${formatCalendarDate(addDaysToDateInput(rawDate, 1))}`;
-  const ics = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//JC Footy//Pickup Soccer//EN",
-    "CALSCALE:GREGORIAN",
-    "BEGIN:VEVENT",
-    `UID:jc-footy-${rawDate}@jcfooty.com`,
-    `DTSTAMP:${timestamp}`,
-    startLine,
-    endLine,
-    "SUMMARY:JC Footy Pickup Soccer",
-    `LOCATION:${escapeCalendarText(location)}`,
-    `DESCRIPTION:${escapeCalendarText(details)}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
+  const params = new URLSearchParams({
+    date: rawDate,
+    location,
+    details,
+  });
 
-  return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
-}
+  if (startTime) params.set("start", startTime);
+  if (endTime) params.set("end", endTime);
 
-function addDaysToDateInput(rawDate: string, days: number) {
-  const date = new Date(`${rawDate}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-
-  return date.toISOString().slice(0, 10);
-}
-
-function formatCalendarDate(rawDate: string) {
-  return rawDate.replaceAll("-", "");
-}
-
-function formatCalendarDateTime(rawDate: string, startTime: string, addHours = 0) {
-  const [year, month, day] = rawDate.split("-");
-  const [hour, minute] = startTime.split(":").map(Number);
-  const date = new Date(Number(year), Number(month) - 1, Number(day), hour + addHours, minute || 0, 0);
-  const pad = (value: number) => String(value).padStart(2, "0");
-
-  return [
-    date.getFullYear(),
-    pad(date.getMonth() + 1),
-    pad(date.getDate()),
-    "T",
-    pad(date.getHours()),
-    pad(date.getMinutes()),
-    "00",
-  ].join("");
-}
-
-function escapeCalendarText(value: string) {
-  return value
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\n/g, "\\n");
+  return `/api/calendar?${params.toString()}`;
 }
 
 function slugify(value: string) {
