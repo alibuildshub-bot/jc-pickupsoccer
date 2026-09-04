@@ -310,7 +310,7 @@ export default async function Home() {
                 </div>
 
                 {data.upcomingSession.teams.length > 0 ? (
-                  <div className="mt-4 grid gap-2 md:grid-cols-3">
+                  <div className="mt-4 hidden gap-2 sm:grid md:grid-cols-3">
                     {data.upcomingSession.teams.map((team) => (
                       <div key={`next-${team.name}`} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-3">
                         <div className="mb-1 flex items-center gap-2">
@@ -338,7 +338,7 @@ export default async function Home() {
                     icon={Trophy}
                   />
                 </div>
-                <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-3">
+                <div className="mt-3 hidden gap-2 sm:mt-4 sm:grid sm:grid-cols-3">
                   <a
                     href="#progress"
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1f7a4d] px-4 text-center text-sm font-black text-white transition hover:bg-[#17613d]"
@@ -399,7 +399,7 @@ export default async function Home() {
                 )}
               </div>
               {data.recentMatches.length > 2 ? (
-                <div className="mt-3 rounded-lg bg-[#fbfaf7] p-2.5 sm:p-3">
+                <div className="mt-3 hidden rounded-lg bg-[#fbfaf7] p-2.5 sm:block sm:p-3">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <p className="text-xs font-black uppercase tracking-wide text-black/45">Session Timeline</p>
                     <p className="text-xs font-bold text-black/40">{data.recentMatches.length} games</p>
@@ -423,7 +423,7 @@ export default async function Home() {
           </article>
 
           <div className="grid gap-4">
-            <article className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
+            <article className="hidden rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5 lg:block">
               <div>
                 <p className="text-xs font-bold text-black/50 sm:text-sm">Latest Session</p>
                 <h2 className="mt-1 text-xl font-black sm:text-2xl">{latestSession.label}</h2>
