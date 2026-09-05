@@ -344,7 +344,7 @@ export default function ScorerPage() {
         <section className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center">
           <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-4">
-              <LogoMark className="h-16 w-16" />
+              <LogoMark />
               <div>
                 <p className="text-sm font-black uppercase tracking-wide text-[#16633f]">JC Footy</p>
                 <h1 className="text-3xl font-black">Live Scorer</h1>
@@ -383,7 +383,7 @@ export default function ScorerPage() {
         <header className="rounded-[28px] border border-black/10 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <LogoMark className="h-14 w-14 shrink-0" />
+              <LogoMark />
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-wide text-[#16633f]">JC Footy</p>
                 <h1 className="truncate text-2xl font-black sm:text-4xl">Live Scorer</h1>
