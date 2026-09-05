@@ -18,6 +18,8 @@ import LogoMark from "@/components/LogoMark";
 type Player = {
   id: string;
   name: string;
+  nickname?: string | null;
+  position?: string | null;
   is_active: boolean;
 };
 
@@ -63,8 +65,10 @@ type PlayerStat = {
   team_name: string;
   goals: number;
   assists: number;
+  own_goals?: number;
   result: string;
   players: { name: string } | null;
+  matches?: { week_label: string; match_date: string } | null;
 };
 
 type ScorerData = {
@@ -154,19 +158,33 @@ export default function ScorerPage() {
     setMessage("");
 
     try {
-      const response = await fetch("/api/scorer", {
-        headers: {
-          "x-scorer-code": credential,
-        },
-      });
-      const payload = await response.json();
+      const [matchesResponse, playersResponse, teamsResponse, statsResponse] = await Promise.all([
+        adminFetch("/api/admin/matches", { method: "GET" }, credential),
+        adminFetch("/api/admin/players", { method: "GET" }, credential),
+        adminFetch("/api/admin/teams", { method: "GET" }, credential),
+        adminFetch("/api/admin/stats", { method: "GET" }, credential),
+      ]);
 
-      if (!response.ok) {
+      const responses = [matchesResponse, playersResponse, teamsResponse, statsResponse];
+      const failedResponse = responses.find((response) => !response.ok);
+
+      if (failedResponse) {
+        const payload = await failedResponse.json();
         setMessage(payload.error || "Could not load scorer data.");
         return;
       }
 
-      setData(payload);
+      const [matchesPayload, playersPayload, teamsPayload, statsPayload] = await Promise.all(
+        responses.map((response) => response.json()),
+      );
+
+      setData({
+        matches: matchesPayload.matches || [],
+        players: playersPayload.players || [],
+        teams: teamsPayload.teams || [],
+        roster: teamsPayload.roster || [],
+        stats: statsPayload.stats || [],
+      });
       setMessage("Live scorer is ready.");
     } catch {
       setMessage("Could not reach the scorer service.");
@@ -205,20 +223,26 @@ export default function ScorerPage() {
     setMessage("");
 
     try {
-      const response = await fetch("/api/scorer", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-scorer-code": savedCode,
+      const response = await adminFetch(
+        "/api/admin/matches",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            id: match.id,
+            match_date: match.match_date,
+            start_time: match.start_time,
+            end_time: match.end_time,
+            week_label: match.week_label,
+            location: match.location || "",
+            team_a_name: match.team_a_name,
+            team_b_name: match.team_b_name,
+            team_a_score: Number(draft.a || 0),
+            team_b_score: Number(draft.b || 0),
+            status,
+          }),
         },
-        body: JSON.stringify({
-          action: "score",
-          match_id: match.id,
-          team_a_score: Number(draft.a || 0),
-          team_b_score: Number(draft.b || 0),
-          status,
-        }),
-      });
+        savedCode,
+      );
       const payload = await response.json();
 
       if (!response.ok) {
@@ -238,26 +262,30 @@ export default function ScorerPage() {
   async function saveStat(match: Match, player: Player, teamName: string) {
     const key = getStatKey(match.id, player.id, teamName);
     const draft = statDrafts[key] || getDraftFromExisting(data.stats, match.id, player.id, teamName);
+    const existingStat = data.stats.find(
+      (stat) => stat.match_id === match.id && stat.player_id === player.id && stat.team_name === teamName,
+    );
 
     setLoading(true);
     setMessage("");
 
     try {
-      const response = await fetch("/api/scorer", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-scorer-code": savedCode,
+      const response = await adminFetch(
+        "/api/admin/stats",
+        {
+          method: existingStat ? "PATCH" : "POST",
+          body: JSON.stringify({
+            id: existingStat?.id,
+            match_id: match.id,
+            player_id: player.id,
+            team_name: teamName,
+            goals: Number(draft.goals || 0),
+            assists: Number(draft.assists || 0),
+            own_goals: existingStat?.own_goals || 0,
+          }),
         },
-        body: JSON.stringify({
-          action: "stat",
-          match_id: match.id,
-          player_id: player.id,
-          team_name: teamName,
-          goals: Number(draft.goals || 0),
-          assists: Number(draft.assists || 0),
-        }),
-      });
+        savedCode,
+      );
       const payload = await response.json();
 
       if (!response.ok) {
@@ -829,5 +857,16 @@ function formatDateLabel(value: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+}
+
+function adminFetch(path: string, init: RequestInit, credential: string) {
+  const headers = new Headers(init.headers);
+  headers.set("Content-Type", "application/json");
+  headers.set("x-admin-password", credential);
+
+  return fetch(path, {
+    ...init,
+    headers,
   });
 }
