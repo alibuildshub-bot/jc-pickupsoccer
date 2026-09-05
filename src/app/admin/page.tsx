@@ -3323,6 +3323,7 @@ function AdminMetric({
 function AdminQuickLinks() {
   const links = [
     { label: "Game Day", href: "#game-day" },
+    { label: "Scorer Link", href: "/scorer" },
     { label: "Teams", href: "#teams" },
     { label: "Stats", href: "#stats" },
     { label: "Polls", href: "#polls" },

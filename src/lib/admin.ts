@@ -8,6 +8,7 @@ const supabaseSecretKey = (
   ""
 ).trim();
 const adminPassword = process.env.ADMIN_PASSWORD?.trim();
+const scorerPassword = (process.env.SCORER_PASSWORD || process.env.ADMIN_PASSWORD || "").trim();
 const adminEmails = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || "")
   .split(",")
   .map((email) => email.trim().toLowerCase())
@@ -17,6 +18,16 @@ export async function isAdminRequest(request: Request) {
   const authInfo = await getAdminAuthInfo(request);
 
   return authInfo.allowed;
+}
+
+export async function isScorerRequest(request: Request) {
+  const providedCode = request.headers.get("x-scorer-code") || request.headers.get("x-admin-password");
+
+  if (scorerPassword && providedCode && providedCode === scorerPassword) {
+    return true;
+  }
+
+  return isAdminRequest(request);
 }
 
 export async function getAdminAuthInfo(request: Request) {
