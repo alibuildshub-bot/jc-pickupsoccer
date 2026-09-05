@@ -661,7 +661,9 @@ export default async function Home() {
                     <div>
                       <p className="text-sm font-bold text-black/50">{match.date}</p>
                       <p className="mt-1 text-xs font-black uppercase text-[#1f7a4d]">{match.game}</p>
-                      <h3 className="mt-1 text-base font-black sm:text-lg">{match.week}</h3>
+                      {normalizeMatchLabel(match.week) !== normalizeMatchLabel(match.game) && (
+                        <h3 className="mt-1 text-base font-black sm:text-lg">{match.week}</h3>
+                      )}
                     </div>
                     <p className="shrink-0 rounded-lg bg-[#171717] px-3 py-2 text-sm font-black text-white sm:text-lg">{match.score}</p>
                   </div>
@@ -1842,6 +1844,10 @@ function normalizePlayerName(name: string) {
 
 function cleanTeamName(name: string) {
   return name.trim().replace(/\s+/g, " ");
+}
+
+function normalizeMatchLabel(label: string) {
+  return cleanTeamName(label).toLowerCase();
 }
 
 function buildTeamDisplayNames(teams: TeamRow[]) {
