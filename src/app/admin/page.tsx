@@ -1420,75 +1420,79 @@ export default function AdminPage() {
         </div>
       </nav>
 
-      <section className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:mb-6 sm:gap-4 lg:grid-cols-4">
+      <section className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-6 lg:px-8">
+        <div className="mb-3 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
           <AdminMetric icon={Users} label="Active Players" value={String(activePlayers.length)} />
           <AdminMetric icon={Users} label="Teams" value={String(teams.filter((team) => team.is_active).length)} />
           <AdminMetric icon={CalendarDays} label="Current Games" value={String(gameDayMatches.length)} />
           <AdminMetric icon={Target} label="Current Stat Rows" value={String(gameDayStats.length)} />
         </div>
 
-        <section className="mb-5 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:mb-6 sm:p-5">
-          <div className="mb-5 flex items-center justify-between gap-4">
+        <AdminQuickLinks />
+
+        <details id="analytics" className="mb-4 rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-4">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-bold text-black/50">Site Analytics</p>
-              <h1 className="text-2xl font-black">Visitor Tracking</h1>
+              <p className="text-xs font-bold text-black/50">Site Analytics</p>
+              <h1 className="text-lg font-black sm:text-xl">Visitor Tracking</h1>
             </div>
             <MousePointerClick className="text-[#1f7a4d]" size={26} />
-          </div>
+          </summary>
 
-          {analyticsSetupNeeded ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
-              Analytics table is not set up yet. Run supabase-site-analytics.sql in Supabase, then refresh this page.
-            </div>
-          ) : (
-            <>
-              <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <AdminMiniMetric label="Total Visits" value={String(analytics.totalVisits)} />
-                <AdminMiniMetric label="Unique Visitors" value={String(analytics.uniqueVisitors)} />
-                <AdminMiniMetric label="Today" value={String(analytics.todayVisits)} />
-                <AdminMiniMetric label="Today Unique" value={String(analytics.todayVisitors)} />
+          <div className="mt-4">
+            {analyticsSetupNeeded ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+                Analytics table is not set up yet. Run supabase-site-analytics.sql in Supabase, then refresh this page.
               </div>
-              <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-                <div className="rounded-lg bg-[#fbfaf7] p-4">
-                  <p className="mb-3 text-xs font-black uppercase text-black/45">Recent Days</p>
-                  {analytics.daily.length > 0 ? (
-                    <div className="space-y-2">
-                      {analytics.daily.map((day) => (
-                        <div key={day.date} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-lg bg-white px-3 py-2 text-sm">
-                          <span className="font-black">{day.date}</span>
-                          <span className="font-bold text-black/55">{day.visits} visits</span>
-                          <span className="font-bold text-black/55">{day.visitors} unique</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="rounded-lg bg-white px-3 py-4 text-sm font-bold text-black/50">
-                      Visits will appear after people open the public site.
-                    </p>
-                  )}
+            ) : (
+              <>
+                <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <AdminMiniMetric label="Total Visits" value={String(analytics.totalVisits)} />
+                  <AdminMiniMetric label="Unique Visitors" value={String(analytics.uniqueVisitors)} />
+                  <AdminMiniMetric label="Today" value={String(analytics.todayVisits)} />
+                  <AdminMiniMetric label="Today Unique" value={String(analytics.todayVisitors)} />
                 </div>
-                <div className="rounded-lg bg-[#fbfaf7] p-4">
-                  <p className="mb-3 text-xs font-black uppercase text-black/45">Top Pages</p>
-                  {analytics.topPages.length > 0 ? (
-                    <div className="space-y-2">
-                      {analytics.topPages.map((page) => (
-                        <div key={page.path} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm">
-                          <span className="min-w-0 truncate font-black">{page.path}</span>
-                          <span className="shrink-0 font-bold text-black/55">{page.visits}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="rounded-lg bg-white px-3 py-4 text-sm font-bold text-black/50">
-                      Top pages will appear after visits are tracked.
-                    </p>
-                  )}
+                <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                  <div className="rounded-lg bg-[#fbfaf7] p-4">
+                    <p className="mb-3 text-xs font-black uppercase text-black/45">Recent Days</p>
+                    {analytics.daily.length > 0 ? (
+                      <div className="space-y-2">
+                        {analytics.daily.map((day) => (
+                          <div key={day.date} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-lg bg-white px-3 py-2 text-sm">
+                            <span className="font-black">{day.date}</span>
+                            <span className="font-bold text-black/55">{day.visits} visits</span>
+                            <span className="font-bold text-black/55">{day.visitors} unique</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="rounded-lg bg-white px-3 py-4 text-sm font-bold text-black/50">
+                        Visits will appear after people open the public site.
+                      </p>
+                    )}
+                  </div>
+                  <div className="rounded-lg bg-[#fbfaf7] p-4">
+                    <p className="mb-3 text-xs font-black uppercase text-black/45">Top Pages</p>
+                    {analytics.topPages.length > 0 ? (
+                      <div className="space-y-2">
+                        {analytics.topPages.map((page) => (
+                          <div key={page.path} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm">
+                            <span className="min-w-0 truncate font-black">{page.path}</span>
+                            <span className="shrink-0 font-bold text-black/55">{page.visits}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="rounded-lg bg-white px-3 py-4 text-sm font-bold text-black/50">
+                        Top pages will appear after visits are tracked.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-        </section>
+              </>
+            )}
+          </div>
+        </details>
 
         {message && (
           <div className="mb-6 rounded-lg border border-black/10 bg-white p-4 text-sm font-bold text-black/70">
@@ -1520,7 +1524,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+        <section id="past-games" className="mb-5 scroll-mt-24 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Results</p>
@@ -1733,7 +1737,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        <section className="mb-5 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:mb-6 sm:p-5">
+        <section id="game-day" className="mb-5 scroll-mt-24 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-4 flex flex-col gap-3 lg:mb-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-xs font-bold text-black/50 sm:text-sm">Game Day Console</p>
@@ -2012,7 +2016,7 @@ export default function AdminPage() {
           </div>
         </section>
 
-        <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+        <section id="polls" className="mb-5 scroll-mt-24 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">After the Tournament</p>
@@ -2137,7 +2141,7 @@ export default function AdminPage() {
           )}
         </section>
 
-        <section className="mb-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+        <section id="teams" className="mb-5 scroll-mt-24 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Tournament Setup</p>
@@ -2489,7 +2493,7 @@ export default function AdminPage() {
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <section className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <section id="players" className="scroll-mt-24 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-black/50">Roster</p>
@@ -2566,7 +2570,7 @@ export default function AdminPage() {
             </div>
           </section>
 
-          <section className="rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+          <section id="matches" className="scroll-mt-24 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-black/50">Game Log</p>
@@ -2610,7 +2614,7 @@ export default function AdminPage() {
           </section>
         </div>
 
-        <section className="mt-6 rounded-lg border border-black/10 bg-white p-5 shadow-sm">
+        <section id="stats" className="mt-5 scroll-mt-24 rounded-lg border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-black/50">Player Performance</p>
@@ -3308,11 +3312,38 @@ function AdminMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
-      <Icon className="mb-2 text-[#1f7a4d] sm:mb-4" size={20} />
-      <p className="text-2xl font-black sm:text-3xl">{value}</p>
-      <p className="mt-1 text-xs font-semibold text-black/55 sm:text-sm">{label}</p>
+    <div className="rounded-lg border border-black/10 bg-white p-3 shadow-sm">
+      <Icon className="mb-2 text-[#1f7a4d]" size={18} />
+      <p className="text-xl font-black sm:text-2xl">{value}</p>
+      <p className="mt-0.5 text-[11px] font-semibold text-black/55 sm:text-xs">{label}</p>
     </div>
+  );
+}
+
+function AdminQuickLinks() {
+  const links = [
+    { label: "Game Day", href: "#game-day" },
+    { label: "Teams", href: "#teams" },
+    { label: "Stats", href: "#stats" },
+    { label: "Polls", href: "#polls" },
+    { label: "Players", href: "#players" },
+    { label: "Past Games", href: "#past-games" },
+  ];
+
+  return (
+    <nav className="sticky top-0 z-20 -mx-3 mb-4 border-y border-black/10 bg-[#f7f3ec]/95 px-3 py-2 backdrop-blur sm:static sm:mx-0 sm:rounded-lg sm:border sm:bg-white sm:px-3">
+      <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:pb-0">
+        {links.map((link) => (
+          <a
+            key={link.href}
+            href={link.href}
+            className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-black text-black/65 transition hover:border-[#1f7a4d]/30 hover:text-[#17613d] sm:bg-[#fbfaf7]"
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+    </nav>
   );
 }
 
