@@ -158,32 +158,20 @@ export default function ScorerPage() {
     setMessage("");
 
     try {
-      const [matchesResponse, playersResponse, teamsResponse, statsResponse] = await Promise.all([
-        adminFetch("/api/admin/matches", { method: "GET" }, credential),
-        adminFetch("/api/admin/players", { method: "GET" }, credential),
-        adminFetch("/api/admin/teams", { method: "GET" }, credential),
-        adminFetch("/api/admin/stats", { method: "GET" }, credential),
-      ]);
+      const response = await scorerFetch("/api/scorer", { method: "GET" }, credential);
+      const payload = await response.json();
 
-      const responses = [matchesResponse, playersResponse, teamsResponse, statsResponse];
-      const failedResponse = responses.find((response) => !response.ok);
-
-      if (failedResponse) {
-        const payload = await failedResponse.json();
+      if (!response.ok) {
         setMessage(payload.error || "Could not load scorer data.");
         return;
       }
 
-      const [matchesPayload, playersPayload, teamsPayload, statsPayload] = await Promise.all(
-        responses.map((response) => response.json()),
-      );
-
       setData({
-        matches: matchesPayload.matches || [],
-        players: playersPayload.players || [],
-        teams: teamsPayload.teams || [],
-        roster: teamsPayload.roster || [],
-        stats: statsPayload.stats || [],
+        matches: payload.matches || [],
+        players: payload.players || [],
+        teams: payload.teams || [],
+        roster: payload.roster || [],
+        stats: payload.stats || [],
       });
       setMessage("Live scorer is ready.");
     } catch {
@@ -216,6 +204,15 @@ export default function ScorerPage() {
     loadData(trimmedCode);
   }
 
+  function continueWithoutCode() {
+    const publicCode = "public";
+
+    window.localStorage.setItem(codeStorageKey, publicCode);
+    setCode(publicCode);
+    setSavedCode(publicCode);
+    loadData(publicCode);
+  }
+
   async function saveScore(match: Match, status: "live" | "completed") {
     const draft = scoreDrafts[match.id] || { a: String(match.team_a_score || 0), b: String(match.team_b_score || 0) };
 
@@ -223,19 +220,13 @@ export default function ScorerPage() {
     setMessage("");
 
     try {
-      const response = await adminFetch(
-        "/api/admin/matches",
+      const response = await scorerFetch(
+        "/api/scorer",
         {
-          method: "PATCH",
+          method: "POST",
           body: JSON.stringify({
-            id: match.id,
-            match_date: match.match_date,
-            start_time: match.start_time,
-            end_time: match.end_time,
-            week_label: match.week_label,
-            location: match.location || "",
-            team_a_name: match.team_a_name,
-            team_b_name: match.team_b_name,
+            action: "score",
+            match_id: match.id,
             team_a_score: Number(draft.a || 0),
             team_b_score: Number(draft.b || 0),
             status,
@@ -262,26 +253,22 @@ export default function ScorerPage() {
   async function saveStat(match: Match, player: Player, teamName: string) {
     const key = getStatKey(match.id, player.id, teamName);
     const draft = statDrafts[key] || getDraftFromExisting(data.stats, match.id, player.id, teamName);
-    const existingStat = data.stats.find(
-      (stat) => stat.match_id === match.id && stat.player_id === player.id && stat.team_name === teamName,
-    );
 
     setLoading(true);
     setMessage("");
 
     try {
-      const response = await adminFetch(
-        "/api/admin/stats",
+      const response = await scorerFetch(
+        "/api/scorer",
         {
-          method: existingStat ? "PATCH" : "POST",
+          method: "POST",
           body: JSON.stringify({
-            id: existingStat?.id,
+            action: "stat",
             match_id: match.id,
             player_id: player.id,
             team_name: teamName,
             goals: Number(draft.goals || 0),
             assists: Number(draft.assists || 0),
-            own_goals: existingStat?.own_goals || 0,
           }),
         },
         savedCode,
@@ -368,6 +355,13 @@ export default function ScorerPage() {
               >
                 <Lock className="h-5 w-5" />
                 Open Scorer
+              </button>
+              <button
+                type="button"
+                onClick={continueWithoutCode}
+                className="flex w-full items-center justify-center rounded-2xl border border-black/10 bg-white px-5 py-4 text-base font-black text-[#16633f] transition hover:bg-[#eef6f1]"
+              >
+                Continue Without Code
               </button>
             </form>
             {message ? <p className="mt-4 text-sm font-bold text-black/60">{message}</p> : null}
@@ -860,10 +854,10 @@ function formatDateLabel(value: string) {
   });
 }
 
-function adminFetch(path: string, init: RequestInit, credential: string) {
+function scorerFetch(path: string, init: RequestInit, credential: string) {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
-  headers.set("x-admin-password", credential);
+  headers.set("x-scorer-code", credential);
 
   return fetch(path, {
     ...init,

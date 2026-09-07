@@ -74,6 +74,10 @@ type PlayerHonor = {
 
 const manualMvpHonors = [
   {
+    playerName: "Mustafa Hoda",
+    sessionDate: "2026-07-09",
+  },
+  {
     playerName: "Hamzah Q",
     sessionDate: "2026-07-25",
   },
