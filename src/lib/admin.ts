@@ -8,8 +8,7 @@ const supabaseSecretKey = (
   ""
 ).trim();
 const adminPassword = process.env.ADMIN_PASSWORD?.trim();
-const scorerPassword = process.env.SCORER_PASSWORD?.trim();
-const scorerLinkPublic = process.env.SCORER_LINK_PUBLIC?.trim().toLowerCase() === "true";
+const scorerPassword = process.env.SCORER_PASSWORD?.trim() || "jcfooty";
 const adminEmails = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || "")
   .split(",")
   .map((email) => email.trim().toLowerCase())
@@ -22,8 +21,6 @@ export async function isAdminRequest(request: Request) {
 }
 
 export async function isScorerRequest(request: Request) {
-  if (scorerLinkPublic) return true;
-
   const providedCode = request.headers.get("x-scorer-code") || request.headers.get("x-admin-password");
 
   if (scorerPassword && providedCode && providedCode === scorerPassword) {

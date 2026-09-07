@@ -204,15 +204,6 @@ export default function ScorerPage() {
     loadData(trimmedCode);
   }
 
-  function continueWithoutCode() {
-    const publicCode = "public";
-
-    window.localStorage.setItem(codeStorageKey, publicCode);
-    setCode(publicCode);
-    setSavedCode(publicCode);
-    loadData(publicCode);
-  }
-
   async function saveScore(match: Match, status: "live" | "completed") {
     const draft = scoreDrafts[match.id] || { a: String(match.team_a_score || 0), b: String(match.team_b_score || 0) };
 
@@ -355,13 +346,6 @@ export default function ScorerPage() {
               >
                 <Lock className="h-5 w-5" />
                 Open Scorer
-              </button>
-              <button
-                type="button"
-                onClick={continueWithoutCode}
-                className="flex w-full items-center justify-center rounded-2xl border border-black/10 bg-white px-5 py-4 text-base font-black text-[#16633f] transition hover:bg-[#eef6f1]"
-              >
-                Continue Without Code
               </button>
             </form>
             {message ? <p className="mt-4 text-sm font-bold text-black/60">{message}</p> : null}
