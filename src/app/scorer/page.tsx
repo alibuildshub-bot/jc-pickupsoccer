@@ -162,6 +162,9 @@ export default function ScorerPage() {
       const payload = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          resetScorerAccess();
+        }
         setMessage(payload.error || "Could not load scorer data.");
         return;
       }
@@ -228,6 +231,9 @@ export default function ScorerPage() {
       const payload = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          resetScorerAccess();
+        }
         setMessage(payload.error || "Score was not saved.");
         return;
       }
@@ -267,6 +273,9 @@ export default function ScorerPage() {
       const payload = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          resetScorerAccess();
+        }
         setMessage(payload.error || "Player stat was not saved.");
         return;
       }
@@ -289,6 +298,12 @@ export default function ScorerPage() {
         [side]: value,
       },
     }));
+  }
+
+  function resetScorerAccess() {
+    window.localStorage.removeItem(codeStorageKey);
+    setSavedCode("");
+    setCode("");
   }
 
   function stepScore(matchId: string, side: "a" | "b", amount: number) {
