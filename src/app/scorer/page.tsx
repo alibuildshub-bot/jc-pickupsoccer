@@ -176,7 +176,7 @@ export default function ScorerPage() {
         roster: payload.roster || [],
         stats: payload.stats || [],
       });
-      setMessage("Live scorer is ready.");
+      setMessage("");
     } catch {
       setMessage("Could not reach the scorer service.");
     } finally {
@@ -371,21 +371,21 @@ export default function ScorerPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4efe7] px-3 py-4 text-[#171717] sm:px-6">
-      <section className="mx-auto max-w-5xl space-y-4">
-        <header className="rounded-[28px] border border-black/10 bg-white p-4 shadow-sm sm:p-6">
+    <main className="min-h-screen bg-[#f4efe7] px-3 py-3 text-[#171717] sm:px-6 sm:py-5">
+      <section className="mx-auto max-w-4xl space-y-3 sm:space-y-4">
+        <header className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <LogoMark />
+              <LogoMark size="sm" />
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-wide text-[#16633f]">JC Footy</p>
-                <h1 className="truncate text-2xl font-black sm:text-4xl">Live Scorer</h1>
+                <h1 className="truncate text-2xl font-black sm:text-3xl">Live Scorer</h1>
               </div>
             </div>
             <button
               type="button"
               onClick={() => loadData(savedCode)}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-black/10 bg-white text-[#16633f] transition hover:bg-[#eef6f1]"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-white text-[#16633f] transition hover:bg-[#eef6f1]"
               aria-label="Refresh scorer data"
             >
               <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
@@ -398,7 +398,7 @@ export default function ScorerPage() {
           ) : null}
         </header>
 
-        <section className="grid gap-3 rounded-[28px] border border-black/10 bg-white p-4 shadow-sm sm:grid-cols-2 sm:p-6">
+        <section className="grid gap-3 rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:grid-cols-2 sm:p-5">
           <label className="space-y-2">
             <span className="flex items-center gap-2 text-sm font-black uppercase text-black/55">
               <CalendarDays className="h-4 w-4 text-[#16633f]" />
@@ -410,7 +410,7 @@ export default function ScorerPage() {
                 setSelectedDate(event.target.value);
                 setSelectedMatchId("");
               }}
-              className="w-full rounded-2xl border border-black/15 bg-white px-4 py-4 text-base font-black outline-none focus:border-[#1f7a4d]"
+              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-base font-black outline-none focus:border-[#1f7a4d]"
             >
               {dateOptions.map((option) => (
                 <option key={option.date} value={option.date}>
@@ -428,7 +428,7 @@ export default function ScorerPage() {
             <select
               value={selectedMatch?.id || ""}
               onChange={(event) => setSelectedMatchId(event.target.value)}
-              className="w-full rounded-2xl border border-black/15 bg-white px-4 py-4 text-base font-black outline-none focus:border-[#1f7a4d]"
+              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-base font-black outline-none focus:border-[#1f7a4d]"
             >
               {selectedDateMatches.map((match) => (
                 <option key={match.id} value={match.id}>
@@ -440,7 +440,7 @@ export default function ScorerPage() {
         </section>
 
         {!selectedMatch ? (
-          <section className="rounded-[28px] border border-black/10 bg-white p-6 text-center shadow-sm">
+          <section className="rounded-2xl border border-black/10 bg-white p-6 text-center shadow-sm">
             <p className="text-lg font-black">No games found for this date.</p>
             <p className="mt-2 font-bold text-black/55">Create the matchups in the admin portal first.</p>
           </section>
@@ -456,7 +456,7 @@ export default function ScorerPage() {
               onSaveScore={saveScore}
             />
 
-            <section className="grid gap-4 lg:grid-cols-2">
+            <section className="grid gap-3 lg:grid-cols-2">
               {[selectedMatch.team_a_name, selectedMatch.team_b_name].map((teamName) => (
                 <TeamStatCard
                   key={teamName}
@@ -504,20 +504,20 @@ function ScoreCard({
   onSaveScore: (match: Match, status: "live" | "completed") => void;
 }) {
   return (
-    <section className="rounded-[28px] border border-black/10 bg-white p-4 shadow-sm sm:p-6">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
+    <section className="overflow-hidden rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-black uppercase text-[#16633f]">{label}</p>
-          <h2 className="text-2xl font-black sm:text-4xl">
+          <h2 className="mt-1 break-words text-2xl font-black leading-tight sm:text-3xl">
             {match.team_a_name} vs {match.team_b_name}
           </h2>
         </div>
-        <span className="rounded-2xl bg-[#f7f3ed] px-4 py-2 text-sm font-black capitalize text-black/60">
+        <span className="shrink-0 rounded-xl bg-[#f7f3ed] px-3 py-2 text-xs font-black capitalize text-black/60 sm:text-sm">
           {match.status}
         </span>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+      <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_32px_minmax(0,1fr)] md:items-end">
         <ScoreInput
           label={match.team_a_name}
           value={draft.a}
@@ -525,7 +525,7 @@ function ScoreCard({
           onMinus={() => onStepScore(match.id, "a", -1)}
           onPlus={() => onStepScore(match.id, "a", 1)}
         />
-        <div className="hidden pb-4 text-center text-2xl font-black text-black/35 sm:block">vs</div>
+        <div className="hidden pb-4 text-center text-lg font-black text-black/35 md:block">vs</div>
         <ScoreInput
           label={match.team_b_name}
           value={draft.b}
@@ -535,12 +535,12 @@ function ScoreCard({
         />
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <button
           type="button"
           disabled={loading}
           onClick={() => onSaveScore(match, "live")}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#171717] px-5 py-4 text-lg font-black text-white transition hover:bg-black disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-base font-black text-white transition hover:bg-black disabled:opacity-60"
         >
           <Save className="h-5 w-5" />
           Save Live
@@ -549,7 +549,7 @@ function ScoreCard({
           type="button"
           disabled={loading}
           onClick={() => onSaveScore(match, "completed")}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1f7a4d] px-5 py-4 text-lg font-black text-white transition hover:bg-[#16633f] disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1f7a4d] px-4 py-3 text-base font-black text-white transition hover:bg-[#16633f] disabled:opacity-60"
         >
           <Check className="h-5 w-5" />
           Mark Complete
@@ -573,13 +573,13 @@ function ScoreInput({
   onPlus: () => void;
 }) {
   return (
-    <div className="rounded-3xl bg-[#f7f3ed] p-4">
-      <p className="mb-3 text-base font-black text-black/65">{label}</p>
-      <div className="grid grid-cols-[52px_1fr_52px] gap-2">
+    <div className="min-w-0 rounded-2xl bg-[#f7f3ed] p-3">
+      <p className="mb-2 truncate text-sm font-black text-black/65 sm:text-base">{label}</p>
+      <div className="grid min-w-0 grid-cols-[44px_minmax(0,1fr)_44px] gap-2">
         <button
           type="button"
           onClick={onMinus}
-          className="flex h-14 items-center justify-center rounded-2xl bg-white text-[#171717] shadow-sm"
+          className="flex h-12 w-11 items-center justify-center rounded-xl bg-white text-[#171717] shadow-sm"
           aria-label={`Decrease ${label} score`}
         >
           <Minus className="h-5 w-5" />
@@ -589,12 +589,12 @@ function ScoreInput({
           min="0"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-14 rounded-2xl border border-black/10 bg-white text-center text-3xl font-black outline-none focus:border-[#1f7a4d]"
+          className="h-12 min-w-0 rounded-xl border border-black/10 bg-white text-center text-2xl font-black outline-none focus:border-[#1f7a4d]"
         />
         <button
           type="button"
           onClick={onPlus}
-          className="flex h-14 items-center justify-center rounded-2xl bg-[#1f7a4d] text-white shadow-sm"
+          className="flex h-12 w-11 items-center justify-center rounded-xl bg-[#1f7a4d] text-white shadow-sm"
           aria-label={`Increase ${label} score`}
         >
           <Plus className="h-5 w-5" />
@@ -628,34 +628,34 @@ function TeamStatCard({
   onSaveStat: (match: Match, player: Player, teamName: string) => void;
 }) {
   return (
-    <section className="rounded-[28px] border border-black/10 bg-white p-4 shadow-sm sm:p-6">
-      <div className="mb-4 flex items-center gap-3">
+    <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-3 flex items-center gap-3">
         <TeamBadge team={team} />
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-black uppercase text-black/45">Player Stats</p>
-          <h3 className="text-2xl font-black">{teamName}</h3>
+          <h3 className="truncate text-xl font-black">{teamName}</h3>
         </div>
       </div>
 
       {players.length === 0 ? (
-        <div className="rounded-2xl bg-[#f7f3ed] p-4 font-bold text-black/55">
+        <div className="rounded-xl bg-[#f7f3ed] p-3 text-sm font-bold text-black/55">
           No roster found for this team. You can still use the full admin portal if a player is missing.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {players.map((player) => {
             const key = getStatKey(match.id, player.id, teamName);
             const draft = drafts[key] || getDraftFromExisting(stats, match.id, player.id, teamName);
 
             return (
-              <div key={player.id} className="rounded-3xl bg-[#f7f3ed] p-3">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="min-w-0 truncate text-lg font-black">{player.name}</p>
+              <div key={player.id} className="rounded-2xl bg-[#f7f3ed] p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="min-w-0 truncate text-base font-black">{player.name}</p>
                   <button
                     type="button"
                     disabled={loading}
                     onClick={() => onSaveStat(match, player, teamName)}
-                    className="shrink-0 rounded-2xl bg-[#171717] px-4 py-2 text-sm font-black text-white transition hover:bg-[#1f7a4d] disabled:opacity-60"
+                    className="shrink-0 rounded-xl bg-[#171717] px-3 py-2 text-xs font-black text-white transition hover:bg-[#1f7a4d] disabled:opacity-60"
                   >
                     Save
                   </button>
@@ -701,8 +701,8 @@ function StatStepper({
   return (
     <div>
       <p className="mb-2 text-xs font-black uppercase text-black/45">{label}</p>
-      <div className="grid grid-cols-[40px_1fr_40px] gap-1">
-        <button type="button" onClick={onMinus} className="flex h-11 items-center justify-center rounded-xl bg-white">
+      <div className="grid min-w-0 grid-cols-[36px_minmax(0,1fr)_36px] gap-1">
+        <button type="button" onClick={onMinus} className="flex h-10 items-center justify-center rounded-lg bg-white">
           <Minus className="h-4 w-4" />
         </button>
         <input
@@ -710,9 +710,9 @@ function StatStepper({
           min="0"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-11 rounded-xl border border-black/10 bg-white text-center text-xl font-black outline-none focus:border-[#1f7a4d]"
+          className="h-10 min-w-0 rounded-lg border border-black/10 bg-white text-center text-lg font-black outline-none focus:border-[#1f7a4d]"
         />
-        <button type="button" onClick={onPlus} className="flex h-11 items-center justify-center rounded-xl bg-[#1f7a4d] text-white">
+        <button type="button" onClick={onPlus} className="flex h-10 items-center justify-center rounded-lg bg-[#1f7a4d] text-white">
           <Plus className="h-4 w-4" />
         </button>
       </div>
@@ -726,22 +726,22 @@ function SavedStats({ match, stats }: { match: Match; stats: PlayerStat[] }) {
     .sort((first, second) => (second.goals + second.assists) - (first.goals + first.assists));
 
   return (
-    <section className="rounded-[28px] border border-black/10 bg-white p-4 shadow-sm sm:p-6">
+    <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex items-center gap-3">
         <ShieldCheck className="h-6 w-6 text-[#16633f]" />
-        <h3 className="text-2xl font-black">Saved Stats</h3>
+        <h3 className="text-xl font-black">Saved Stats</h3>
       </div>
       {matchStats.length === 0 ? (
-        <p className="rounded-2xl bg-[#f7f3ed] p-4 font-bold text-black/55">No player stats saved for this game yet.</p>
+        <p className="rounded-xl bg-[#f7f3ed] p-3 text-sm font-bold text-black/55">No player stats saved for this game yet.</p>
       ) : (
         <div className="space-y-2">
           {matchStats.map((stat) => (
-            <div key={stat.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-2xl bg-[#f7f3ed] p-3">
+            <div key={stat.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-xl bg-[#f7f3ed] p-3">
               <div className="min-w-0">
                 <p className="truncate font-black">{stat.players?.name || "Player"}</p>
                 <p className="truncate text-sm font-bold text-black/50">{stat.team_name}</p>
               </div>
-              <p className="font-black">
+              <p className="shrink-0 font-black">
                 {stat.goals} G / {stat.assists} A
               </p>
             </div>
@@ -759,17 +759,17 @@ function TeamBadge({ team }: { team?: TournamentTeam }) {
       <img
         src={team.logo_url}
         alt=""
-        className="h-12 w-12 rounded-full border border-black/10 bg-white object-contain p-1"
+        className="h-10 w-10 rounded-full border border-black/10 bg-white object-contain p-1"
       />
     );
   }
 
   return (
     <span
-      className="flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-[#16633f]"
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-[#16633f]"
       style={{ color: team?.color || "#16633f" }}
     >
-      <Users className="h-6 w-6" />
+      <Users className="h-5 w-5" />
     </span>
   );
 }
