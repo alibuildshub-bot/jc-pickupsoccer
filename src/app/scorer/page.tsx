@@ -520,7 +520,9 @@ export default function ScorerPage() {
         {!selectedMatch ? (
           <section className="rounded-2xl border border-black/10 bg-white p-6 text-center shadow-sm">
             <p className="text-lg font-black">No games found for this date.</p>
-            <p className="mt-2 font-bold text-black/55">Add a game above, then save the score and player stats here.</p>
+            <p className="mt-2 font-bold text-black/55">
+              Pick two teams from this date above, add the game, then save the score and player stats here.
+            </p>
           </section>
         ) : (
           <>
@@ -585,8 +587,8 @@ function CreateGameCard({
     <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-black uppercase text-[#16633f]">Add Game</p>
-          <h2 className="text-2xl font-black">Game {nextGameNumber}</h2>
+          <p className="text-sm font-black uppercase text-[#16633f]">Teams for this date</p>
+          <h2 className="text-2xl font-black">Create Game {nextGameNumber}</h2>
         </div>
         <button
           type="button"
@@ -601,26 +603,39 @@ function CreateGameCard({
 
       {teams.length < 2 ? (
         <p className="rounded-xl bg-[#f7f3ed] p-3 text-sm font-bold text-black/55">
-          Add at least two teams for this date in the admin portal first.
+          No team list is available for this date yet. Select a date that already has teams assigned.
         </p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end">
-          <TeamSelect
-            label="Team A"
-            value={draft.teamA}
-            teams={teams}
-            blockedTeam={draft.teamB}
-            onChange={(teamA) => onDraftChange({ ...draft, teamA })}
-          />
-          <div className="hidden pb-3 text-center text-lg font-black text-black/35 sm:block">vs</div>
-          <TeamSelect
-            label="Team B"
-            value={draft.teamB}
-            teams={teams}
-            blockedTeam={draft.teamA}
-            onChange={(teamB) => onDraftChange({ ...draft, teamB })}
-          />
-        </div>
+        <>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {teams.map((team) => (
+              <span
+                key={team.id}
+                className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-[#f7f3ed] px-3 py-2 text-sm font-black text-black/70"
+              >
+                <TeamBadge team={team} size="sm" />
+                {team.name}
+              </span>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end">
+            <TeamSelect
+              label="Team A"
+              value={draft.teamA}
+              teams={teams}
+              blockedTeam={draft.teamB}
+              onChange={(teamA) => onDraftChange({ ...draft, teamA })}
+            />
+            <div className="hidden pb-3 text-center text-lg font-black text-black/35 sm:block">vs</div>
+            <TeamSelect
+              label="Team B"
+              value={draft.teamB}
+              teams={teams}
+              blockedTeam={draft.teamA}
+              onChange={(teamB) => onDraftChange({ ...draft, teamB })}
+            />
+          </div>
+        </>
       )}
     </section>
   );
@@ -923,24 +938,34 @@ function SavedStats({ match, stats }: { match: Match; stats: PlayerStat[] }) {
   );
 }
 
-function TeamBadge({ team }: { team?: TournamentTeam }) {
+function TeamBadge({ team, size = "md" }: { team?: TournamentTeam; size?: "sm" | "md" }) {
+  const imageClassName =
+    size === "sm"
+      ? "h-6 w-6 rounded-full border border-black/10 bg-white object-contain p-0.5"
+      : "h-10 w-10 rounded-full border border-black/10 bg-white object-contain p-1";
+  const fallbackClassName =
+    size === "sm"
+      ? "flex h-6 w-6 items-center justify-center rounded-full border border-black/10 bg-white text-[#16633f]"
+      : "flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-[#16633f]";
+  const iconClassName = size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5";
+
   if (team?.logo_url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={team.logo_url}
         alt=""
-        className="h-10 w-10 rounded-full border border-black/10 bg-white object-contain p-1"
+        className={imageClassName}
       />
     );
   }
 
   return (
     <span
-      className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-[#16633f]"
+      className={fallbackClassName}
       style={{ color: team?.color || "#16633f" }}
     >
-      <Users className="h-5 w-5" />
+      <Users className={iconClassName} />
     </span>
   );
 }
