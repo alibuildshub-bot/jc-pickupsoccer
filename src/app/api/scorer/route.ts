@@ -6,7 +6,7 @@ import {
 } from "@/lib/admin";
 
 type MatchPayload = {
-  action?: "score" | "stat" | "create_match";
+  action?: "score" | "stat" | "create_match" | "update_match" | "delete_match";
   match_id?: string;
   match_date?: string;
   week_label?: string;
@@ -96,6 +96,14 @@ export async function POST(request: Request) {
     return createMatch(payload, supabase);
   }
 
+  if (payload.action === "update_match") {
+    return updateMatch(payload, supabase);
+  }
+
+  if (payload.action === "delete_match") {
+    return deleteMatch(payload, supabase);
+  }
+
   return Response.json({ error: "Choose a scorer action." }, { status: 400 });
 }
 
@@ -144,6 +152,91 @@ async function createMatch(
   }
 
   return Response.json({ match: data }, { status: 201 });
+}
+
+async function updateMatch(
+  payload: MatchPayload,
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  if (!payload.match_id) {
+    return Response.json({ error: "Match is required." }, { status: 400 });
+  }
+
+  const teamAName = payload.team_a_name?.trim();
+  const teamBName = payload.team_b_name?.trim();
+
+  if (!teamAName || !teamBName) {
+    return Response.json({ error: "Choose two teams for the game." }, { status: 400 });
+  }
+
+  if (teamAName === teamBName) {
+    return Response.json({ error: "Choose two different teams." }, { status: 400 });
+  }
+
+  const { data: existingMatch, error: existingMatchError } = await supabase
+    .from("matches")
+    .select("id,match_date,team_a_name,team_b_name")
+    .eq("id", payload.match_id)
+    .single();
+
+  if (existingMatchError || !existingMatch) {
+    return Response.json({ error: existingMatchError?.message || "Match not found." }, { status: 404 });
+  }
+
+  const { data, error } = await supabase
+    .from("matches")
+    .update({
+      team_a_name: teamAName,
+      team_b_name: teamBName,
+    })
+    .eq("id", payload.match_id)
+    .select(matchSelect)
+    .single();
+
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  const typedMatch = existingMatch as { team_a_name: string; team_b_name: string };
+  const teamUpdates = [
+    { from: typedMatch.team_a_name, to: teamAName },
+    { from: typedMatch.team_b_name, to: teamBName },
+  ].filter((teamUpdate) => teamUpdate.from !== teamUpdate.to);
+
+  for (const teamUpdate of teamUpdates) {
+    const { error: statTeamError } = await supabase
+      .from("match_players")
+      .update({ team_name: teamUpdate.to })
+      .eq("match_id", payload.match_id)
+      .eq("team_name", teamUpdate.from);
+
+    if (statTeamError) {
+      return Response.json({ error: statTeamError.message }, { status: 500 });
+    }
+  }
+
+  return Response.json({ match: data });
+}
+
+async function deleteMatch(
+  payload: MatchPayload,
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  if (!payload.match_id) {
+    return Response.json({ error: "Match is required." }, { status: 400 });
+  }
+
+  const { error: statsError } = await supabase.from("match_players").delete().eq("match_id", payload.match_id);
+  if (statsError) {
+    return Response.json({ error: statsError.message }, { status: 500 });
+  }
+
+  const { error } = await supabase.from("matches").delete().eq("id", payload.match_id);
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  return Response.json({ ok: true });
 }
 
 async function getSessionDetails(

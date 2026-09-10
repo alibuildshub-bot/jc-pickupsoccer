@@ -6,12 +6,15 @@ import {
   Check,
   Lock,
   Minus,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
   ShieldCheck,
+  Trash2,
   Trophy,
   Users,
+  X,
 } from "lucide-react";
 import LogoMark from "@/components/LogoMark";
 
@@ -106,6 +109,8 @@ export default function ScorerPage() {
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, { a: string; b: string }>>({});
   const [statDrafts, setStatDrafts] = useState<Record<string, StatDraft>>({});
   const [newGameDraft, setNewGameDraft] = useState<NewGameDraft>({ teamA: "", teamB: "" });
+  const [editingMatchId, setEditingMatchId] = useState("");
+  const [editGameDraft, setEditGameDraft] = useState<NewGameDraft>({ teamA: "", teamB: "" });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -358,6 +363,110 @@ export default function ScorerPage() {
     }
   }
 
+  function startEditGame(match: Match) {
+    setEditingMatchId(match.id);
+    setEditGameDraft({ teamA: match.team_a_name, teamB: match.team_b_name });
+  }
+
+  function cancelEditGame() {
+    setEditingMatchId("");
+    setEditGameDraft({ teamA: "", teamB: "" });
+  }
+
+  async function updateGame(match: Match) {
+    const normalizedDraft = normalizeNewGameDraft(editGameDraft, activeTeams);
+    const teamAName = normalizedDraft.teamA.trim();
+    const teamBName = normalizedDraft.teamB.trim();
+
+    if (!teamAName || !teamBName) {
+      setMessage("Choose two teams for the game.");
+      return;
+    }
+
+    if (teamAName === teamBName) {
+      setMessage("Choose two different teams.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const response = await scorerFetch(
+        "/api/scorer",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "update_match",
+            match_id: match.id,
+            team_a_name: teamAName,
+            team_b_name: teamBName,
+          }),
+        },
+        savedCode,
+      );
+      const payload = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          resetScorerAccess();
+        }
+        setMessage(payload.error || "Game was not updated.");
+        return;
+      }
+
+      setMessage(`${matchLabels.get(match.id) || "Game"} updated.`);
+      cancelEditGame();
+      await loadData(savedCode);
+      setSelectedMatchId(match.id);
+    } catch {
+      setMessage("Could not update the game.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteGame(match: Match) {
+    const label = matchLabels.get(match.id) || "this game";
+    const shouldDelete = window.confirm(`Delete ${label}? This also removes its saved player stats.`);
+    if (!shouldDelete) return;
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const response = await scorerFetch(
+        "/api/scorer",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "delete_match",
+            match_id: match.id,
+          }),
+        },
+        savedCode,
+      );
+      const payload = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          resetScorerAccess();
+        }
+        setMessage(payload.error || "Game was not deleted.");
+        return;
+      }
+
+      setMessage(`${label} deleted.`);
+      cancelEditGame();
+      setSelectedMatchId("");
+      await loadData(savedCode);
+    } catch {
+      setMessage("Could not delete the game.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function updateScore(matchId: string, side: "a" | "b", value: string) {
     setScoreDrafts((current) => ({
       ...current,
@@ -526,6 +635,17 @@ export default function ScorerPage() {
           </section>
         ) : (
           <>
+            {editingMatchId === selectedMatch.id ? (
+              <EditGameCard
+                teams={activeTeams}
+                draft={normalizeNewGameDraft(editGameDraft, activeTeams)}
+                loading={loading}
+                onDraftChange={setEditGameDraft}
+                onCancel={cancelEditGame}
+                onUpdate={() => updateGame(selectedMatch)}
+              />
+            ) : null}
+
             <ScoreCard
               match={selectedMatch}
               label={matchLabels.get(selectedMatch.id) || "Game"}
@@ -534,6 +654,8 @@ export default function ScorerPage() {
               onScoreChange={updateScore}
               onStepScore={stepScore}
               onSaveScore={saveScore}
+              onStartEdit={startEditGame}
+              onDelete={deleteGame}
             />
 
             <section className="grid gap-3 lg:grid-cols-2">
@@ -672,6 +794,71 @@ function TeamSelect({
   );
 }
 
+function EditGameCard({
+  teams,
+  draft,
+  loading,
+  onDraftChange,
+  onCancel,
+  onUpdate,
+}: {
+  teams: TournamentTeam[];
+  draft: NewGameDraft;
+  loading: boolean;
+  onDraftChange: (draft: NewGameDraft) => void;
+  onCancel: () => void;
+  onUpdate: () => void;
+}) {
+  const canUpdate = teams.length >= 2 && draft.teamA && draft.teamB && draft.teamA !== draft.teamB;
+
+  return (
+    <section className="rounded-2xl border border-[#1f7a4d]/25 bg-[#eef6f1] p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-black uppercase text-[#16633f]">Edit selected game</p>
+          <h2 className="text-2xl font-black">Change matchup</h2>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-4 py-3 text-sm font-black text-black/70 transition hover:bg-[#f7f3ed]"
+        >
+          <X className="h-4 w-4" />
+          Cancel
+        </button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end">
+        <TeamSelect
+          label="Team A"
+          value={draft.teamA}
+          teams={teams}
+          blockedTeam={draft.teamB}
+          onChange={(teamA) => onDraftChange({ ...draft, teamA })}
+        />
+        <div className="hidden pb-3 text-center text-lg font-black text-black/35 sm:block">vs</div>
+        <TeamSelect
+          label="Team B"
+          value={draft.teamB}
+          teams={teams}
+          blockedTeam={draft.teamA}
+          onChange={(teamB) => onDraftChange({ ...draft, teamB })}
+        />
+      </div>
+
+      <button
+        type="button"
+        disabled={loading || !canUpdate}
+        onClick={onUpdate}
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-base font-black text-white transition hover:bg-[#1f7a4d] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Save className="h-5 w-5" />
+        Save Game Changes
+      </button>
+    </section>
+  );
+}
+
 function ScoreCard({
   match,
   label,
@@ -680,6 +867,8 @@ function ScoreCard({
   onScoreChange,
   onStepScore,
   onSaveScore,
+  onStartEdit,
+  onDelete,
 }: {
   match: Match;
   label: string;
@@ -688,6 +877,8 @@ function ScoreCard({
   onScoreChange: (matchId: string, side: "a" | "b", value: string) => void;
   onStepScore: (matchId: string, side: "a" | "b", amount: number) => void;
   onSaveScore: (match: Match, status: "live" | "completed") => void;
+  onStartEdit: (match: Match) => void;
+  onDelete: (match: Match) => void;
 }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:p-5">
@@ -698,9 +889,30 @@ function ScoreCard({
             {match.team_a_name} vs {match.team_b_name}
           </h2>
         </div>
-        <span className="shrink-0 rounded-xl bg-[#f7f3ed] px-3 py-2 text-xs font-black capitalize text-black/60 sm:text-sm">
-          {match.status}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className="rounded-xl bg-[#f7f3ed] px-3 py-2 text-xs font-black capitalize text-black/60 sm:text-sm">
+            {match.status}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onStartEdit(match)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-black/10 bg-white text-black/65 transition hover:bg-[#f7f3ed]"
+              aria-label={`Edit ${label}`}
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => onDelete(match)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+              aria-label={`Delete ${label}`}
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_32px_minmax(0,1fr)] md:items-end">
