@@ -6,8 +6,12 @@ import {
 } from "@/lib/admin";
 
 type MatchPayload = {
-  action?: "score" | "stat";
+  action?: "score" | "stat" | "create_match";
   match_id?: string;
+  match_date?: string;
+  week_label?: string;
+  team_a_name?: string;
+  team_b_name?: string;
   team_a_score?: number;
   team_b_score?: number;
   status?: "live" | "completed";
@@ -88,7 +92,81 @@ export async function POST(request: Request) {
     return saveStat(payload, supabase);
   }
 
+  if (payload.action === "create_match") {
+    return createMatch(payload, supabase);
+  }
+
   return Response.json({ error: "Choose a scorer action." }, { status: 400 });
+}
+
+async function createMatch(
+  payload: MatchPayload,
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  const matchDate = payload.match_date?.trim();
+  const teamAName = payload.team_a_name?.trim();
+  const teamBName = payload.team_b_name?.trim();
+  const weekLabel = payload.week_label?.trim() || "Game";
+
+  if (!matchDate) {
+    return Response.json({ error: "Date is required." }, { status: 400 });
+  }
+
+  if (!teamAName || !teamBName) {
+    return Response.json({ error: "Choose two teams for the game." }, { status: 400 });
+  }
+
+  if (teamAName === teamBName) {
+    return Response.json({ error: "Choose two different teams." }, { status: 400 });
+  }
+
+  const sessionDetails = await getSessionDetails(matchDate, [teamAName, teamBName], supabase);
+
+  const { data, error } = await supabase
+    .from("matches")
+    .insert({
+      match_date: matchDate,
+      start_time: sessionDetails.start_time,
+      end_time: sessionDetails.end_time,
+      week_label: weekLabel,
+      location: sessionDetails.location,
+      team_a_name: teamAName,
+      team_b_name: teamBName,
+      team_a_score: 0,
+      team_b_score: 0,
+      status: "scheduled",
+    })
+    .select(matchSelect)
+    .single();
+
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  return Response.json({ match: data }, { status: 201 });
+}
+
+async function getSessionDetails(
+  matchDate: string,
+  teamNames: string[],
+  supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+) {
+  const { data } = await supabase
+    .from("tournament_teams")
+    .select("name,session_start_time,session_end_time,session_location")
+    .eq("session_date", matchDate)
+    .in("name", teamNames);
+
+  const teamWithDetails = data?.find(
+    (team) => team.session_start_time || team.session_end_time || team.session_location,
+  );
+  const fallbackTeam = teamWithDetails || data?.[0];
+
+  return {
+    start_time: fallbackTeam?.session_start_time || null,
+    end_time: fallbackTeam?.session_end_time || null,
+    location: fallbackTeam?.session_location || null,
+  };
 }
 
 async function saveScore(

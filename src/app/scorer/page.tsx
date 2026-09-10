@@ -84,6 +84,11 @@ type StatDraft = {
   assists: string;
 };
 
+type NewGameDraft = {
+  teamA: string;
+  teamB: string;
+};
+
 const codeStorageKey = "jc-footy-scorer-code";
 
 export default function ScorerPage() {
@@ -100,6 +105,7 @@ export default function ScorerPage() {
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, { a: string; b: string }>>({});
   const [statDrafts, setStatDrafts] = useState<Record<string, StatDraft>>({});
+  const [newGameDraft, setNewGameDraft] = useState<NewGameDraft>({ teamA: "", teamB: "" });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -117,6 +123,10 @@ export default function ScorerPage() {
     selectedDate,
     selectedDateMatches,
   ]);
+  const normalizedNewGameDraft = useMemo(
+    () => normalizeNewGameDraft(newGameDraft, activeTeams),
+    [activeTeams, newGameDraft],
+  );
   const matchLabels = useMemo(() => buildGameLabels(selectedDateMatches), [selectedDateMatches]);
 
   useEffect(() => {
@@ -289,6 +299,65 @@ export default function ScorerPage() {
     }
   }
 
+  async function createGame() {
+    const teamAName = normalizedNewGameDraft.teamA.trim();
+    const teamBName = normalizedNewGameDraft.teamB.trim();
+
+    if (!selectedDate) {
+      setMessage("Pick a date first.");
+      return;
+    }
+
+    if (!teamAName || !teamBName) {
+      setMessage("Choose two teams for the game.");
+      return;
+    }
+
+    if (teamAName === teamBName) {
+      setMessage("Choose two different teams.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    const nextGameLabel = `Game ${selectedDateMatches.length + 1}`;
+
+    try {
+      const response = await scorerFetch(
+        "/api/scorer",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "create_match",
+            match_date: selectedDate,
+            week_label: nextGameLabel,
+            team_a_name: teamAName,
+            team_b_name: teamBName,
+          }),
+        },
+        savedCode,
+      );
+      const payload = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          resetScorerAccess();
+        }
+        setMessage(payload.error || "Game was not created.");
+        return;
+      }
+
+      setMessage(`${nextGameLabel} added. You can score it now.`);
+      await loadData(savedCode);
+      setSelectedMatchId(payload.match?.id || "");
+    } catch {
+      setMessage("Could not add the game.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function updateScore(matchId: string, side: "a" | "b", value: string) {
     setScoreDrafts((current) => ({
       ...current,
@@ -439,10 +508,19 @@ export default function ScorerPage() {
           </label>
         </section>
 
+        <CreateGameCard
+          teams={activeTeams}
+          draft={normalizedNewGameDraft}
+          nextGameNumber={selectedDateMatches.length + 1}
+          loading={loading}
+          onDraftChange={setNewGameDraft}
+          onCreateGame={createGame}
+        />
+
         {!selectedMatch ? (
           <section className="rounded-2xl border border-black/10 bg-white p-6 text-center shadow-sm">
             <p className="text-lg font-black">No games found for this date.</p>
-            <p className="mt-2 font-bold text-black/55">Create the matchups in the admin portal first.</p>
+            <p className="mt-2 font-bold text-black/55">Add a game above, then save the score and player stats here.</p>
           </section>
         ) : (
           <>
@@ -483,6 +561,99 @@ export default function ScorerPage() {
         </footer>
       </section>
     </main>
+  );
+}
+
+function CreateGameCard({
+  teams,
+  draft,
+  nextGameNumber,
+  loading,
+  onDraftChange,
+  onCreateGame,
+}: {
+  teams: TournamentTeam[];
+  draft: NewGameDraft;
+  nextGameNumber: number;
+  loading: boolean;
+  onDraftChange: (draft: NewGameDraft) => void;
+  onCreateGame: () => void;
+}) {
+  const canCreate = teams.length >= 2 && draft.teamA && draft.teamB && draft.teamA !== draft.teamB;
+
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-black uppercase text-[#16633f]">Add Game</p>
+          <h2 className="text-2xl font-black">Game {nextGameNumber}</h2>
+        </div>
+        <button
+          type="button"
+          disabled={loading || !canCreate}
+          onClick={onCreateGame}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1f7a4d] px-4 py-3 text-base font-black text-white transition hover:bg-[#16633f] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Plus className="h-5 w-5" />
+          Add Game
+        </button>
+      </div>
+
+      {teams.length < 2 ? (
+        <p className="rounded-xl bg-[#f7f3ed] p-3 text-sm font-bold text-black/55">
+          Add at least two teams for this date in the admin portal first.
+        </p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end">
+          <TeamSelect
+            label="Team A"
+            value={draft.teamA}
+            teams={teams}
+            blockedTeam={draft.teamB}
+            onChange={(teamA) => onDraftChange({ ...draft, teamA })}
+          />
+          <div className="hidden pb-3 text-center text-lg font-black text-black/35 sm:block">vs</div>
+          <TeamSelect
+            label="Team B"
+            value={draft.teamB}
+            teams={teams}
+            blockedTeam={draft.teamA}
+            onChange={(teamB) => onDraftChange({ ...draft, teamB })}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TeamSelect({
+  label,
+  value,
+  teams,
+  blockedTeam,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  teams: TournamentTeam[];
+  blockedTeam: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="text-sm font-black uppercase text-black/55">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-base font-black outline-none focus:border-[#1f7a4d]"
+      >
+        {teams.map((team) => (
+          <option key={team.id} value={team.name} disabled={team.name === blockedTeam}>
+            {team.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -796,6 +967,17 @@ function getTeamsForDate(teams: TournamentTeam[], matches: Match[], date: string
 
   const matchTeamNames = new Set(matches.flatMap((match) => [match.team_a_name, match.team_b_name]));
   return teams.filter((team) => matchTeamNames.has(team.name));
+}
+
+function normalizeNewGameDraft(draft: NewGameDraft, teams: TournamentTeam[]) {
+  const teamNames = teams.map((team) => team.name);
+  const teamA = teamNames.includes(draft.teamA) ? draft.teamA : teamNames[0] || "";
+  const teamB =
+    teamNames.includes(draft.teamB) && draft.teamB !== teamA
+      ? draft.teamB
+      : teamNames.find((teamName) => teamName !== teamA) || "";
+
+  return { teamA, teamB };
 }
 
 function getPlayersForTeam(teamName: string, teams: TournamentTeam[], roster: RosterRow[], players: Player[]) {
