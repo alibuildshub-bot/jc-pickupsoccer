@@ -67,6 +67,14 @@ type PlayerDateTotal = {
   statIds: string[];
 };
 
+type PlayerSessionFlag = {
+  id: string;
+  player_id: string;
+  session_date: string;
+  exclude_from_averages: boolean;
+  reason: string;
+};
+
 type TournamentTeam = {
   id: string;
   name: string;
@@ -197,6 +205,7 @@ export default function AdminPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [stats, setStats] = useState<PlayerStat[]>([]);
+  const [playerSessionFlags, setPlayerSessionFlags] = useState<PlayerSessionFlag[]>([]);
   const [teams, setTeams] = useState<TournamentTeam[]>([]);
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [teamSessionDateSetupNeeded, setTeamSessionDateSetupNeeded] = useState(false);
@@ -206,6 +215,7 @@ export default function AdminPage() {
   const [pollSetupNeeded, setPollSetupNeeded] = useState(false);
   const [analytics, setAnalytics] = useState<SiteAnalytics>(emptyAnalytics);
   const [analyticsSetupNeeded, setAnalyticsSetupNeeded] = useState(false);
+  const [playerSessionFlagsSetupNeeded, setPlayerSessionFlagsSetupNeeded] = useState(false);
   const [playerForm, setPlayerForm] = useState(emptyPlayer);
   const [matchForm, setMatchForm] = useState(emptyMatch);
   const [teamForm, setTeamForm] = useState(emptyTeam);
@@ -235,6 +245,7 @@ export default function AdminPage() {
     goals: "0",
     assists: "0",
     own_goals: "0",
+    goalie_only: false,
   });
   const [statCorrectionOpen, setStatCorrectionOpen] = useState(false);
   const [ownGoalsAddonOpen, setOwnGoalsAddonOpen] = useState(false);
@@ -287,6 +298,15 @@ export default function AdminPage() {
   const gameDayPlayerTotals = useMemo(
     () => buildPlayerDateTotals(gameDayStats, players),
     [gameDayStats, players],
+  );
+  const gameDayGoalieOnlyPlayerIds = useMemo(
+    () =>
+      new Set(
+        playerSessionFlags
+          .filter((flag) => flag.session_date === gameDayForm.date && flag.exclude_from_averages)
+          .map((flag) => flag.player_id),
+      ),
+    [gameDayForm.date, playerSessionFlags],
   );
   const showOwnGoalsAddon = ownGoalsAddonOpen || stats.some((stat) => (stat.own_goals || 0) > 0);
   const selectedDateIsCompletedSession = useMemo(
@@ -394,18 +414,23 @@ export default function AdminPage() {
         }
       };
 
-      const [playersResponse, matchesResponse, statsResponse, teamsResponse, pollsResponse, analyticsResponse] = await Promise.all([
+      const [playersResponse, matchesResponse, statsResponse, teamsResponse, pollsResponse, analyticsResponse, playerSessionFlagsResponse] = await Promise.all([
         loadSection("Players", () => adminFetch("/api/admin/players", { method: "GET" }, credential)),
         loadSection("Matches", () => adminFetch("/api/admin/matches", { method: "GET" }, credential)),
         loadSection("Stats", () => adminFetch("/api/admin/stats", { method: "GET" }, credential)),
         loadSection("Teams", () => adminFetch("/api/admin/teams", { method: "GET" }, credential)),
         loadSection("Polls", () => adminFetch("/api/admin/polls", { method: "GET" }, credential)),
         loadSection("Analytics", () => adminFetch("/api/admin/analytics", { method: "GET" }, credential)),
+        loadSection("Goalie-only flags", () => adminFetch("/api/admin/player-session-flags", { method: "GET" }, credential)),
       ]);
 
       if (playersResponse) setPlayers(playersResponse.players || []);
       if (matchesResponse) setMatches(matchesResponse.matches || []);
       if (statsResponse) setStats(statsResponse.stats || []);
+      if (playerSessionFlagsResponse) {
+        setPlayerSessionFlags(playerSessionFlagsResponse.flags || []);
+        setPlayerSessionFlagsSetupNeeded(Boolean(playerSessionFlagsResponse.setupNeeded));
+      }
       if (teamsResponse) {
         setTeams(teamsResponse.teams || []);
         setRoster(teamsResponse.roster || []);
@@ -556,6 +581,7 @@ export default function AdminPage() {
     setPlayers([]);
     setMatches([]);
     setStats([]);
+    setPlayerSessionFlags([]);
     setTeams([]);
     setRoster([]);
     setGeneratorPlayerIds([]);
@@ -568,6 +594,7 @@ export default function AdminPage() {
     setPollSetupNeeded(false);
     setAnalytics(emptyAnalytics);
     setAnalyticsSetupNeeded(false);
+    setPlayerSessionFlagsSetupNeeded(false);
     setAuthInfo(null);
     setMessage("");
   }
@@ -1265,19 +1292,22 @@ export default function AdminPage() {
       );
       const playerName = getPlayerName(quickSingleStat.player_id);
 
+      await saveGoalieOnlySessionFlag(quickSingleStat.player_id, gameDayForm.date, quickSingleStat.goalie_only);
+
       setQuickSingleStat({
         player_id: "",
         team_name: quickSingleStat.team_name,
         goals: "0",
         assists: "0",
         own_goals: "0",
+        goalie_only: false,
       });
       setMessage(
         existingStatsForDay.length > 0
-          ? `${playerName} corrected for ${formatDateLabel(gameDayForm.date)}.`
+          ? `${playerName} corrected for ${formatDateLabel(gameDayForm.date)}${quickSingleStat.goalie_only ? " and marked goalie-only." : "."}`
           : response.updatedExisting
-            ? `${playerName} updated.`
-            : `${playerName} day totals saved.`,
+            ? `${playerName} updated${quickSingleStat.goalie_only ? " and marked goalie-only." : "."}`
+            : `${playerName} day totals saved${quickSingleStat.goalie_only ? " and marked goalie-only." : "."}`,
       );
       await loadData();
     } catch (error) {
@@ -1285,6 +1315,35 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function saveGoalieOnlySessionFlag(playerId: string, sessionDate: string, goalieOnly: boolean) {
+    if (!playerId || !sessionDate) return;
+
+    if (!goalieOnly && playerSessionFlagsSetupNeeded) return;
+
+    if (goalieOnly) {
+      await adminFetch(
+        "/api/admin/player-session-flags",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            player_id: playerId,
+            session_date: sessionDate,
+            exclude_from_averages: true,
+            reason: "goalie_only",
+          }),
+        },
+        adminCredential,
+      );
+      return;
+    }
+
+    await adminFetch(
+      `/api/admin/player-session-flags?player_id=${encodeURIComponent(playerId)}&session_date=${encodeURIComponent(sessionDate)}`,
+      { method: "DELETE" },
+      adminCredential,
+    );
   }
 
   function updateQuickStatDraft(matchId: string, playerId: string, teamName: string, field: "goals" | "assists" | "own_goals", value: string) {
@@ -1334,6 +1393,7 @@ export default function AdminPage() {
       goals: String(total.goals),
       assists: String(total.assists),
       own_goals: String(total.own_goals),
+      goalie_only: isGoalieOnlySession(total.player_id, gameDayForm.date),
     });
     setStatCorrectionOpen(true);
     setMessage(`Loaded ${total.playerName} for ${formatDateLabel(gameDayForm.date)}. Update totals, then press Save Corrected Totals.`);
@@ -1341,6 +1401,15 @@ export default function AdminPage() {
     window.setTimeout(() => {
       document.getElementById("stat-correction-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 0);
+  }
+
+  function isGoalieOnlySession(playerId: string, sessionDate: string) {
+    return playerSessionFlags.some(
+      (flag) =>
+        flag.player_id === playerId &&
+        flag.session_date === sessionDate &&
+        flag.exclude_from_averages,
+    );
   }
 
   if (!isUnlocked) {
@@ -2659,6 +2728,7 @@ export default function AdminPage() {
                     goals: "0",
                     assists: "0",
                     own_goals: "0",
+                    goalie_only: false,
                   });
                 }}
                 required
@@ -2673,7 +2743,13 @@ export default function AdminPage() {
                 <AdminSelect
                   label="Player"
                   value={quickSingleStat.player_id}
-                  onChange={(value) => setQuickSingleStat({ ...quickSingleStat, player_id: value })}
+                  onChange={(value) =>
+                    setQuickSingleStat({
+                      ...quickSingleStat,
+                      player_id: value,
+                      goalie_only: isGoalieOnlySession(value, gameDayForm.date),
+                    })
+                  }
                   required
                 >
                   <option value="">Select player</option>
@@ -2732,6 +2808,25 @@ export default function AdminPage() {
                   Save Corrected Totals
                 </button>
               </div>
+              <label className="flex items-start gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm font-bold text-black/65">
+                <input
+                  type="checkbox"
+                  checked={quickSingleStat.goalie_only}
+                  onChange={(event) => setQuickSingleStat({ ...quickSingleStat, goalie_only: event.target.checked })}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-black text-black/75">Goalie-only session</span>
+                  <span className="mt-1 block text-xs leading-5 text-black/45">
+                    Keeps this player&apos;s goals and assists in totals, but excludes this date from per-session averages.
+                  </span>
+                </span>
+              </label>
+              {playerSessionFlagsSetupNeeded && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold leading-5 text-amber-800">
+                  Goalie-only sessions need setup first. Run supabase-player-session-flags.sql in Supabase.
+                </p>
+              )}
             </form>
           </details>
 
@@ -2757,7 +2852,16 @@ export default function AdminPage() {
                   </tr>
                 ) : gameDayPlayerTotals.map((total) => (
                   <tr key={total.key} className="border-b border-black/10 last:border-0">
-                    <td className="py-4 font-black">{total.playerName}</td>
+                    <td className="py-4 font-black">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>{total.playerName}</span>
+                        {gameDayGoalieOnlyPlayerIds.has(total.player_id) && (
+                          <span className="rounded-md bg-[#edf4f0] px-2 py-1 text-[10px] font-black uppercase text-[#17613d]">
+                            Goalie-only
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-4 font-bold">{total.team_name}</td>
                     <td className="py-4 text-center font-bold">{total.goals}</td>
                     <td className="py-4 text-center font-bold">{total.assists}</td>

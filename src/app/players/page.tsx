@@ -24,6 +24,12 @@ type MatchPlayerRow = {
   assists: number;
 };
 
+type PlayerSessionFlagRow = {
+  player_id: string;
+  session_date: string;
+  exclude_from_averages: boolean;
+};
+
 type TeamRow = {
   id: string;
   name: string;
@@ -170,7 +176,7 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
 
   if (!supabase) return [];
 
-  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: teamRows }, { data: rosterRows }, { data: pollRows }, { data: pollOptionRows }] = await Promise.all([
+  const [{ data: playerRows }, { data: matchRows }, { data: statRows }, { data: teamRows }, { data: rosterRows }, { data: pollRows }, { data: pollOptionRows }, flagRowsResult] = await Promise.all([
     supabase.from("players").select("id,name,position").order("name"),
     supabase.from("matches").select("id,match_date,team_a_name,team_b_name,status").eq("status", "completed").limit(200),
     supabase.from("match_players").select("match_id,player_id,goals,assists"),
@@ -178,6 +184,7 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
     supabase.from("tournament_team_players").select("team_id,player_id"),
     supabase.from("mvp_polls").select("id,match_date"),
     supabase.from("mvp_poll_options").select("poll_id,player_id,label"),
+    selectPlayerSessionFlags(supabase),
   ]);
   const players = (playerRows || []) as PlayerRow[];
   const matches = (matchRows || []) as MatchRow[];
@@ -186,6 +193,8 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
   const roster = (rosterRows || []) as RosterRow[];
   const polls = (pollRows || []) as PollRow[];
   const pollOptions = (pollOptionRows || []) as PollOptionRow[];
+  const playerSessionFlags = (flagRowsResult.data || []) as PlayerSessionFlagRow[];
+  const excludedDatesByPlayerId = buildExcludedDatesByPlayerId(playerSessionFlags);
   const completedMatchIds = new Set(matches.map((match) => match.id));
   const completedDates = new Set(matches.map((match) => match.match_date));
   const matchDates = new Map(matches.map((match) => [match.id, match.match_date]));
@@ -266,10 +275,16 @@ async function getAllTimePlayers(): Promise<PlayerTotal[]> {
   }
 
   return Array.from(totals.values())
-    .map(({ sessionDates, ...player }) => ({
-      ...player,
-      sessions: sessionDates.size,
-    }))
+    .map(({ sessionDates, ...player }) => {
+      const visibleSessionDates = Array.from(sessionDates).filter(
+        (sessionDate) => !excludedDatesByPlayerId.get(player.id)?.has(sessionDate),
+      );
+
+      return {
+        ...player,
+        sessions: visibleSessionDates.length,
+      };
+    })
     .filter((player) => player.points > 0 || player.sessions > 0)
     .sort((first, second) => second.points - first.points || second.goals - first.goals || first.name.localeCompare(second.name));
 }
@@ -360,6 +375,42 @@ function buildTeamIdsByName(teams: TeamRow[]) {
   }
 
   return teamIdsByName;
+}
+
+async function selectPlayerSessionFlags(
+  supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
+) {
+  const result = await supabase
+    .from("player_session_flags")
+    .select("player_id,session_date,exclude_from_averages");
+
+  if (isMissingPlayerSessionFlagsTable(result.error)) {
+    return { data: [] };
+  }
+
+  return result;
+}
+
+function buildExcludedDatesByPlayerId(flags: PlayerSessionFlagRow[]) {
+  const excludedDates = new Map<string, Set<string>>();
+
+  for (const flag of flags) {
+    if (!flag.exclude_from_averages) continue;
+
+    const dates = excludedDates.get(flag.player_id) || new Set<string>();
+    dates.add(flag.session_date);
+    excludedDates.set(flag.player_id, dates);
+  }
+
+  return excludedDates;
+}
+
+function isMissingPlayerSessionFlagsTable(error: { code?: string; message?: string } | null) {
+  return (
+    error?.code === "42P01" ||
+    error?.code === "PGRST205" ||
+    Boolean(error?.message?.includes("player_session_flags"))
+  );
 }
 
 function normalizeLabel(value: string) {

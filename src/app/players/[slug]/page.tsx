@@ -29,6 +29,13 @@ type MatchPlayerRow = {
   result: string;
 };
 
+type PlayerSessionFlagRow = {
+  player_id: string;
+  session_date: string;
+  exclude_from_averages: boolean;
+  reason: string | null;
+};
+
 type TeamRow = {
   id: string;
   name: string;
@@ -220,6 +227,7 @@ async function getPlayerProfile(slug: string) {
     { data: pollRows },
     { data: pollOptionRows },
     { data: pollVoteRows },
+    flagRowsResult,
   ] = await Promise.all([
     supabase.from("players").select("id,name,position").order("name"),
     supabase
@@ -233,6 +241,7 @@ async function getPlayerProfile(slug: string) {
     supabase.from("mvp_polls").select("id,match_date,status"),
     supabase.from("mvp_poll_options").select("id,poll_id,player_id,label"),
     supabase.from("mvp_votes").select("option_id"),
+    selectPlayerSessionFlags(supabase),
   ]);
 
   const players = (playerRows || []) as PlayerRow[];
@@ -251,12 +260,18 @@ async function getPlayerProfile(slug: string) {
   const polls = (pollRows || []) as PollRow[];
   const pollOptions = (pollOptionRows || []) as PollOptionRow[];
   const pollVotes = (pollVoteRows || []) as PollVoteRow[];
+  const playerSessionFlags = (flagRowsResult.data || []) as PlayerSessionFlagRow[];
+  const averageExcludedDates = new Set(
+    playerSessionFlags
+      .filter((flag) => matchingPlayerIds.has(flag.player_id) && flag.exclude_from_averages)
+      .map((flag) => flag.session_date),
+  );
   const completedMatchIds = new Set(matches.map((match) => match.id));
   const completedDates = new Set(matches.map((match) => match.match_date));
   const matchesById = new Map(matches.map((match) => [match.id, match]));
   const matchDates = new Map(matches.map((match) => [match.id, match.match_date]));
   const pollDates = new Map(polls.map((poll) => [poll.id, poll.match_date]));
-  const sessionsByDate = new Map<string, { date: string; goals: number; assists: number; points: number }>();
+  const sessionsByDate = new Map<string, { rawDate: string; date: string; goals: number; assists: number; points: number }>();
 
   for (const stat of stats) {
     if (!completedMatchIds.has(stat.match_id)) continue;
@@ -265,6 +280,7 @@ async function getPlayerProfile(slug: string) {
     if (!rawDate) continue;
 
     const existing = sessionsByDate.get(rawDate) || {
+      rawDate,
       date: formatDate(rawDate),
       goals: 0,
       assists: 0,
@@ -290,6 +306,7 @@ async function getPlayerProfile(slug: string) {
     if (!playerWasRostered || sessionsByDate.has(match.match_date)) continue;
 
     sessionsByDate.set(match.match_date, {
+      rawDate: match.match_date,
       date: formatDate(match.match_date),
       goals: 0,
       assists: 0,
@@ -305,6 +322,7 @@ async function getPlayerProfile(slug: string) {
     if (!isPlayerOption || sessionsByDate.has(pollDate)) continue;
 
     sessionsByDate.set(pollDate, {
+      rawDate: pollDate,
       date: formatDate(pollDate),
       goals: 0,
       assists: 0,
@@ -317,6 +335,7 @@ async function getPlayerProfile(slug: string) {
     .map(([, session]) => session);
   const goals = sessions.reduce((total, session) => total + session.goals, 0);
   const assists = sessions.reduce((total, session) => total + session.assists, 0);
+  const averageSessionCount = sessions.filter((session) => !averageExcludedDates.has(session.rawDate)).length;
   const form = buildPlayerForm(stats, matchesById);
   const honors = buildPlayerHonors({
     allStats,
@@ -336,12 +355,34 @@ async function getPlayerProfile(slug: string) {
     assists,
     points: goals + assists,
     sessionsPlayed: sessions.length,
-    goalsPerSession: getPerSessionAverage(goals, sessions.length),
-    assistsPerSession: getPerSessionAverage(assists, sessions.length),
+    goalsPerSession: getPerSessionAverage(goals, averageSessionCount),
+    assistsPerSession: getPerSessionAverage(assists, averageSessionCount),
     form,
     honors,
     sessions,
   };
+}
+
+async function selectPlayerSessionFlags(
+  supabase: NonNullable<ReturnType<typeof createSupabaseClient>>,
+) {
+  const result = await supabase
+    .from("player_session_flags")
+    .select("player_id,session_date,exclude_from_averages,reason");
+
+  if (isMissingPlayerSessionFlagsTable(result.error)) {
+    return { data: [] };
+  }
+
+  return result;
+}
+
+function isMissingPlayerSessionFlagsTable(error: { code?: string; message?: string } | null) {
+  return (
+    error?.code === "42P01" ||
+    error?.code === "PGRST205" ||
+    Boolean(error?.message?.includes("player_session_flags"))
+  );
 }
 
 function ProfileStat({ label, value }: { label: string; value: number }) {
