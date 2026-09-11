@@ -198,6 +198,8 @@ export default async function Home() {
   const topPlayers = data.players.slice(0, 3);
   const topPlayersLabel = data.playerLeaderboardLabel.replace(" Stats", "");
   const showUpcomingTeams = data.completedTournamentGames === 0 && data.teamRosters.length > 0;
+  const sessionGoalsPerGame =
+    data.completedTournamentGames > 0 ? data.goalsTracked / data.completedTournamentGames : 0;
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f7f3ec] pb-20 text-[#171717] md:pb-0">
@@ -338,6 +340,11 @@ export default async function Home() {
                     icon={Trophy}
                   />
                 </div>
+                <div className="mt-2 grid gap-2 rounded-lg bg-[#fbfaf7] p-2 sm:mt-3 sm:grid-cols-3 sm:p-3">
+                  <SessionPulseItem label="Session pace" value={`${formatDecimal(sessionGoalsPerGame)} goals/game`} />
+                  <SessionPulseItem label="Top player" value={topPlayers[0]?.name || "Coming soon"} />
+                  <SessionPulseItem label="Full results" value={`${data.recentMatches.length} games listed`} />
+                </div>
                 <div className="mt-3 hidden gap-2 sm:mt-4 sm:grid sm:grid-cols-3">
                   <a
                     href="#progress"
@@ -399,7 +406,7 @@ export default async function Home() {
                 )}
               </div>
               {data.recentMatches.length > 2 ? (
-                <div className="mt-3 hidden rounded-lg bg-[#fbfaf7] p-2.5 sm:block sm:p-3">
+                <div className="mt-3 rounded-lg bg-[#fbfaf7] p-2.5 sm:p-3">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <p className="text-xs font-black uppercase tracking-wide text-black/45">Session Timeline</p>
                     <p className="text-xs font-bold text-black/40">{data.recentMatches.length} games</p>
@@ -2301,6 +2308,15 @@ function MiniStat({
         {(logo || color) && <TeamLogo logo={logo} color={color || "#1f7a4d"} name={value} />}
         <p className="min-w-0 break-words text-sm font-black">{value}</p>
       </div>
+    </div>
+  );
+}
+
+function SessionPulseItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-white px-3 py-2">
+      <p className="text-[11px] font-black uppercase tracking-wide text-black/40">{label}</p>
+      <p className="mt-1 truncate text-sm font-black text-black/80">{value}</p>
     </div>
   );
 }
