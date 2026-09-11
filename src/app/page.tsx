@@ -861,7 +861,7 @@ async function getDashboardData() {
   const resultsArchive = buildResultsArchive(matches, matchStats, players, teams, gameLabels, teamDisplayNames, tournamentDate);
   const sessionGoalTrends = buildSessionGoalTrends(resultsArchive);
 
-  const goalsTracked = currentMatchStats.reduce((total, stat) => total + (stat.goals || 0), 0);
+  const goalsTracked = getCompletedMatchGoalTotal(tournamentMatches);
 
   return {
     isConnected: true,
@@ -1164,6 +1164,12 @@ function getPlayerLeaderboardMatches(
   return matches.filter(
     (match) => match.match_date === matchDate && match.status === "completed" && statMatchIds.has(match.id),
   );
+}
+
+function getCompletedMatchGoalTotal(matches: MatchRow[]) {
+  return matches
+    .filter((match) => match.status === "completed")
+    .reduce((total, match) => total + match.team_a_score + match.team_b_score, 0);
 }
 
 function buildUpcomingSession(
