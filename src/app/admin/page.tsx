@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import {
   CalendarDays,
+  ChevronDown,
   Copy,
   Edit3,
   LogIn,
@@ -2132,16 +2133,24 @@ export default function AdminPage() {
                   No tournament MVP polls yet.
                 </div>
               ) : (
-                <div className="grid gap-3 lg:grid-cols-2">
+                <details className="group/polls rounded-lg border border-black/10">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold [&::-webkit-details-marker]:hidden">
+                    <span>Saved polls ({polls.length}) <span className="font-medium text-black/50">· {polls.filter((poll) => poll.status === "open").length} open</span></span>
+                    <ChevronDown size={16} className="shrink-0 transition-transform group-open/polls:rotate-180" />
+                  </summary>
+                <div className="space-y-2 border-t border-black/10 p-3">
                   {polls.map((poll) => (
-                    <article key={poll.id} className="rounded-lg border border-black/10 bg-[#fbfaf7] p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="font-black">{getTournamentPollTitle(poll)}</h2>
-                      <p className="mt-1 text-sm font-semibold text-black/50">
+                    <details key={poll.id} name="admin-saved-poll" className="group/poll min-w-0 rounded-lg border border-black/10 bg-[#fbfaf7]">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-3 [&::-webkit-details-marker]:hidden">
+                    <span className="min-w-0">
+                      <span className="block break-words text-sm font-bold">{getTournamentPollTitle(poll)}</span>
+                      <span className="mt-1 block text-xs font-semibold text-black/50">
                         {poll.totalVotes} votes | {poll.status}
-                      </p>
-                    </div>
+                      </span>
+                    </span>
+                    <ChevronDown size={16} className="shrink-0 transition-transform group-open/poll:rotate-180" />
+                  </summary>
+                  <div className="border-t border-black/10 p-3">
                     <button
                       type="button"
                       onClick={() => copyPollLink(poll.token)}
@@ -2150,8 +2159,7 @@ export default function AdminPage() {
                       <Copy size={14} />
                       Copy Link
                     </button>
-                  </div>
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-3 grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">
                     {poll.options.map((option) => (
                       <div key={option.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
                         <span className="min-w-0 break-words text-sm font-bold">{option.label}</span>
@@ -2202,9 +2210,11 @@ export default function AdminPage() {
                       Delete Poll
                     </button>
                   </div>
-                    </article>
+                  </div>
+                    </details>
                   ))}
                 </div>
+                </details>
               )}
             </>
           )}
