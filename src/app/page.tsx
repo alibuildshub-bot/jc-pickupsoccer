@@ -472,6 +472,7 @@ export default async function Home() {
         </div>
       </section>
 
+      {showUpcomingTeams ? <div id="progress" /> : (
       <section id="progress" className="mx-auto max-w-7xl px-3 pb-6 sm:px-6 lg:px-8">
         <div className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -603,10 +604,11 @@ export default async function Home() {
         </div>
       </section>
 
+      )}
       <section id="teams" className="mx-auto max-w-7xl px-3 pb-5 sm:px-6 sm:pb-6 lg:px-8">
         <div className="mb-3 flex items-end justify-between gap-4 sm:mb-5">
           <div>
-            <p className="text-sm font-bold text-black/50">Rosters</p>
+            <p className="text-sm font-bold text-black/50">Rosters · {data.tournamentLabel}</p>
             <h2 className="text-xl font-black sm:text-2xl">Teams & Players</h2>
           </div>
           <Users className="hidden text-[#1f7a4d] sm:block" size={26} />
