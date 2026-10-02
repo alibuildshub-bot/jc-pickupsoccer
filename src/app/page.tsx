@@ -228,7 +228,7 @@ export default async function Home() {
         </div>
       </nav>
 
-      <section className="mx-auto max-w-7xl px-3 py-4 sm:px-6 lg:px-8 lg:py-8">
+      <section className="mx-auto max-w-7xl px-3 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between lg:mb-4">
           <div>
             <p className="mb-2 inline-flex w-fit rounded-lg bg-[#edf4f0] px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[#17613d] sm:px-3 sm:py-2 sm:text-sm">
@@ -254,8 +254,8 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="grid items-start gap-4 lg:grid-cols-[1.35fr_0.9fr]">
-          <article className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-6">
+        <div className="grid items-start gap-3">
+          <article className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-wide text-[#17613d] sm:text-sm">
@@ -429,7 +429,8 @@ export default async function Home() {
             </div>
           </article>
 
-          <div className="grid gap-4">
+          <div className={`grid items-start gap-3 md:grid-cols-2 ${data.upcomingSession ? "lg:grid-cols-3" : ""}`}>
+            {data.upcomingSession && (
             <article className="hidden rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5 lg:block">
               <div>
                 <p className="text-xs font-bold text-black/50 sm:text-sm">Latest Session</p>
@@ -445,6 +446,7 @@ export default async function Home() {
                 <CompactResult label="MVP" value={latestSession.mvp} />
               </div>
             </article>
+            )}
 
             <SessionGoalChart trends={data.sessionGoalTrends} />
 
@@ -613,7 +615,7 @@ export default async function Home() {
           </div>
           <Users className="hidden text-[#1f7a4d] sm:block" size={26} />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
           {data.teamRosters.length > 0 ? data.teamRosters.map((team) => (
             <article key={team.name} className="rounded-lg border border-black/10 bg-white p-3 shadow-sm sm:p-5">
               <div className="mb-3 flex items-center justify-between gap-3 border-b border-black/10 pb-3 sm:mb-4 sm:pb-4">
