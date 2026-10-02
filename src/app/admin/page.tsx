@@ -969,9 +969,10 @@ export default function AdminPage() {
         adminCredential,
       );
 
-      setTeamForm(getEmptyTeamForSelectedDate());
+      setGameDayForm((current) => ({ ...current, date: teamForm.session_date }));
+      setTeamForm({ ...emptyTeam, session_date: teamForm.session_date });
       setEditingTeamId(null);
-      setMessage(editingTeamId ? "Team updated." : "Team added.");
+      setMessage(editingTeamId ? `Team updated for ${formatDateLabel(teamForm.session_date)}.` : "Team added.");
       await loadData();
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -1032,6 +1033,7 @@ export default function AdminPage() {
   }
 
   function editTeam(team: TournamentTeam) {
+    document.getElementById("team-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
     setEditingTeamId(team.id);
     setTeamForm({
       name: team.name,
@@ -2311,15 +2313,16 @@ export default function AdminPage() {
 
           <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
-              <form onSubmit={saveTeam} className="mb-4 grid gap-3 rounded-lg bg-[#f7f3ec] p-4">
-                <div className="grid gap-3 sm:grid-cols-[0.8fr_0.65fr_0.65fr_1fr_auto] sm:items-end">
+              <form id="team-editor" onSubmit={saveTeam} className="mb-4 grid scroll-mt-24 gap-3 rounded-lg bg-[#f7f3ec] p-4">
+                {editingTeamId && <h3 className="text-sm font-bold">Editing {teamForm.name}</h3>}
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 sm:items-end">
                   <AdminInput
                     type="date"
-                    label="Pickup date"
+                    label={editingTeamId ? "Team pickup date" : "Pickup date"}
                     value={teamForm.session_date}
                     onChange={(value) => {
                       setTeamForm({ ...teamForm, session_date: value });
-                      selectGameDayDate(value);
+                      if (!editingTeamId) selectGameDayDate(value);
                     }}
                     required
                   />
