@@ -297,8 +297,8 @@ export default function AdminPage() {
     [gameDayMatchIds, gameDayMatches, stats],
   );
   const gameDayPlayerTotals = useMemo(
-    () => buildPlayerDateTotals(gameDayStats, players),
-    [gameDayStats, players],
+    () => buildPlayerDateTotals(gameDayStats, players, teams.filter((team) => team.session_date === gameDayForm.date), roster),
+    [gameDayStats, players, teams, gameDayForm.date, roster],
   );
   const gameDayGoalieOnlyPlayerIds = useMemo(
     () =>
@@ -2868,6 +2868,7 @@ export default function AdminPage() {
                     <td className="py-4 font-black">
                       <div className="flex flex-wrap items-center gap-2">
                         <span>{total.playerName}</span>
+                        {total.statIds.length === 0 && <span className="text-xs font-medium text-black/45">No stats saved</span>}
                         {gameDayGoalieOnlyPlayerIds.has(total.player_id) && (
                           <span className="rounded-md bg-[#edf4f0] px-2 py-1 text-[10px] font-black uppercase text-[#17613d]">
                             Goalie-only
@@ -2883,7 +2884,7 @@ export default function AdminPage() {
                     <td className="py-4">
                       <div className="flex justify-end gap-2">
                         <IconButton label="Edit corrected total" onClick={() => editDateStatTotal(total)} icon={Edit3} />
-                        <IconButton label="Delete player date stats" onClick={() => deleteDateStatTotal(total)} icon={Trash2} danger />
+                        {total.statIds.length > 0 && <IconButton label="Delete player date stats" onClick={() => deleteDateStatTotal(total)} icon={Trash2} danger />}
                       </div>
                     </td>
                   </tr>
@@ -3058,9 +3059,26 @@ function normalizeAdminPlayerName(name: string) {
   return name.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function buildPlayerDateTotals(stats: PlayerStat[], players: Player[]): PlayerDateTotal[] {
+function buildPlayerDateTotals(stats: PlayerStat[], players: Player[], sessionTeams: TournamentTeam[], roster: RosterRow[]): PlayerDateTotal[] {
   const playerNames = new Map(players.map((player) => [player.id, player.name]));
   const totals = new Map<string, PlayerDateTotal>();
+  const teamNames = new Map(sessionTeams.map((team) => [team.id, team.name]));
+
+  for (const row of roster) {
+    const teamName = teamNames.get(row.team_id);
+    if (!teamName) continue;
+    const key = `${row.player_id}:${normalizeAdminLabel(teamName)}`;
+    totals.set(key, {
+      key,
+      player_id: row.player_id,
+      playerName: row.players?.name || playerNames.get(row.player_id) || "Unknown player",
+      team_name: teamName,
+      goals: 0,
+      assists: 0,
+      own_goals: 0,
+      statIds: [],
+    });
+  }
 
   for (const stat of stats) {
     const playerName = stat.players?.name || playerNames.get(stat.player_id) || "Unknown player";
